@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
+import { fonts, fontSizes, colors } from '../../global';
+import { globalStyles } from '../../global/styles';
 
 export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#efefef',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -17,25 +19,19 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoContainer: {
-    width: 170,
-    height: 170,
-    backgroundColor: '#d0d0d0',
-    justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
+    justifyContent: 'center',
   },
-  logoText: {
-    fontSize: 56,
-    letterSpacing: 1,
-    color: '#111111',
+  logoImage: {
+    width: 270,
+    height: 270,
   },
   subtitle: {
     marginTop: 22,
     textAlign: 'center',
-    fontSize: 30 / 2,
-    lineHeight: 22,
-    color: '#1f1f1f',
-    fontWeight: '500',
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: fontSizes.xl,
   },
   actionsContainer: {
     paddingBottom: 20,

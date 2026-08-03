@@ -24,62 +24,73 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-    paddingHorizontal: 28,
-    paddingTop: 18,
-    paddingBottom: 32,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 36,
   },
 
   backButton: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     alignItems: 'flex-start',
     justifyContent: 'center',
-    marginLeft: -8,
+    marginLeft: -7,
+  },
+
+  progressBackground: {
+    width: '100%',
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: '#DEDEDE',
+    marginTop: 10,
+    overflow: 'hidden',
+  },
+
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+backgroundColor: '#18C7C8',
+  },
+
+  stepText: {
+    color: colors.cinza,
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm ?? 12,
+    textAlign: 'right',
+    marginTop: 8,
   },
 
   header: {
-    marginTop: 26,
-    marginBottom: 34,
+    marginTop: 12,
+    marginBottom: 20,
   },
 
   title: {
     color: colors.text,
     fontFamily: fonts.semibold,
     fontSize: fontSizes['2xl'] ?? 22,
-    lineHeight: 35,
+    lineHeight: 32,
+    paddingVertical: 2,
   },
 
   subtitle: {
     color: colors.text,
     fontFamily: fonts.regular,
-    fontSize: fontSizes.md ?? 14,
-    lineHeight: 21,
+    fontSize: fontSizes.sm ?? 13,
+    lineHeight: 20,
     marginTop: 2,
   },
 
   form: {
     width: '100%',
-    marginBottom: 40,
-  },
-
-  fieldContainer: {
-    width: '100%',
-    marginBottom: 14,
-  },
-
-  label: {
-    color: colors.cinza,
-    fontFamily: fonts.semibold,
-    fontSize: fontSizes.md ?? 15,
-    lineHeight: 20,
-    marginBottom: 7,
+    gap: 10,
   },
 
   input: {
     width: '100%',
     height: 48,
-    borderWidth: 2,
-    borderColor: colors.border,
+    borderWidth: 1.8,
+    borderColor: '#C8C8C8',
     borderRadius: 8,
     backgroundColor: colors.white,
     paddingHorizontal: 12,
@@ -94,8 +105,8 @@ export const styles = StyleSheet.create({
     height: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.border,
+    borderWidth: 1.8,
+    borderColor: '#C8C8C8',
     borderRadius: 8,
     backgroundColor: colors.white,
     overflow: 'hidden',
@@ -118,29 +129,17 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  forgotButton: {
-    alignSelf: 'flex-end',
-    paddingVertical: 2,
-    paddingLeft: 12,
-  },
-
-  forgotText: {
-    color: '#14ab3c',
-    fontFamily: fonts.semibold,
-    fontSize: fontSizes.sm ?? 12,
-  },
-
-  loginButton: {
+  mainButton: {
     width: '100%',
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#14ab3c',
+    height: 51,
+    borderRadius: 15,
+backgroundColor: '#18C7C8',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 46,
   },
 
-
-  loginButtonText: {
+  mainButtonText: {
     color: colors.white,
     fontFamily: fonts.semibold,
     fontSize: fontSizes.md ?? 15,
@@ -153,14 +152,14 @@ export const styles = StyleSheet.create({
     marginTop: 17,
   },
 
-  noAccount: {
+  footerText: {
     color: colors.text,
     fontFamily: fonts.semibold,
     fontSize: fontSizes.sm ?? 12,
   },
 
-  createAccount: {
-    color: '#14ab3c',
+  loginText: {
+    color: '#18C7C8',
     fontFamily: fonts.semibold,
     fontSize: fontSizes.sm ?? 12,
   },

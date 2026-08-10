@@ -82,6 +82,7 @@ export default function EncontrarDiaristaScreen({
   navigation,
 }: any) {
   const [busca, setBusca] = useState('');
+
   const [diaristas, setDiaristas] = useState<Diarista[]>(
     listaInicialDiaristas
   );
@@ -91,9 +92,8 @@ export default function EncontrarDiaristaScreen({
   const [avaliacaoSelecionada, setAvaliacaoSelecionada] =
     useState('4 estrelas ou mais');
 
-  const [servicosSelecionados, setServicosSelecionados] = useState<
-    string[]
-  >([]);
+  const [servicosSelecionados, setServicosSelecionados] =
+    useState<string[]>([]);
 
   const [distanciaSelecionada, setDistanciaSelecionada] =
     useState('Até 5 km');
@@ -104,10 +104,18 @@ export default function EncontrarDiaristaScreen({
   const [somenteRespostaRapida, setSomenteRespostaRapida] =
     useState(false);
 
-  function abrirPerfil(diarista: Diarista) {
+  function abrirPerfilDiarista(diarista: Diarista) {
     navigation.navigate('PerfilDiarista', {
       diaristaId: diarista.id,
     });
+  }
+
+  function abrirHistorico() {
+    navigation.navigate('HistoricoCliente');
+  }
+
+  function abrirPerfilCliente() {
+    navigation.navigate('PerfilCliente');
   }
 
   function alternarFavorito(id: number) {
@@ -362,8 +370,7 @@ export default function EncontrarDiaristaScreen({
         </Text>
 
         <Text style={styles.filterPanelDescription}>
-          Exiba apenas profissionais que costumam responder
-          rapidamente.
+          Exiba apenas profissionais que respondem rapidamente.
         </Text>
 
         <TouchableOpacity
@@ -444,16 +451,33 @@ export default function EncontrarDiaristaScreen({
               />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.profileButton}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="person"
-                size={21}
-                color="#111111"
-              />
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={abrirHistorico}
+                activeOpacity={0.7}
+                accessibilityLabel="Abrir histórico e favoritos"
+              >
+                <Ionicons
+                  name="clipboard-outline"
+                  size={22}
+                  color="#111111"
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={abrirPerfilCliente}
+                activeOpacity={0.7}
+                accessibilityLabel="Abrir perfil"
+              >
+                <Ionicons
+                  name="person"
+                  size={21}
+                  color="#111111"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <Text style={styles.welcome}>
@@ -567,7 +591,9 @@ export default function EncontrarDiaristaScreen({
               >
                 <TouchableOpacity
                   style={styles.professionalMainContent}
-                  onPress={() => abrirPerfil(diarista)}
+                  onPress={() =>
+                    abrirPerfilDiarista(diarista)
+                  }
                   activeOpacity={0.85}
                 >
                   <View style={styles.avatar}>
@@ -610,9 +636,7 @@ export default function EncontrarDiaristaScreen({
                         color="#18C7C8"
                       />
 
-                      <Text
-                        style={styles.quickResponseText}
-                      >
+                      <Text style={styles.quickResponseText}>
                         Responde rápido
                       </Text>
                     </View>
@@ -625,11 +649,6 @@ export default function EncontrarDiaristaScreen({
                     alternarFavorito(diarista.id)
                   }
                   activeOpacity={0.7}
-                  accessibilityLabel={
-                    diarista.favorito
-                      ? 'Remover dos favoritos'
-                      : 'Adicionar aos favoritos'
-                  }
                 >
                   <Ionicons
                     name={
@@ -640,7 +659,7 @@ export default function EncontrarDiaristaScreen({
                     size={23}
                     color={
                       diarista.favorito
-                        ? '#FF4D4F'
+                        ? '#E0001B'
                         : '#A0A0A0'
                     }
                   />

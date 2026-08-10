@@ -40,13 +40,29 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  profileButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  headerIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+
+    elevation: 2,
   },
 
   welcome: {

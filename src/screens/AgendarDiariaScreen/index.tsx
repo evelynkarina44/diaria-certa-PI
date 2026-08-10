@@ -37,7 +37,7 @@ export default function AgendarDiariaScreen({
   const [observacao, setObservacao] = useState('');
 
   function confirmarAgendamento() {
-    navigation.navigate('Home');
+    navigation.navigate('Pagamento');
   }
 
   return (

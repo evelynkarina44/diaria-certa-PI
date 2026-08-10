@@ -144,9 +144,12 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
     navigation.goBack();
   }
 
-  function handleEnviar() {
-    navigation.navigate('Login');
-  }
+function handleEnviar() {
+  navigation.reset({
+    index: 0,
+    routes: [{ name: 'HomeDiarista' }],
+  });
+}
 
   function alternarServicoIndividual(id: number) {
     setServicosSelecionados((selecionadosAtuais) => {

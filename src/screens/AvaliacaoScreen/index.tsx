@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -12,8 +14,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { avaliacaoService } from '../../services/avaliacaoService';
+import { denunciaService } from '../../services/denunciaService';
+import { getErrorMessage } from '../../services/api';
 
-export default function AvaliacaoScreen({ navigation }: any) {
+export default function AvaliacaoScreen({ navigation, route }: any) {
   const [avaliacao, setAvaliacao] = useState(4);
   const [comentario, setComentario] = useState('');
 
@@ -21,6 +26,9 @@ export default function AvaliacaoScreen({ navigation }: any) {
   const [denuncia, setDenuncia] = useState('');
 
   const [imagens, setImagens] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const agendamentoId = Number(route.params?.agendamentoId);
+  const idUsuarioDenunciado = Number(route.params?.idUsuarioDenunciado);
 
   function selecionarAvaliacao(valor: number) {
     setAvaliacao(valor);
@@ -63,12 +71,46 @@ export default function AvaliacaoScreen({ navigation }: any) {
     );
   }
 
-  function enviarAvaliacao() {
-    navigation.navigate('EncontrarDiarista');
+  async function enviarAvaliacao() {
+    if (!agendamentoId) {
+      Alert.alert('Agendamento ausente', 'Abra a avaliação pelo histórico.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await avaliacaoService.criar({
+        id_agendamento: agendamentoId,
+        nota: avaliacao,
+        comentario: comentario.trim() || null,
+        publica: true,
+        anonima: false,
+      });
+      navigation.navigate('EncontrarDiarista');
+    } catch (error) {
+      Alert.alert('Não foi possível enviar a avaliação', getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function enviarDenuncia() {
-    navigation.navigate('EncontrarDiarista');
+  async function enviarDenuncia() {
+    if (!idUsuarioDenunciado || !denuncia.trim()) {
+      Alert.alert('Dados incompletos', 'Informe a denúncia e abra esta tela por uma diária.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await denunciaService.criar({
+        id_usuario_denunciado: idUsuarioDenunciado,
+        motivo: 'outro',
+        descricao: denuncia.trim(),
+      });
+      navigation.navigate('EncontrarDiarista');
+    } catch (error) {
+      Alert.alert('Não foi possível enviar a denúncia', getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -171,11 +213,16 @@ export default function AvaliacaoScreen({ navigation }: any) {
               <TouchableOpacity
                 style={styles.sendButton}
                 onPress={enviarAvaliacao}
+                disabled={loading}
                 activeOpacity={0.85}
               >
-                <Text style={styles.sendButtonText}>
-                  Enviar
-                </Text>
+                {loading ? (
+                  <ActivityIndicator color={'#FFFFFF'} />
+                ) : (
+                  <Text style={styles.sendButtonText}>
+                    Enviar
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -274,11 +321,16 @@ export default function AvaliacaoScreen({ navigation }: any) {
             <TouchableOpacity
               style={styles.reportSendButton}
               onPress={enviarDenuncia}
+              disabled={loading}
               activeOpacity={0.85}
             >
-              <Text style={styles.sendButtonText}>
-                Enviar
-              </Text>
+              {loading ? (
+                <ActivityIndicator color={'#FFFFFF'} />
+              ) : (
+                <Text style={styles.sendButtonText}>
+                  Enviar
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         )}

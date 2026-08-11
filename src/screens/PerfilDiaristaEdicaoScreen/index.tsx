@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   Alert,
@@ -12,10 +12,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { useAuth } from '../../contexts/GlobalContext';
+import { diaristaService } from '../../services/diaristaService';
+import type { Diarista } from '../../services/types';
 
 export default function PerfilDiaristaEdicaoScreen({
   navigation,
 }: any) {
+  const { logout, user } = useAuth();
+  const [profile, setProfile] = useState<Diarista | null>(null);
+
+  useEffect(() => {
+    const diaristaId = user?.diarista?.[0]?.id_diarista;
+    if (!diaristaId) return;
+    diaristaService
+      .buscarPorId(diaristaId)
+      .then(setProfile)
+      .catch(() => setProfile(null));
+  }, [user]);
   function handleLogout() {
     Alert.alert(
       'Sair da conta',
@@ -28,7 +42,8 @@ export default function PerfilDiaristaEdicaoScreen({
         {
           text: 'Sair',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            await logout();
             navigation.reset({
               index: 0,
               routes: [{ name: 'Home' }],
@@ -91,12 +106,12 @@ export default function PerfilDiaristaEdicaoScreen({
 
             <View style={styles.profileInfo}>
               <Text style={styles.name}>
-                Maria da Silva
+                {user?.nome ?? 'Diarista'}
               </Text>
 
               <View style={styles.ratingRow}>
                 <Text style={styles.ratingNumber}>
-                  5.0
+                  {Number(profile?.avaliacao_media ?? 0).toFixed(1)}
                 </Text>
 
                 <Ionicons
@@ -164,8 +179,7 @@ export default function PerfilDiaristaEdicaoScreen({
 
             <View style={styles.aboutCard}>
               <Text style={styles.aboutText}>
-                Trabalho como diarista há 4 anos, sou
-                organizada e de confiança.
+                {profile?.descricao ?? 'Descrição não informada.'}
               </Text>
             </View>
           </View>

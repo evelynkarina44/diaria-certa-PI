@@ -32,7 +32,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] =
     useState(false);
 
-  const progresso = `${(etapa / 3) * 100}%`;
+  const progresso = `${(etapa / 3) * 100}%` as `${number}%`;
 
   function handleProximo() {
     if (etapa < 3) {

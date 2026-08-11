@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -11,6 +13,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { agendamentoService } from '../../services/agendamentoService';
+import { favoritoService } from '../../services/favoritoService';
+import { getErrorMessage } from '../../services/api';
+import type {
+  Agendamento,
+  Diarista as ApiDiarista,
+  Favorito,
+} from '../../services/types';
 
 type Aba = 'historico' | 'favoritos';
 
@@ -21,66 +31,111 @@ type Diarista = {
   quantidadeAvaliacoes: string;
   distancia: string;
   favorito: boolean;
+  diaristaId?: number;
+  favoritoId?: number;
+  data?: string;
 };
-
-const diaristasIniciais: Diarista[] = [
-  {
-    id: 1,
-    nome: 'Maria da Silva',
-    avaliacao: '4.9',
-    quantidadeAvaliacoes: '128',
-    distancia: '1,2 km de você',
-    favorito: false,
-  },
-  {
-    id: 2,
-    nome: 'Maria da Silva',
-    avaliacao: '4.9',
-    quantidadeAvaliacoes: '128',
-    distancia: '1,2 km de você',
-    favorito: false,
-  },
-  {
-    id: 3,
-    nome: 'Maria da Silva',
-    avaliacao: '4.9',
-    quantidadeAvaliacoes: '128',
-    distancia: '1,2 km de você',
-    favorito: true,
-  },
-  {
-    id: 4,
-    nome: 'Maria da Silva',
-    avaliacao: '4.9',
-    quantidadeAvaliacoes: '128',
-    distancia: '1,2 km de você',
-    favorito: true,
-  },
-];
 
 export default function HistoricoClienteScreen({
   navigation,
 }: any) {
   const [aba, setAba] = useState<Aba>('historico');
 
-  const [diaristas, setDiaristas] =
-    useState<Diarista[]>(diaristasIniciais);
+  const [historico, setHistorico] = useState<Diarista[]>([]);
+  const [favoritos, setFavoritos] = useState<Diarista[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  function alternarFavorito(id: number) {
-    setDiaristas((listaAtual) =>
-      listaAtual.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              favorito: !item.favorito,
-            }
-          : item
-      )
-    );
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
+  function apresentarPerfil(
+    profile: ApiDiarista,
+    favorito?: Favorito,
+  ): Diarista {
+    const endereco = profile.endereco?.[0];
+    return {
+      id: favorito?.id_favorito ?? profile.id_diarista,
+      diaristaId: profile.id_diarista,
+      nome: profile.usuario?.nome ?? 'Diarista',
+      avaliacao: Number(profile.avaliacao_media ?? 0).toFixed(1),
+      quantidadeAvaliacoes: String(profile.avaliacao?.length ?? 0),
+      distancia: endereco
+        ? `${endereco.bairro}, ${endereco.cidade} - ${endereco.estado}`
+        : 'Localização não informada',
+      favorito: Boolean(favorito),
+      favoritoId: favorito?.id_favorito,
+    };
   }
 
-  function abrirPerfil() {
-    navigation.navigate('PerfilDiarista');
+  function apresentarHistorico(
+    appointment: Agendamento,
+    favorites: Favorito[],
+  ): Diarista {
+    const profile = appointment.diarista;
+    const favorite = favorites.find(
+      (item) => item.id_diarista === appointment.id_diarista,
+    );
+    return {
+      id: appointment.id_agendamento,
+      diaristaId: appointment.id_diarista,
+      nome: profile?.usuario?.nome ?? 'Diarista',
+      avaliacao: Number(profile?.avaliacao_media ?? 0).toFixed(1),
+      quantidadeAvaliacoes: '0',
+      distancia: appointment.endereco
+        ? `${appointment.endereco.bairro}, ${appointment.endereco.cidade}`
+        : 'Localização não informada',
+      favorito: Boolean(favorite),
+      favoritoId: favorite?.id_favorito,
+      data: new Date(appointment.data_agendamento).toLocaleDateString(
+        'pt-BR',
+        { day: '2-digit', month: 'long', year: 'numeric' },
+      ),
+    };
+  }
+
+  async function carregarDados() {
+    try {
+      setLoading(true);
+      const [appointments, favoritesResponse] = await Promise.all([
+        agendamentoService.listar({ visao: 'historico', limit: 100 }),
+        favoritoService.listar({ limit: 100 }),
+      ]);
+      setHistorico(
+        appointments.data.map((item) =>
+          apresentarHistorico(item, favoritesResponse.data),
+        ),
+      );
+      setFavoritos(
+        favoritesResponse.data
+          .filter((item) => item.diarista)
+          .map((item) => apresentarPerfil(item.diarista!, item)),
+      );
+    } catch (error) {
+      Alert.alert('Não foi possível carregar o histórico', getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function alternarFavorito(item: Diarista) {
+    if (!item.diaristaId) return;
+    try {
+      if (item.favoritoId) {
+        await favoritoService.remover(item.favoritoId);
+      } else {
+        await favoritoService.criar(item.diaristaId);
+      }
+      await carregarDados();
+    } catch (error) {
+      Alert.alert('Não foi possível atualizar', getErrorMessage(error));
+    }
+  }
+
+  function abrirPerfil(diarista: Diarista) {
+    navigation.navigate('PerfilDiarista', {
+      diaristaId: diarista.diaristaId,
+    });
   }
 
   function renderCard(diarista: Diarista) {
@@ -91,7 +146,7 @@ export default function HistoricoClienteScreen({
       >
         <TouchableOpacity
           style={styles.cardContent}
-          onPress={abrirPerfil}
+          onPress={() => abrirPerfil(diarista)}
           activeOpacity={0.85}
         >
           <View style={styles.avatar}>
@@ -143,7 +198,7 @@ export default function HistoricoClienteScreen({
 
         <TouchableOpacity
           style={styles.favoriteButton}
-          onPress={() => alternarFavorito(diarista.id)}
+          onPress={() => alternarFavorito(diarista)}
           activeOpacity={0.7}
         >
           <Ionicons
@@ -222,29 +277,17 @@ export default function HistoricoClienteScreen({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {loading && <ActivityIndicator color={'#18C7C8'} />}
           {aba === 'historico' ? (
             <>
-              <Text style={styles.dateTitle}>
-                14 de Julho
-              </Text>
-
-              {renderCard(diaristas[0])}
-
-              <Text style={styles.dateTitle}>
-                8 de Julho
-              </Text>
-
-              {renderCard(diaristas[1])}
-
-              <View style={styles.cardGap}>
-                {renderCard(diaristas[2])}
-              </View>
-
-              <Text style={styles.dateTitle}>
-                30 de Junho
-              </Text>
-
-              {renderCard(diaristas[3])}
+              {historico.map((item) => (
+                <React.Fragment key={item.id}>
+                  <Text style={styles.dateTitle}>
+                    {item.data}
+                  </Text>
+                  {renderCard(item)}
+                </React.Fragment>
+              ))}
             </>
           ) : (
             <>
@@ -253,13 +296,10 @@ export default function HistoricoClienteScreen({
               </Text>
 
               <View style={styles.favoritesList}>
-                {diaristas
-                  .filter((item) => item.favorito)
-                  .map((item) => renderCard(item))}
+                {favoritos.map((item) => renderCard(item))}
               </View>
 
-              {diaristas.filter((item) => item.favorito)
-                .length === 0 && (
+              {favoritos.length === 0 && (
                 <View style={styles.emptyState}>
                   <Ionicons
                     name="heart-outline"

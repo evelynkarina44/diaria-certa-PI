@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   Alert,
@@ -12,8 +12,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { useAuth } from '../../contexts/GlobalContext';
+import { enderecoService } from '../../services/enderecoService';
+import type { Endereco } from '../../services/types';
 
 export default function PerfilClienteScreen({ navigation }: any) {
+  const { logout, user } = useAuth();
+  const [endereco, setEndereco] = useState<Endereco | null>(null);
+
+  useEffect(() => {
+    enderecoService
+      .listar({ limit: 1 })
+      .then((response) => setEndereco(response.data[0] ?? null))
+      .catch(() => setEndereco(null));
+  }, []);
   function handleLogout() {
     Alert.alert(
       'Sair da conta',
@@ -26,7 +38,8 @@ export default function PerfilClienteScreen({ navigation }: any) {
         {
           text: 'Sair',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            await logout();
             navigation.reset({
               index: 0,
               routes: [
@@ -74,7 +87,7 @@ export default function PerfilClienteScreen({ navigation }: any) {
           <View style={styles.profileInfo}>
             <View style={styles.nameRow}>
               <Text style={styles.name}>
-                Pollyana F. Lima
+                {user?.nome ?? 'Cliente'}
               </Text>
 
               <Ionicons
@@ -133,7 +146,9 @@ export default function PerfilClienteScreen({ navigation }: any) {
             />
 
             <Text style={styles.address}>
-              Rua Pradopolys 483 - Ariston
+              {endereco
+                ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}`
+                : 'Endereço não informado'}
             </Text>
           </View>
         </View>

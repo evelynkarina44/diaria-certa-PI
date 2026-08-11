@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -12,6 +14,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { useAuth } from '../../contexts/GlobalContext';
+import { getErrorMessage } from '../../services/api';
+import { diaristaService } from '../../services/diaristaService';
+import { favoritoService } from '../../services/favoritoService';
+import { servicoService } from '../../services/servicoService';
+import type {
+  Diarista as ApiDiarista,
+  Favorito,
+  Servico,
+} from '../../services/types';
 
 type Diarista = {
   id: number;
@@ -20,6 +32,8 @@ type Diarista = {
   quantidadeAvaliacoes: string;
   distancia: string;
   favorito: boolean;
+  favoritoId?: number;
+  respostaRapida?: boolean;
 };
 
 const filtros = [
@@ -28,13 +42,6 @@ const filtros = [
   'Distância',
   'Preço',
   'Responde rápido',
-];
-
-const opcoesServicos = [
-  'Limpeza geral',
-  'Limpeza pesada',
-  'Passar roupas',
-  'Cozinha',
 ];
 
 const opcoesDistancia = [
@@ -51,41 +58,16 @@ const opcoesPreco = [
   'Acima de R$ 200',
 ];
 
-const listaInicialDiaristas: Diarista[] = [
-  {
-    id: 1,
-    nome: 'Maria da Silva',
-    avaliacao: '4.9',
-    quantidadeAvaliacoes: '128',
-    distancia: '1,2 km de você',
-    favorito: false,
-  },
-  {
-    id: 2,
-    nome: 'Ana Oliveira',
-    avaliacao: '4.8',
-    quantidadeAvaliacoes: '94',
-    distancia: '1,7 km de você',
-    favorito: false,
-  },
-  {
-    id: 3,
-    nome: 'Juliana Santos',
-    avaliacao: '4.7',
-    quantidadeAvaliacoes: '76',
-    distancia: '2,1 km de você',
-    favorito: false,
-  },
-];
-
 export default function EncontrarDiaristaScreen({
   navigation,
 }: any) {
   const [busca, setBusca] = useState('');
 
-  const [diaristas, setDiaristas] = useState<Diarista[]>(
-    listaInicialDiaristas
-  );
+  const [diaristas, setDiaristas] = useState<Diarista[]>([]);
+  const [catalogoServicos, setCatalogoServicos] = useState<Servico[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState('');
+  const { user } = useAuth();
 
   const [filtroAberto, setFiltroAberto] = useState('');
 
@@ -104,6 +86,104 @@ export default function EncontrarDiaristaScreen({
   const [somenteRespostaRapida, setSomenteRespostaRapida] =
     useState(false);
 
+  useEffect(() => {
+    servicoService
+      .listar()
+      .then(setCatalogoServicos)
+      .catch(() => setCatalogoServicos([]));
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      carregarDiaristas();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [
+    busca,
+    avaliacaoSelecionada,
+    precoSelecionado,
+    servicosSelecionados,
+    somenteRespostaRapida,
+    user?.id_usuario,
+    catalogoServicos,
+  ]);
+
+  function avaliacaoMinima() {
+    if (avaliacaoSelecionada.startsWith('5')) return 5;
+    if (avaliacaoSelecionada.startsWith('4')) return 4;
+    return 3;
+  }
+
+  function faixaPreco() {
+    if (precoSelecionado.includes('Até R$ 100')) {
+      return { preco_max: 100 };
+    }
+    if (precoSelecionado.includes('150 a R$ 200')) {
+      return { preco_min: 150, preco_max: 200 };
+    }
+    if (precoSelecionado.includes('Acima')) {
+      return { preco_min: 200 };
+    }
+    return { preco_min: 100, preco_max: 150 };
+  }
+
+  function apresentarDiarista(
+    profile: ApiDiarista,
+    favoritos: Favorito[],
+  ): Diarista {
+    const endereco = profile.endereco?.[0];
+    const favorito = favoritos.find(
+      (item) => item.id_diarista === profile.id_diarista,
+    );
+    return {
+      id: profile.id_diarista,
+      nome: profile.usuario?.nome ?? 'Diarista',
+      avaliacao: Number(profile.avaliacao_media ?? 0).toFixed(1),
+      quantidadeAvaliacoes: String(profile.avaliacao?.length ?? 0),
+      distancia: endereco
+        ? `${endereco.bairro}, ${endereco.cidade} - ${endereco.estado}`
+        : 'Localização não informada',
+      favorito: Boolean(favorito),
+      favoritoId: favorito?.id_favorito,
+      respostaRapida: Boolean(profile.frequencia_resposta),
+    };
+  }
+
+  async function carregarDiaristas() {
+    try {
+      setLoading(true);
+      setErro('');
+      const servicoSelecionado = catalogoServicos.find(
+        (item) => item.nome_servico === servicosSelecionados[0],
+      );
+      const [response, favoritosResponse] = await Promise.all([
+        diaristaService.listar({
+          nome: busca.trim() || undefined,
+          avaliacao_min: avaliacaoMinima(),
+          ...faixaPreco(),
+          id_servico: servicoSelecionado?.id_servico,
+        }),
+        user?.cliente?.length
+          ? favoritoService.listar({ limit: 100 })
+          : Promise.resolve({ data: [] as Favorito[] }),
+      ]);
+      setDiaristas(
+        response.data
+          .map((item) =>
+            apresentarDiarista(item, favoritosResponse.data),
+          )
+          .filter(
+            (item) => !somenteRespostaRapida || item.respostaRapida,
+          ),
+      );
+    } catch (error) {
+      setErro(getErrorMessage(error));
+      setDiaristas([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function abrirPerfilDiarista(diarista: Diarista) {
     navigation.navigate('PerfilDiarista', {
       diaristaId: diarista.id,
@@ -118,17 +198,23 @@ export default function EncontrarDiaristaScreen({
     navigation.navigate('PerfilCliente');
   }
 
-  function alternarFavorito(id: number) {
-    setDiaristas((listaAtual) =>
-      listaAtual.map((diarista) =>
-        diarista.id === id
-          ? {
-              ...diarista,
-              favorito: !diarista.favorito,
-            }
-          : diarista
-      )
-    );
+  async function alternarFavorito(id: number) {
+    if (!user?.cliente?.length) {
+      Alert.alert('Perfil necessário', 'Entre com um perfil de cliente.');
+      return;
+    }
+    const diarista = diaristas.find((item) => item.id === id);
+    if (!diarista) return;
+    try {
+      if (diarista.favorito && diarista.favoritoId) {
+        await favoritoService.remover(diarista.favoritoId);
+      } else {
+        await favoritoService.criar(id);
+      }
+      await carregarDiaristas();
+    } catch (error) {
+      Alert.alert('Não foi possível atualizar', getErrorMessage(error));
+    }
   }
 
   function alternarFiltro(filtro: string) {
@@ -218,7 +304,7 @@ export default function EncontrarDiaristaScreen({
         </Text>
 
         <View style={styles.checkboxGrid}>
-          {opcoesServicos.map((servico) => {
+          {catalogoServicos.map((item) => item.nome_servico).map((servico) => {
             const selecionado =
               servicosSelecionados.includes(servico);
 
@@ -584,6 +670,15 @@ export default function EncontrarDiaristaScreen({
           </Text>
 
           <View style={styles.list}>
+            {loading && <ActivityIndicator color={'#18C7C8'} />}
+            {!loading && Boolean(erro) && (
+              <Text style={styles.distance}>{erro}</Text>
+            )}
+            {!loading && !erro && diaristas.length === 0 && (
+              <Text style={styles.distance}>
+                Nenhuma diarista encontrada com os filtros informados.
+              </Text>
+            )}
             {diaristas.map((diarista) => (
               <View
                 key={diarista.id}

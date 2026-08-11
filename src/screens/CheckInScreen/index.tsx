@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -11,15 +13,32 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { checkinCheckoutService } from '../../services/checkinCheckoutService';
+import { getErrorMessage } from '../../services/api';
 
 type FormaPagamento = 'pix' | 'cartao' | 'nova';
 
-export default function CheckInScreen({ navigation }: any) {
+export default function CheckInScreen({ navigation, route }: any) {
   const [formaPagamento, setFormaPagamento] =
     useState<FormaPagamento>('pix');
+  const [loading, setLoading] = useState(false);
+  const agendamentoId = Number(route.params?.agendamentoId);
 
-  function confirmarCheckIn() {
-    navigation.navigate('Avaliacao');
+  async function confirmarCheckIn() {
+    if (!agendamentoId) {
+      Alert.alert('Agendamento ausente', 'Abra o check-in a partir de uma diária.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await checkinCheckoutService.confirmarPagamento(agendamentoId);
+      Alert.alert('Check-in confirmado', 'O serviço foi iniciado.');
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Não foi possível confirmar', getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -223,11 +242,16 @@ export default function CheckInScreen({ navigation }: any) {
           <TouchableOpacity
             style={styles.checkInButton}
             onPress={confirmarCheckIn}
+            disabled={loading}
             activeOpacity={0.85}
           >
-            <Text style={styles.checkInButtonText}>
-              Confirmar Check In
-            </Text>
+            {loading ? (
+              <ActivityIndicator color={'#FFFFFF'} />
+            ) : (
+              <Text style={styles.checkInButtonText}>
+                Confirmar Check In
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>

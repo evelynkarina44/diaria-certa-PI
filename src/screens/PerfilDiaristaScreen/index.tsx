@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -11,17 +13,40 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
-
-const servicos = [
-  'Limpeza Geral',
-  'Passar Roupas',
-  'Limpeza Pesada',
-  'Cozinha',
-];
+import { diaristaService } from '../../services/diaristaService';
+import { getErrorMessage } from '../../services/api';
+import type { Diarista } from '../../services/types';
 
 export default function PerfilDiaristaScreen({
   navigation,
+  route,
 }: any) {
+  const [profile, setProfile] = useState<Diarista | null>(null);
+  const [loading, setLoading] = useState(true);
+  const diaristaId = Number(route.params?.diaristaId);
+
+  useEffect(() => {
+    if (!diaristaId) {
+      setLoading(false);
+      return;
+    }
+    diaristaService
+      .buscarPorId(diaristaId)
+      .then(setProfile)
+      .catch((error) =>
+        Alert.alert('Não foi possível carregar o perfil', getErrorMessage(error)),
+      )
+      .finally(() => setLoading(false));
+  }, [diaristaId]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ActivityIndicator color={'#18C7C8'} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -54,12 +79,12 @@ export default function PerfilDiaristaScreen({
 
         <View style={styles.contentCard}>
           <Text style={styles.name}>
-            Maria da Silva
+            {profile?.usuario?.nome ?? 'Diarista'}
           </Text>
 
           <View style={styles.ratingRow}>
             <Text style={styles.ratingValue}>
-              4.9
+              {Number(profile?.avaliacao_media ?? 0).toFixed(1)}
             </Text>
 
             {[1, 2, 3, 4, 5].map((item) => (
@@ -72,7 +97,7 @@ export default function PerfilDiaristaScreen({
             ))}
 
             <Text style={styles.ratingCount}>
-              (128 avaliações)
+              ({profile?.avaliacao?.length ?? 0} avaliações)
             </Text>
           </View>
 
@@ -81,8 +106,7 @@ export default function PerfilDiaristaScreen({
           </Text>
 
           <Text style={styles.aboutText}>
-            Trabalho como diarista há 4 anos, sou organizada e
-            de confiança.
+            {profile?.descricao ?? 'Descrição não informada.'}
           </Text>
 
           <Text style={styles.sectionTitle}>
@@ -90,13 +114,13 @@ export default function PerfilDiaristaScreen({
           </Text>
 
           <View style={styles.servicesGrid}>
-            {servicos.map((servico) => (
+            {(profile?.diarista_servico ?? []).map((item) => (
               <View
-                key={servico}
+                key={item.id_diarista_servico}
                 style={styles.serviceButton}
               >
                 <Text style={styles.serviceText}>
-                  {servico}
+                  {item.servico?.nome_servico ?? `Serviço #${item.id_servico}`}
                 </Text>
               </View>
             ))}
@@ -104,7 +128,7 @@ export default function PerfilDiaristaScreen({
 
           <TouchableOpacity
   style={styles.scheduleButton}
-  onPress={() => navigation.navigate('AgendarDiaria')}
+  onPress={() => navigation.navigate('AgendarDiaria', { diaristaId })}
   activeOpacity={0.85}
 >
   <Text style={styles.scheduleButtonText}>

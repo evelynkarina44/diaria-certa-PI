@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   Text,
@@ -12,6 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { agendamentoService } from '../../services/agendamentoService';
+import { getErrorMessage } from '../../services/api';
+import type { Agendamento } from '../../services/types';
 
 type Solicitacao = {
   id: number;
@@ -21,23 +25,6 @@ type Solicitacao = {
   data: string;
 };
 
-const solicitacoesIniciais: Solicitacao[] = [
-  {
-    id: 1,
-    nome: 'Maria da Silva',
-    avaliacao: '5.0',
-    endereco: 'Rua Pradopolys 483 - Ariston',
-    data: '15/05',
-  },
-  {
-    id: 2,
-    nome: 'Italo Monteiro',
-    avaliacao: '5.0',
-    endereco: 'Rua Pradopolys 483 - Ariston',
-    data: '30/05',
-  },
-];
-
 export default function SolicitacoesDiaristaScreen({
   navigation,
 }: any) {
@@ -45,25 +32,65 @@ export default function SolicitacoesDiaristaScreen({
     'solicitacoes'
   );
 
-  const [solicitacoes, setSolicitacoes] = useState(
-    solicitacoesIniciais
-  );
+  const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  function aceitarSolicitacao(id: number) {
-    setSolicitacoes((listaAtual) =>
-      listaAtual.filter((item) => item.id !== id)
-    );
+  useEffect(() => {
+    carregarSolicitacoes();
+  }, []);
 
-    Alert.alert(
-      'Solicitação aceita',
-      'A diária foi adicionada à sua agenda.'
-    );
+  function apresentarSolicitacao(item: Agendamento): Solicitacao {
+    const endereco = item.endereco;
+    return {
+      id: item.id_agendamento,
+      nome: item.cliente?.usuario?.nome ?? 'Cliente',
+      avaliacao: '-',
+      endereco: endereco
+        ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}`
+        : 'Endereço não informado',
+      data: new Date(item.data_agendamento).toLocaleDateString('pt-BR'),
+    };
   }
 
-  function negarSolicitacao(id: number) {
-    setSolicitacoes((listaAtual) =>
-      listaAtual.filter((item) => item.id !== id)
-    );
+  async function carregarSolicitacoes() {
+    try {
+      setLoading(true);
+      const response = await agendamentoService.listar({
+        visao: 'solicitacoes',
+        limit: 100,
+      });
+      setSolicitacoes(response.data.map(apresentarSolicitacao));
+    } catch (error) {
+      Alert.alert(
+        'Não foi possível carregar as solicitações',
+        getErrorMessage(error),
+      );
+      setSolicitacoes([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function aceitarSolicitacao(id: number) {
+    try {
+      await agendamentoService.aceitar(id);
+      await carregarSolicitacoes();
+      Alert.alert(
+        'Solicitação aceita',
+        'A diária foi adicionada à sua agenda.',
+      );
+    } catch (error) {
+      Alert.alert('Não foi possível aceitar', getErrorMessage(error));
+    }
+  }
+
+  async function negarSolicitacao(id: number) {
+    try {
+      await agendamentoService.recusar(id);
+      await carregarSolicitacoes();
+    } catch (error) {
+      Alert.alert('Não foi possível recusar', getErrorMessage(error));
+    }
   }
 
   function irParaAgenda() {
@@ -159,7 +186,9 @@ export default function SolicitacoesDiaristaScreen({
             Solicitações disponíveis
           </Text>
 
-          {solicitacoes.length === 0 ? (
+          {loading ? (
+            <ActivityIndicator color={'#FF6B2C'} />
+          ) : solicitacoes.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons
                 name="checkmark-circle-outline"

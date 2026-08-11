@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -11,37 +13,65 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { agendamentoService } from '../../services/agendamentoService';
+import { getErrorMessage } from '../../services/api';
+import type { Agendamento } from '../../services/types';
 
-const historico = [
-  {
-    data: '14 de Julho',
-    registros: [
-      {
-        id: 1,
-        nome: 'Maria da Silva',
-        avaliacao: '5.0',
-        endereco: 'Rua Pradopolys 483 - Ariston',
-        status: 'Concluído',
-      },
-    ],
-  },
-  {
-    data: '8 de Julho',
-    registros: [
-      {
-        id: 2,
-        nome: 'Italo Monteiro',
-        avaliacao: '5.0',
-        endereco: 'Rua Pradopolys 483 - Ariston',
-        status: 'Reembolsado',
-      },
-    ],
-  },
-];
+type RegistroHistorico = {
+  id: number;
+  nome: string;
+  avaliacao: string;
+  endereco: string;
+  status: string;
+};
+
+type GrupoHistorico = {
+  data: string;
+  registros: RegistroHistorico[];
+};
 
 export default function HistoricoDiaristaScreen({
   navigation,
 }: any) {
+  const [historicoReal, setHistoricoReal] = useState<GrupoHistorico[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    agendamentoService
+      .listar({ visao: 'historico', limit: 100 })
+      .then((response) => {
+        const groups = new Map<string, RegistroHistorico[]>();
+        response.data.forEach((item: Agendamento) => {
+          const data = new Date(item.data_agendamento).toLocaleDateString(
+            'pt-BR',
+            { day: '2-digit', month: 'long', year: 'numeric' },
+          );
+          const endereco = item.endereco;
+          const registros = groups.get(data) ?? [];
+          registros.push({
+            id: item.id_agendamento,
+            nome: item.cliente?.usuario?.nome ?? 'Cliente',
+            avaliacao: '-',
+            endereco: endereco
+              ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}`
+              : 'Endereço não informado',
+            status: item.status === 'Concluido' ? 'Concluído' : item.status,
+          });
+          groups.set(data, registros);
+        });
+        setHistoricoReal(
+          [...groups.entries()].map(([data, registros]) => ({
+            data,
+            registros,
+          })),
+        );
+      })
+      .catch((error) =>
+        Alert.alert('Não foi possível carregar o histórico', getErrorMessage(error)),
+      )
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -70,7 +100,11 @@ export default function HistoricoDiaristaScreen({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {historico.map((grupo) => (
+          {loading && <ActivityIndicator color={'#FF6B2C'} />}
+          {!loading && historicoReal.length === 0 && (
+            <Text style={styles.smallLabel}>Nenhum registro encontrado.</Text>
+          )}
+          {historicoReal.map((grupo) => (
             <View
               key={grupo.data}
               style={styles.historyGroup}

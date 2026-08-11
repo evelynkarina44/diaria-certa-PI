@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -11,12 +13,46 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { agendamentoService } from '../../services/agendamentoService';
+import { checkinCheckoutService } from '../../services/checkinCheckoutService';
+import { getErrorMessage } from '../../services/api';
+import type { Agendamento } from '../../services/types';
 
 export default function CheckInDiaristaScreen({
   navigation,
+  route,
 }: any) {
-  function solicitarCheckIn() {
-    navigation.goBack();
+  const agendamentoId = Number(route.params?.agendamentoId);
+  const [agendamento, setAgendamento] = useState<Agendamento | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!agendamentoId) {
+      setLoading(false);
+      return;
+    }
+    agendamentoService
+      .buscarPorId(agendamentoId)
+      .then(setAgendamento)
+      .catch((error) =>
+        Alert.alert('Não foi possível carregar a diária', getErrorMessage(error)),
+      )
+      .finally(() => setLoading(false));
+  }, [agendamentoId]);
+
+  async function solicitarCheckIn() {
+    if (!agendamentoId) return;
+    try {
+      setSending(true);
+      await checkinCheckoutService.solicitar(agendamentoId);
+      Alert.alert('Check-in solicitado', 'O cliente já pode confirmar o pagamento.');
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Não foi possível solicitar o check-in', getErrorMessage(error));
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -28,6 +64,7 @@ export default function CheckInDiaristaScreen({
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        {loading && <ActivityIndicator color={'#FF6B2C'} />}
         <Text style={styles.title}>
           Solicitar Check In
         </Text>
@@ -46,7 +83,7 @@ export default function CheckInDiaristaScreen({
           <View style={styles.profileInfo}>
             <View style={styles.nameRow}>
               <Text style={styles.name}>
-                Pollyanna Ferreira
+                {agendamento?.cliente?.usuario?.nome ?? 'Cliente'}
               </Text>
 
               <Ionicons
@@ -79,7 +116,8 @@ export default function CheckInDiaristaScreen({
 
         <View style={styles.serviceBadge}>
           <Text style={styles.serviceText}>
-            Limpeza Geral
+            {agendamento?.agendamento_servico?.[0]?.diarista_servico?.servico?.nome_servico
+              ?? 'Serviço'}
           </Text>
         </View>
 
@@ -104,7 +142,9 @@ export default function CheckInDiaristaScreen({
             />
 
             <Text style={styles.address}>
-              Rua Pradopolys 483 - Ariston
+              {agendamento?.endereco
+                ? `${agendamento.endereco.logradouro} ${agendamento.endereco.numero} - ${agendamento.endereco.bairro}`
+                : 'Endereço não informado'}
             </Text>
           </View>
         </View>
@@ -139,11 +179,16 @@ export default function CheckInDiaristaScreen({
         <TouchableOpacity
           style={styles.checkInButton}
           onPress={solicitarCheckIn}
+          disabled={sending || !agendamentoId}
           activeOpacity={0.85}
         >
-          <Text style={styles.checkInButtonText}>
-            Solicitar Check In
-          </Text>
+          {sending ? (
+            <ActivityIndicator color={'#FFFFFF'} />
+          ) : (
+            <Text style={styles.checkInButtonText}>
+              Solicitar Check In
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

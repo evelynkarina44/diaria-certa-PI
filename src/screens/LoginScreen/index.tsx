@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,14 +16,38 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { useAuth } from '../../contexts/GlobalContext';
+import { getErrorMessage } from '../../services/api';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
-  function handleLogin() {
-    navigation.navigate('EncontrarDiarista');
+  async function handleLogin() {
+    if (!email.trim() || !password) {
+      Alert.alert('Dados incompletos', 'Informe seu e-mail e sua senha.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const user = await login(email.trim(), password);
+      const isDiarista = Boolean(user.diarista?.length);
+      const isCliente = Boolean(user.cliente?.length);
+      navigation.reset({
+        index: 0,
+        routes: [
+          { name: isDiarista && !isCliente ? 'HomeDiarista' : 'EncontrarDiarista' },
+        ],
+      });
+    } catch (error) {
+      Alert.alert('Não foi possível entrar', getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleForgotPassword() {
@@ -141,11 +167,16 @@ export default function LoginScreen({ navigation }: any) {
             <TouchableOpacity
               style={styles.loginButton}
               onPress={handleLogin}
+              disabled={loading}
               activeOpacity={0.85}
             >
-              <Text style={styles.loginButtonText}>
-                Entrar
-              </Text>
+              {loading ? (
+                <ActivityIndicator color={'#FFFFFF'} />
+              ) : (
+                <Text style={styles.loginButtonText}>
+                  Entrar
+                </Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.footer}>

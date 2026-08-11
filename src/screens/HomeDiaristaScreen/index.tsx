@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   Text,
@@ -12,11 +13,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { useAuth } from '../../contexts/GlobalContext';
+import { agendamentoService } from '../../services/agendamentoService';
+import { getErrorMessage } from '../../services/api';
+import type { Agendamento } from '../../services/types';
 
 export default function HomeDiaristaScreen({ navigation }: any) {
   const [aba, setAba] = useState<'agenda' | 'solicitacoes'>(
     'agenda'
   );
+  const [proximas, setProximas] = useState<Agendamento[]>([]);
+  const [loadingAgenda, setLoadingAgenda] = useState(true);
+  const { user, logout } = useAuth();
+
+  useEffect(() => {
+    agendamentoService
+      .listar({ visao: 'futuros', limit: 100 })
+      .then((response) => setProximas(response.data))
+      .catch((error) =>
+        Alert.alert('Não foi possível carregar a agenda', getErrorMessage(error)),
+      )
+      .finally(() => setLoadingAgenda(false));
+  }, []);
 
   function handleLogout() {
     Alert.alert(
@@ -30,7 +48,8 @@ export default function HomeDiaristaScreen({ navigation }: any) {
         {
           text: 'Sair',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            await logout();
             navigation.reset({
               index: 0,
               routes: [{ name: 'Home' }],
@@ -78,7 +97,7 @@ export default function HomeDiaristaScreen({ navigation }: any) {
 </View>
 
         <Text style={styles.welcome}>
-          Olá, Maria!
+          Olá, {user?.nome?.split(' ')[0] ?? 'diarista'}!
         </Text>
 
         <Text style={styles.subtitle}>
@@ -110,7 +129,10 @@ export default function HomeDiaristaScreen({ navigation }: any) {
               styles.tab,
               aba === 'solicitacoes' && styles.tabActive,
             ]}
-            onPress={() => setAba('solicitacoes')}
+            onPress={() => {
+              setAba('solicitacoes');
+              navigation.navigate('SolicitacoesDiarista');
+            }}
           >
             <Text
               style={[
@@ -241,10 +263,20 @@ export default function HomeDiaristaScreen({ navigation }: any) {
                 Próximas diárias
               </Text>
 
+              {loadingAgenda && <ActivityIndicator color={'#FF6B2C'} />}
+              {!loadingAgenda && proximas.length === 0 && (
+                <Text style={styles.smallText}>
+                  Nenhuma diária futura encontrada.
+                </Text>
+              )}
+              {proximas.map((agendamento) => (
               <TouchableOpacity
+                key={agendamento.id_agendamento}
                 style={styles.dailyCard}
                 onPress={() =>
-                  navigation.navigate('CheckInDiarista')
+                  navigation.navigate('CheckInDiarista', {
+                    agendamentoId: agendamento.id_agendamento,
+                  })
                 }
                 activeOpacity={0.85}
               >
@@ -258,7 +290,7 @@ export default function HomeDiaristaScreen({ navigation }: any) {
 
                 <View style={styles.dailyInfo}>
                   <Text style={styles.clientName}>
-                    Pedro Karina
+                    {agendamento.cliente?.usuario?.nome ?? 'Cliente'}
                   </Text>
 
                   <View style={styles.ratingRow}>
@@ -285,7 +317,9 @@ export default function HomeDiaristaScreen({ navigation }: any) {
                     />
 
                     <Text style={styles.address}>
-                      Rua Pradopolys 483 - Ariston
+                      {agendamento.endereco
+                        ? `${agendamento.endereco.logradouro} ${agendamento.endereco.numero} - ${agendamento.endereco.bairro}`
+                        : 'Endereço não informado'}
                     </Text>
                   </View>
 
@@ -297,11 +331,12 @@ export default function HomeDiaristaScreen({ navigation }: any) {
                     />
 
                     <Text style={styles.statusText}>
-                      Marcado
+                      {agendamento.status}
                     </Text>
                   </View>
                 </View>
               </TouchableOpacity>
+              ))}
             </>
           ) : (
             <View style={styles.emptyState}>

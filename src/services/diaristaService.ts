@@ -24,7 +24,7 @@ export type DiaristaSearchQuery = {
 const crud = createCrudService<
   Diarista,
   DiaristaCreate,
-  Partial<Omit<DiaristaCreate, 'id_usuario'>>,
+  Partial<Omit<DiaristaCreate, 'id_usuario' | 'endereco'>>,
   PaginatedResponse<Diarista>
 >('/api/diarista');
 

@@ -195,9 +195,4 @@ avatar: {
   gap: 8,
 },
 
-logoutButtonText: {
-  color: '#FF3338',
-  fontFamily: fonts.semibold,
-  fontSize: fontSizes.md ?? 15,
-},
 });

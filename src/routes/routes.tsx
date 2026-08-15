@@ -28,6 +28,7 @@ import HistoricoDiaristaScreen from '../screens/HistoricoDiaristaScreen';
 
 import PerfilClienteScreen from '../screens/PerfilClienteScreen';
 import HistoricoClienteScreen from '../screens/HistoricoClienteScreen';
+import SelecionarPerfilScreen from '../screens/SelecionarPerfilScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -47,6 +48,11 @@ export function Routes() {
       <Stack.Screen
         name="Login"
         component={LoginScreen}
+      />
+
+      <Stack.Screen
+        name="SelecionarPerfil"
+        component={SelecionarPerfilScreen}
       />
 
       <Stack.Screen

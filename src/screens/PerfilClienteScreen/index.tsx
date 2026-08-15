@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
 import {
-  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -15,9 +14,11 @@ import { styles } from './styles';
 import { useAuth } from '../../contexts/GlobalContext';
 import { enderecoService } from '../../services/enderecoService';
 import type { Endereco } from '../../services/types';
+import { LogoutButton } from '../../components/logout-button';
+import { ProfileAccessActions } from '../../components/profile-access-actions';
 
 export default function PerfilClienteScreen({ navigation }: any) {
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const [endereco, setEndereco] = useState<Endereco | null>(null);
 
   useEffect(() => {
@@ -26,34 +27,6 @@ export default function PerfilClienteScreen({ navigation }: any) {
       .then((response) => setEndereco(response.data[0] ?? null))
       .catch(() => setEndereco(null));
   }, []);
-  function handleLogout() {
-    Alert.alert(
-      'Sair da conta',
-      'Deseja realmente sair da sua conta?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            navigation.reset({
-              index: 0,
-              routes: [
-                {
-                  name: 'Home',
-                },
-              ],
-            });
-          },
-        },
-      ]
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -180,21 +153,11 @@ export default function PerfilClienteScreen({ navigation }: any) {
           ))}
         </ScrollView>
 
-        <TouchableOpacity
+        <ProfileAccessActions navigation={navigation} />
+        <LogoutButton
+          navigation={navigation}
           style={styles.logoutButton}
-          onPress={handleLogout}
-          activeOpacity={0.85}
-        >
-          <Ionicons
-            name="log-out-outline"
-            size={21}
-            color="#FF3338"
-          />
-
-          <Text style={styles.logoutButtonText}>
-            Sair da conta
-          </Text>
-        </TouchableOpacity>
+        />
       </ScrollView>
     </SafeAreaView>
   );

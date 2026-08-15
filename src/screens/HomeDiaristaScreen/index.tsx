@@ -17,6 +17,7 @@ import { useAuth } from '../../contexts/GlobalContext';
 import { agendamentoService } from '../../services/agendamentoService';
 import { getErrorMessage } from '../../services/api';
 import type { Agendamento } from '../../services/types';
+import { LogoutButton } from '../../components/logout-button';
 
 export default function HomeDiaristaScreen({ navigation }: any) {
   const [aba, setAba] = useState<'agenda' | 'solicitacoes'>(
@@ -24,7 +25,7 @@ export default function HomeDiaristaScreen({ navigation }: any) {
   );
   const [proximas, setProximas] = useState<Agendamento[]>([]);
   const [loadingAgenda, setLoadingAgenda] = useState(true);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     agendamentoService
@@ -35,30 +36,6 @@ export default function HomeDiaristaScreen({ navigation }: any) {
       )
       .finally(() => setLoadingAgenda(false));
   }, []);
-
-  function handleLogout() {
-    Alert.alert(
-      'Sair da conta',
-      'Deseja realmente sair da sua conta?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Home' }],
-            });
-          },
-        },
-      ]
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -94,6 +71,8 @@ export default function HomeDiaristaScreen({ navigation }: any) {
       color="#FF6B2C"
     />
   </TouchableOpacity>
+
+  <LogoutButton navigation={navigation} variant='icon' />
 </View>
 
         <Text style={styles.welcome}>

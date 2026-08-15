@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -17,34 +16,58 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
 import { useAuth } from '../../contexts/GlobalContext';
-import { getErrorMessage } from '../../services/api';
+import { ApiError, getErrorMessage } from '../../services/api';
+
+type FieldErrors = {
+  email?: string;
+  password?: string;
+};
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [loginError, setLoginError] = useState('');
   const { login } = useAuth();
 
   async function handleLogin() {
-    if (!email.trim() || !password) {
-      Alert.alert('Dados incompletos', 'Informe seu e-mail e sua senha.');
-      return;
+    if (loading) return;
+
+    const errors: FieldErrors = {};
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      errors.email = 'Informe seu e-mail.';
+    } else if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      errors.email = 'Digite um e-mail válido.';
     }
+    if (!password) errors.password = 'Informe sua senha.';
+
+    setFieldErrors(errors);
+    setLoginError('');
+    if (Object.keys(errors).length) return;
 
     try {
       setLoading(true);
-      const user = await login(email.trim(), password);
-      const isDiarista = Boolean(user.diarista?.length);
-      const isCliente = Boolean(user.cliente?.length);
+      const user = await login(normalizedEmail, password);
+      const destination = user.requiresProfileSelection
+        ? 'SelecionarPerfil'
+        : user.activeProfile === 'DIARISTA'
+          ? 'HomeDiarista'
+          : 'EncontrarDiarista';
       navigation.reset({
         index: 0,
         routes: [
-          { name: isDiarista && !isCliente ? 'HomeDiarista' : 'EncontrarDiarista' },
+          { name: destination },
         ],
       });
     } catch (error) {
-      Alert.alert('Não foi possível entrar', getErrorMessage(error));
+      setLoginError(
+        error instanceof ApiError && error.status === 401
+          ? 'E-mail ou senha inválidos. Confira seus dados e tente novamente.'
+          : getErrorMessage(error),
+      );
     } finally {
       setLoading(false);
     }
@@ -99,17 +122,24 @@ export default function LoginScreen({ navigation }: any) {
                 </Text>
 
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, fieldErrors.email && styles.inputError]}
                   placeholder="seu@email.com"
                   placeholderTextColor="#9B9B9B"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(value) => {
+                    setEmail(value);
+                    setFieldErrors((current) => ({ ...current, email: undefined }));
+                    setLoginError('');
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoComplete="email"
                   returnKeyType="next"
                 />
+                {fieldErrors.email && (
+                  <Text style={styles.fieldErrorText}>{fieldErrors.email}</Text>
+                )}
               </View>
 
               <View style={styles.fieldContainer}>
@@ -117,14 +147,23 @@ export default function LoginScreen({ navigation }: any) {
                   Senha
                 </Text>
 
-                <View style={styles.passwordContainer}>
+                <View
+                  style={[
+                    styles.passwordContainer,
+                    fieldErrors.password && styles.inputError,
+                  ]}
+                >
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="************"
                     placeholderTextColor="#9B9B9B"
                     secureTextEntry={!showPassword}
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(value) => {
+                      setPassword(value);
+                      setFieldErrors((current) => ({ ...current, password: undefined }));
+                      setLoginError('');
+                    }}
                     autoCapitalize="none"
                     autoCorrect={false}
                     autoComplete="password"
@@ -151,6 +190,9 @@ export default function LoginScreen({ navigation }: any) {
                     />
                   </TouchableOpacity>
                 </View>
+                {fieldErrors.password && (
+                  <Text style={styles.fieldErrorText}>{fieldErrors.password}</Text>
+                )}
               </View>
 
               <TouchableOpacity
@@ -164,8 +206,19 @@ export default function LoginScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
+            {loginError ? (
+              <View
+                style={styles.loginErrorContainer}
+                accessibilityRole='alert'
+                accessibilityLiveRegion='assertive'
+              >
+                <Ionicons name='alert-circle-outline' size={20} color='#B42318' />
+                <Text style={styles.loginErrorText}>{loginError}</Text>
+              </View>
+            ) : null}
+
             <TouchableOpacity
-              style={styles.loginButton}
+              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
               onPress={handleLogin}
               disabled={loading}
               activeOpacity={0.85}

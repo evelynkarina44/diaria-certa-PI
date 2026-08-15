@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,6 +16,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { cadastroService } from '../../services/cadastroService';
+import { getErrorMessage } from '../../services/api';
+import { useAuth } from '../../contexts/GlobalContext';
+import { enderecoService } from '../../services/enderecoService';
+import {
+  CadastroConcluidoModal,
+  removerFocoAtivoNaWeb,
+} from '../../components/cadastro-concluido-modal';
+import {
+  EnderecoCadastroForm,
+  enderecoFormInicial,
+  enderecoFormParaApi,
+  validarEnderecoForm,
+} from '../../components/endereco-cadastro-form';
 
 type ServicoIndividual = {
   id: number;
@@ -82,11 +98,14 @@ const opcoesServicosPacote = [
 ];
 
 export default function CadastroDiaristaScreen({ navigation }: any) {
-  const [etapa, setEtapa] = useState(1);
+  const { user, logout, refreshSession } = useAuth();
+  const adicionandoPerfil = Boolean(user && !user.diarista?.length);
+  const [etapa, setEtapa] = useState(adicionandoPerfil ? 4 : 1);
 
   const [primeiroNome, setPrimeiroNome] = useState('');
   const [ultimoNome, setUltimoNome] = useState('');
   const [cpf, setCpf] = useState('');
+  const [telefone, setTelefone] = useState('');
 
   const [email, setEmail] = useState('');
   const [confirmarEmail, setConfirmarEmail] = useState('');
@@ -99,6 +118,13 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
     useState(false);
 
   const [sobreVoce, setSobreVoce] = useState('');
+  const [qtdMaxComodos, setQtdMaxComodos] = useState('8');
+  const [erroDescricao, setErroDescricao] = useState('');
+  const [erroComodos, setErroComodos] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [cadastroConcluido, setCadastroConcluido] = useState(false);
+  const [endereco, setEndereco] = useState(enderecoFormInicial);
+  const [erroEndereco, setErroEndereco] = useState('');
 
   const [tamanhoSelecionado, setTamanhoSelecionado] =
     useState('Até 60m²');
@@ -127,15 +153,107 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
   const [precoPacote, setPrecoPacote] = useState('');
 
-  const progresso = `${etapa * 20}%` as `${number}%`;
+  const etapaVisual = adicionandoPerfil ? etapa - 3 : etapa;
+  const totalEtapas = adicionandoPerfil ? 3 : 6;
+  const progresso = `${(etapaVisual / totalEtapas) * 100}%` as `${number}%`;
+
+  useEffect(() => {
+    if (!adicionandoPerfil || !user) return;
+    const nomes = user.nome.trim().split(/\s+/);
+    setPrimeiroNome(nomes.shift() ?? '');
+    setUltimoNome(nomes.join(' '));
+    setCpf(user.cpf ?? '');
+    setTelefone(user.telefone);
+    setEmail(user.email);
+    setConfirmarEmail(user.email);
+    enderecoService.listar({ limit: 1 }).then((response) => {
+      const atual = response.data[0];
+      if (!atual) return;
+      setEndereco({
+        cep: atual.cep,
+        logradouro: atual.logradouro,
+        numero: String(atual.numero),
+        complemento: atual.complemento ?? '',
+        bairro: atual.bairro,
+        cidade: atual.cidade,
+        estado: atual.estado,
+        referencia: atual.referencia ?? '',
+      });
+    }).catch(() => undefined);
+  }, [adicionandoPerfil, user]);
+
+  function validarEtapaAtual() {
+    if (etapa === 1) {
+      if (`${primeiroNome} ${ultimoNome}`.trim().length < 3) {
+        Alert.alert('Dados incompletos', 'Informe seu nome completo.');
+        return false;
+      }
+      if (telefone.replace(/\D/g, '').length < 10) {
+        Alert.alert('Telefone inválido', 'Informe o telefone com DDD.');
+        return false;
+      }
+      if (cpf.replace(/\D/g, '').length !== 11) {
+        Alert.alert('CPF inválido', 'Informe os 11 números do CPF.');
+        return false;
+      }
+    }
+    if (etapa === 2) {
+      if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+        Alert.alert('E-mail inválido', 'Informe um endereço de e-mail válido.');
+        return false;
+      }
+      if (email.trim().toLowerCase() !== confirmarEmail.trim().toLowerCase()) {
+        Alert.alert('E-mails diferentes', 'Os dois e-mails devem ser iguais.');
+        return false;
+      }
+    }
+    if (etapa === 3) {
+      if (senha.length < 8) {
+        Alert.alert('Senha inválida', 'A senha deve ter pelo menos 8 caracteres.');
+        return false;
+      }
+      if (senha !== confirmarSenha) {
+        Alert.alert('Senhas diferentes', 'As duas senhas devem ser iguais.');
+        return false;
+      }
+    }
+    if (etapa === 4) {
+      let etapaValida = true;
+      if (sobreVoce.trim().length < 20) {
+        setErroDescricao('Escreva pelo menos 20 caracteres sobre sua experiência.');
+        etapaValida = false;
+      } else {
+        setErroDescricao('');
+      }
+      const comodos = Number(qtdMaxComodos);
+      if (!Number.isInteger(comodos) || comodos < 1 || comodos > 100) {
+        setErroComodos('Informe uma quantidade entre 1 e 100 cômodos.');
+        etapaValida = false;
+      } else {
+        setErroComodos('');
+      }
+      if (!etapaValida) return false;
+    }
+    if (etapa === 6) {
+      const erro = validarEnderecoForm(endereco);
+      setErroEndereco(erro ?? '');
+      if (erro) return false;
+    }
+    return true;
+  }
 
   function handleProximo() {
-    if (etapa < 5) {
+    if (!validarEtapaAtual()) return;
+    if (etapa < 6) {
       setEtapa((etapaAtual) => etapaAtual + 1);
     }
   }
 
   function handleVoltar() {
+    if (adicionandoPerfil && etapa === 4) {
+      navigation.goBack();
+      return;
+    }
     if (etapa > 1) {
       setEtapa((etapaAtual) => etapaAtual - 1);
       return;
@@ -144,12 +262,43 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
     navigation.goBack();
   }
 
-function handleEnviar() {
-  navigation.reset({
-    index: 0,
-    routes: [{ name: 'HomeDiarista' }],
-  });
-}
+  async function handleEnviar() {
+    if (!validarEtapaAtual() || enviando) return;
+    setEnviando(true);
+    try {
+      const perfil = {
+        descricao: sobreVoce.trim(),
+        frequencia_resposta: null,
+        qtd_max_comodos: Number(qtdMaxComodos),
+        endereco: enderecoFormParaApi(endereco),
+      };
+      if (adicionandoPerfil) {
+        await cadastroService.adicionarPerfilDiarista(perfil);
+        await refreshSession();
+        navigation.reset({ index: 0, routes: [{ name: 'SelecionarPerfil' }] });
+        return;
+      }
+      await cadastroService.criarDiarista(
+        {
+          nome: `${primeiroNome} ${ultimoNome}`.trim(),
+          email: email.trim().toLowerCase(),
+          senha,
+          telefone: telefone.trim(),
+          foto_perfil: '',
+          cpf: cpf.replace(/\D/g, ''),
+          tipo: 'DIARISTA',
+        },
+        perfil,
+      );
+      await logout();
+      removerFocoAtivoNaWeb();
+      setCadastroConcluido(true);
+    } catch (error) {
+      Alert.alert('Não foi possível cadastrar', getErrorMessage(error));
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   function alternarServicoIndividual(id: number) {
     setServicosSelecionados((selecionadosAtuais) => {
@@ -247,6 +396,9 @@ function handleEnviar() {
       case 5:
         return 'Quais são os pacotes oferecidos?';
 
+      case 6:
+        return 'Onde você atende?';
+
       default:
         return '';
     }
@@ -265,6 +417,9 @@ function handleEnviar() {
 
       case 4:
         return 'Conte um pouco mais sobre você para que as pessoas saibam quem você é!';
+
+      case 6:
+        return 'Finalize o cadastro informando seu endereço';
 
       default:
         return '';
@@ -318,7 +473,7 @@ function handleEnviar() {
             </View>
 
             <Text style={styles.stepText}>
-              Etapa {etapa} de 5
+              Etapa {etapaVisual} de {totalEtapas}
             </Text>
 
             <View style={styles.header}>
@@ -361,6 +516,16 @@ function handleEnviar() {
                   onChangeText={setCpf}
                   keyboardType="number-pad"
                   maxLength={14}
+                />
+
+                <TextInput
+                  style={styles.input}
+                  placeholder='Telefone com DDD'
+                  placeholderTextColor='#9B9B9B'
+                  value={telefone}
+                  onChangeText={setTelefone}
+                  keyboardType='phone-pad'
+                  maxLength={20}
                 />
               </View>
             )}
@@ -459,15 +624,62 @@ function handleEnviar() {
 
             {etapa === 4 && (
               <View style={styles.professionalContent}>
+                <Text style={styles.professionalFieldLabel}>
+                  Conte sobre você <Text style={styles.requiredMark}>*</Text>
+                </Text>
                 <TextInput
-                  style={styles.aboutInput}
+                  style={[
+                    styles.aboutInput,
+                    erroDescricao && styles.inputError,
+                  ]}
                   placeholder="Trabalho como diarista há 4 anos, sou organizada e de confiança."
                   placeholderTextColor="#9B9B9B"
                   value={sobreVoce}
-                  onChangeText={setSobreVoce}
+                  onChangeText={(value) => {
+                    setSobreVoce(value);
+                    if (value.trim().length >= 20) setErroDescricao('');
+                  }}
                   multiline
                   textAlignVertical="top"
                 />
+
+                <View style={styles.fieldFeedbackRow}>
+                  <Text style={styles.inlineError}>{erroDescricao}</Text>
+                  <Text
+                    style={[
+                      styles.characterCount,
+                      sobreVoce.trim().length < 20 && styles.characterCountPending,
+                    ]}
+                  >
+                    {sobreVoce.trim().length}/20 mínimo
+                  </Text>
+                </View>
+
+                <Text style={styles.professionalFieldLabel}>
+                  Máximo de cômodos atendidos <Text style={styles.requiredMark}>*</Text>
+                </Text>
+                <TextInput
+                  style={[
+                    styles.roomInput,
+                    erroComodos && styles.inputError,
+                  ]}
+                  placeholder='Ex.: 8'
+                  placeholderTextColor='#9B9B9B'
+                  value={qtdMaxComodos}
+                  onChangeText={(value) => {
+                    setQtdMaxComodos(value.replace(/\D/g, ''));
+                    setErroComodos('');
+                  }}
+                  keyboardType='number-pad'
+                  maxLength={3}
+                />
+                {erroComodos ? (
+                  <Text style={styles.inlineErrorStandalone}>{erroComodos}</Text>
+                ) : (
+                  <Text style={styles.fieldHelper}>
+                    Altere o valor se você atender uma quantidade diferente.
+                  </Text>
+                )}
 
                 <View style={styles.divider} />
 
@@ -751,16 +963,32 @@ function handleEnviar() {
               </View>
             )}
 
+            {etapa === 6 && (
+              <EnderecoCadastroForm
+                value={endereco}
+                error={erroEndereco}
+                onChange={(value) => {
+                  setEndereco(value);
+                  setErroEndereco('');
+                }}
+              />
+            )}
+
             <TouchableOpacity
-              style={styles.mainButton}
+              style={[styles.mainButton, enviando && styles.mainButtonDisabled]}
               onPress={
-                etapa < 5 ? handleProximo : handleEnviar
+                etapa < 6 ? handleProximo : handleEnviar
               }
+              disabled={enviando}
               activeOpacity={0.85}
             >
-              <Text style={styles.mainButtonText}>
-                {etapa < 5 ? 'Próximo' : 'Enviar'}
-              </Text>
+              {enviando ? (
+                <ActivityIndicator color='#FFFFFF' />
+              ) : (
+                <Text style={styles.mainButtonText}>
+                  {etapa < 6 ? 'Próximo' : 'Finalizar cadastro'}
+                </Text>
+              )}
             </TouchableOpacity>
 
             {etapa < 4 && (
@@ -784,6 +1012,17 @@ function handleEnviar() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <CadastroConcluidoModal
+        visible={cadastroConcluido}
+        perfil='diarista'
+        onContinue={() => {
+          setCadastroConcluido(false);
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+        }}
+      />
     </SafeAreaView>
   );
 }

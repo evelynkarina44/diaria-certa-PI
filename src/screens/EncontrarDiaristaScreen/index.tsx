@@ -163,7 +163,7 @@ export default function EncontrarDiaristaScreen({
           ...faixaPreco(),
           id_servico: servicoSelecionado?.id_servico,
         }),
-        user?.cliente?.length
+        user?.activeProfile === 'CLIENTE'
           ? favoritoService.listar({ limit: 100 })
           : Promise.resolve({ data: [] as Favorito[] }),
       ]);
@@ -199,7 +199,7 @@ export default function EncontrarDiaristaScreen({
   }
 
   async function alternarFavorito(id: number) {
-    if (!user?.cliente?.length) {
+    if (user?.activeProfile !== 'CLIENTE') {
       Alert.alert('Perfil necessário', 'Entre com um perfil de cliente.');
       return;
     }

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
 import {
-  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -15,11 +14,13 @@ import { styles } from './styles';
 import { useAuth } from '../../contexts/GlobalContext';
 import { diaristaService } from '../../services/diaristaService';
 import type { Diarista } from '../../services/types';
+import { LogoutButton } from '../../components/logout-button';
+import { ProfileAccessActions } from '../../components/profile-access-actions';
 
 export default function PerfilDiaristaEdicaoScreen({
   navigation,
 }: any) {
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<Diarista | null>(null);
 
   useEffect(() => {
@@ -30,30 +31,6 @@ export default function PerfilDiaristaEdicaoScreen({
       .then(setProfile)
       .catch(() => setProfile(null));
   }, [user]);
-  function handleLogout() {
-    Alert.alert(
-      'Sair da conta',
-      'Deseja realmente sair da sua conta?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Home' }],
-            });
-          },
-        },
-      ]
-    );
-  }
-
   function voltar() {
     navigation.goBack();
   }
@@ -246,21 +223,11 @@ export default function PerfilDiaristaEdicaoScreen({
           </TouchableOpacity>
 
           {/* BOTÃO SAIR DA CONTA */}
-          <TouchableOpacity
+          <ProfileAccessActions navigation={navigation} />
+          <LogoutButton
+            navigation={navigation}
             style={styles.logoutButton}
-            onPress={handleLogout}
-            activeOpacity={0.85}
-          >
-            <Ionicons
-              name="log-out-outline"
-              size={24}
-              color="#FF3338"
-            />
-
-            <Text style={styles.logoutButtonText}>
-              Sair da conta
-            </Text>
-          </TouchableOpacity>
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

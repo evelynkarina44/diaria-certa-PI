@@ -89,6 +89,17 @@ export const styles = StyleSheet.create({
     fontSize: fontSizes.md ?? 15,
   },
 
+  inputError: {
+    borderColor: '#D92D20',
+  },
+
+  fieldErrorText: {
+    color: '#B42318',
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 12,
+    marginTop: 5,
+  },
+
   passwordContainer: {
     width: '100%',
     height: 48,
@@ -137,6 +148,32 @@ export const styles = StyleSheet.create({
     backgroundColor: '#14ab3c',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  loginButtonDisabled: {
+    opacity: 0.65,
+  },
+
+  loginErrorContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#FDA29B',
+    borderRadius: 8,
+    backgroundColor: '#FEF3F2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 14,
+  },
+
+  loginErrorText: {
+    flex: 1,
+    color: '#B42318',
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm ?? 12,
+    lineHeight: 18,
   },
 
 

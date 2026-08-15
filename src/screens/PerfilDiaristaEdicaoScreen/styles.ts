@@ -342,9 +342,4 @@ export const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
-  logoutButtonText: {
-    color: dangerColor,
-    fontFamily: fonts.semibold,
-    fontSize: fontSizes.lg ?? 17,
-  },
 });

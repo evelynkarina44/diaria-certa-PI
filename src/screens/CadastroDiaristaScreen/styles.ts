@@ -136,6 +136,17 @@ export const styles = StyleSheet.create({
     width: '100%',
   },
 
+  professionalFieldLabel: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: fontSizes.sm ?? 13,
+    marginBottom: 7,
+  },
+
+  requiredMark: {
+    color: '#D92D20',
+  },
+
   aboutInput: {
     width: '100%',
     minHeight: 74,
@@ -147,6 +158,65 @@ export const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fonts.regular,
     fontSize: fontSizes.sm ?? 13,
+  },
+
+  inputError: {
+    borderColor: '#D92D20',
+  },
+
+  fieldFeedbackRow: {
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingTop: 5,
+  },
+
+  inlineError: {
+    flex: 1,
+    color: '#B42318',
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+
+  characterCount: {
+    color: '#14AB3C',
+    fontFamily: fonts.medium,
+    fontSize: 11,
+  },
+
+  characterCountPending: {
+    color: colors.cinza,
+  },
+
+  roomInput: {
+    width: '100%',
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: '#C8C8C8',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    color: colors.text,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 13,
+  },
+
+  inlineErrorStandalone: {
+    color: '#B42318',
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 5,
+  },
+
+  fieldHelper: {
+    color: colors.cinza,
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 5,
   },
 
   divider: {
@@ -534,6 +604,10 @@ export const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: fonts.semibold,
     fontSize: fontSizes.lg ?? 17,
+  },
+
+  mainButtonDisabled: {
+    opacity: 0.65,
   },
 
   footer: {

@@ -25,15 +25,21 @@ export type ListQuery = {
   limit?: number;
 };
 
+export type Profile = 'CLIENTE' | 'DIARISTA';
+
 export type Usuario = {
   id_usuario: number;
   nome: string;
   email: string;
   telefone: string;
+  cpf?: string | null;
   foto_perfil: string;
   data_cadastro?: string;
   cliente?: Array<{ id_cliente: number }>;
   diarista?: Array<{ id_diarista: number }>;
+  profiles: Profile[];
+  activeProfile: Profile | null;
+  requiresProfileSelection: boolean;
 };
 
 export type AuthResponse = {
@@ -228,13 +234,21 @@ export type UsuarioCreate = {
   senha: string;
   telefone: string;
   foto_perfil?: string;
+  cpf?: string | null;
+  tipo?: 'CLIENTE' | 'DIARISTA';
 };
+
+export type EnderecoCadastro = Omit<
+  Endereco,
+  'id_endereco' | 'id_cliente' | 'id_diarista'
+>;
 
 export type ClienteCreate = {
   id_usuario: number;
   data_nascimento: string;
   qtd_comodos: number;
   tamanho_casa: HouseSize;
+  endereco: EnderecoCadastro;
 };
 
 export type DiaristaCreate = {
@@ -242,6 +256,7 @@ export type DiaristaCreate = {
   descricao: string;
   frequencia_resposta?: string | null;
   qtd_max_comodos: number;
+  endereco: EnderecoCadastro;
 };
 
 export type EnderecoInput = Omit<Endereco, 'id_endereco'>;

@@ -5,7 +5,7 @@ import type {
   PaginatedResponse,
 } from './types';
 
-type ClienteUpdate = Partial<Omit<ClienteCreate, 'id_usuario'>>;
+type ClienteUpdate = Partial<Omit<ClienteCreate, 'id_usuario' | 'endereco'>>;
 
 export const clienteService = createCrudService<
   Cliente,

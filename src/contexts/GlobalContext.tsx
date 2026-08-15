@@ -7,12 +7,13 @@ import {
   type ReactNode,
 } from 'react';
 import { authService } from '../services/authService';
-import type { Usuario } from '../services/types';
+import type { Profile, Usuario } from '../services/types';
 
 type GlobalContextValue = {
   user: Usuario | null;
   initializing: boolean;
   login(email: string, password: string): Promise<Usuario>;
+  selectProfile(profile: Profile): Promise<Usuario>;
   logout(): Promise<void>;
   refreshSession(): Promise<Usuario | null>;
 };
@@ -24,6 +25,9 @@ const defaultValue: GlobalContextValue = {
     throw new Error('GlobalProvider não inicializado');
   },
   logout: async () => undefined,
+  selectProfile: async () => {
+    throw new Error('GlobalProvider não inicializado');
+  },
   refreshSession: async () => null,
 };
 
@@ -70,8 +74,14 @@ export function GlobalProvider({ children }: GlobalProviderProps) {
     setUser(null);
   }
 
+  async function selectProfile(profile: Profile) {
+    const session = await authService.selectProfile(profile);
+    setUser(session.user);
+    return session.user;
+  }
+
   const value = useMemo(
-    () => ({ user, initializing, login, logout, refreshSession }),
+    () => ({ user, initializing, login, logout, refreshSession, selectProfile }),
     [user, initializing],
   );
 

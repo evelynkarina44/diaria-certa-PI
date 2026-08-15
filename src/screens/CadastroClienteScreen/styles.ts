@@ -100,6 +100,44 @@ backgroundColor: '#18C7C8',
     fontSize: fontSizes.md ?? 15,
   },
 
+  fieldLabel: {
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm ?? 12,
+    marginTop: 2,
+  },
+
+  sizeOptions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+
+  sizeButton: {
+    flex: 1,
+    height: 42,
+    borderWidth: 1.5,
+    borderColor: '#C8C8C8',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  sizeButtonSelected: {
+    borderColor: '#18C7C8',
+    backgroundColor: '#E9FCFC',
+  },
+
+  sizeButtonText: {
+    color: colors.text,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 12,
+  },
+
+  sizeButtonTextSelected: {
+    color: '#18AEB0',
+    fontFamily: fonts.semibold,
+  },
+
   passwordContainer: {
     width: '100%',
     height: 48,
@@ -143,6 +181,10 @@ backgroundColor: '#18C7C8',
     color: colors.white,
     fontFamily: fonts.semibold,
     fontSize: fontSizes.md ?? 15,
+  },
+
+  mainButtonDisabled: {
+    opacity: 0.65,
   },
 
   footer: {

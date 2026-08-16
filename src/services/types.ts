@@ -33,7 +33,7 @@ export type Usuario = {
   email: string;
   telefone: string;
   cpf?: string | null;
-  foto_perfil: string;
+  foto_perfil: string | null;
   data_cadastro?: string;
   cliente?: Array<{ id_cliente: number }>;
   diarista?: Array<{ id_diarista: number }>;
@@ -53,7 +53,9 @@ export type Cliente = {
   data_nascimento: string;
   qtd_comodos: number;
   tamanho_casa: HouseSize;
-  usuario?: Usuario;
+  usuario?: Pick<Usuario, 'id_usuario' | 'nome' | 'email' | 'telefone' | 'cpf' | 'foto_perfil' | 'data_cadastro'>;
+  endereco?: Endereco[];
+  avaliacao?: Array<Pick<Avaliacao, 'id_avaliacao' | 'nota'>>;
 };
 
 export type Endereco = {
@@ -82,6 +84,9 @@ export type DiaristaServico = {
   id_servico: number;
   preco: number | string;
   faz_parte_combo_base?: boolean | null;
+  adicional?: boolean;
+  ativo?: boolean;
+  duracao_estimada_min?: number | null;
   servico?: Servico;
 };
 
@@ -117,6 +122,9 @@ export type ComboBase = {
   atende_casa_pequena?: boolean | null;
   atende_casa_media?: boolean | null;
   atende_casa_grande?: boolean | null;
+  ativo?: boolean;
+  atualizado_em?: string;
+  criado_em?: string;
   combo_servico?: ComboServico[];
 };
 
@@ -257,6 +265,22 @@ export type DiaristaCreate = {
   frequencia_resposta?: string | null;
   qtd_max_comodos: number;
   endereco: EnderecoCadastro;
+  servicos?: Array<{
+    id_servico?: number;
+    nome_servico?: string;
+    descricao?: string | null;
+    preco: number;
+    faz_parte_combo_base: boolean;
+  }>;
+  combo_base?: {
+    nome_combo: string;
+    valor_base: number;
+    descricao?: string | null;
+    qtd_comodos_casa: number;
+    atende_casa_pequena: boolean;
+    atende_casa_media: boolean;
+    atende_casa_grande: boolean;
+  };
 };
 
 export type EnderecoInput = Omit<Endereco, 'id_endereco'>;

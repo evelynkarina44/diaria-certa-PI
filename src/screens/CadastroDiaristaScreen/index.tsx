@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -20,6 +20,7 @@ import { cadastroService } from '../../services/cadastroService';
 import { getErrorMessage } from '../../services/api';
 import { useAuth } from '../../contexts/GlobalContext';
 import { enderecoService } from '../../services/enderecoService';
+import { servicoService } from '../../services/servicoService';
 import {
   CadastroConcluidoModal,
   removerFocoAtivoNaWeb,
@@ -32,69 +33,17 @@ import {
 } from '../../components/endereco-cadastro-form';
 
 type ServicoIndividual = {
-  id: number;
-  nome: string;
-  valor: string;
-};
-
-type Pacote = {
-  id: string;
-  nome: string;
+  key: string;
+  id_servico?: number;
+  nome_servico: string;
+  descricao?: string | null;
+  preco: string;
 };
 
 const tamanhosResidencia = [
-  'Até 60m²',
-  'Até 120m²',
-  'Acima de 120m²',
-];
-
-const servicosIniciais: ServicoIndividual[] = [
-  {
-    id: 1,
-    nome: 'Limpeza Geral',
-    valor: 'R$ 100,00',
-  },
-  {
-    id: 2,
-    nome: 'Passar Roupas',
-    valor: 'R$ 30,00',
-  },
-  {
-    id: 3,
-    nome: 'Limpeza Pesada',
-    valor: 'R$ 130,00',
-  },
-  {
-    id: 4,
-    nome: 'Cozinha',
-    valor: 'R$ 80,00',
-  },
-];
-
-const tiposPacote: Pacote[] = [
-  {
-    id: 'leve',
-    nome: 'Leve',
-  },
-  {
-    id: 'pesado',
-    nome: 'Pesado',
-  },
-  {
-    id: 'completo',
-    nome: 'Completo',
-  },
-];
-
-const opcoesServicosPacote = [
-  'Aspirador em móveis',
-  'Passar roupas',
-  'Piscina',
-  'Banheiro',
-  'Lavar louça',
-  'Limpeza em móveis',
-  'Pano em chão',
-  'Jardim',
+  { id: 'pequena', label: 'Pequena' },
+  { id: 'media', label: 'Média' },
+  { id: 'grande', label: 'Grande' },
 ];
 
 export default function CadastroDiaristaScreen({ navigation }: any) {
@@ -122,36 +71,29 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
   const [erroDescricao, setErroDescricao] = useState('');
   const [erroComodos, setErroComodos] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const envioEmAndamento = useRef(false);
   const [cadastroConcluido, setCadastroConcluido] = useState(false);
   const [endereco, setEndereco] = useState(enderecoFormInicial);
   const [erroEndereco, setErroEndereco] = useState('');
 
-  const [tamanhoSelecionado, setTamanhoSelecionado] =
-    useState('Até 60m²');
+  const [tamanhosSelecionados, setTamanhosSelecionados] =
+    useState<string[]>(['pequena']);
 
-  const [servicos, setServicos] =
-    useState<ServicoIndividual[]>(servicosIniciais);
+  const [servicos, setServicos] = useState<ServicoIndividual[]>([]);
+  const [carregandoServicos, setCarregandoServicos] = useState(true);
+  const [erroServicos, setErroServicos] = useState('');
 
-  const [servicosSelecionados, setServicosSelecionados] = useState<
-    number[]
-  >(servicosIniciais.map((servico) => servico.id));
+  const [servicosSelecionados, setServicosSelecionados] = useState<string[]>([]);
 
   const [novoServico, setNovoServico] = useState('');
   const [novoValor, setNovoValor] = useState('');
 
-  const [pacoteSelecionado, setPacoteSelecionado] =
-    useState('pesado');
+  const [nomeCombo, setNomeCombo] = useState('');
+  const [descricaoCombo, setDescricaoCombo] = useState('');
+  const [servicosComboSelecionados, setServicosComboSelecionados] =
+    useState<string[]>([]);
 
-  const [servicosPacoteSelecionados, setServicosPacoteSelecionados] =
-    useState<string[]>([
-      'Aspirador em móveis',
-      'Passar roupas',
-      'Lavar louça',
-      'Limpeza em móveis',
-      'Pano em chão',
-    ]);
-
-  const [precoPacote, setPrecoPacote] = useState('');
+  const [valorCombo, setValorCombo] = useState('');
 
   const etapaVisual = adicionandoPerfil ? etapa - 3 : etapa;
   const totalEtapas = adicionandoPerfil ? 3 : 6;
@@ -181,6 +123,33 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
       });
     }).catch(() => undefined);
   }, [adicionandoPerfil, user]);
+
+  useEffect(() => {
+    let mounted = true;
+    setCarregandoServicos(true);
+    servicoService.listar({ limit: 100 }).then((catalogo) => {
+      if (!mounted) return;
+      setServicos(catalogo.map((servico) => ({
+        key: `servico-${servico.id_servico}`,
+        id_servico: servico.id_servico,
+        nome_servico: servico.nome_servico,
+        descricao: servico.descricao,
+        preco: '',
+      })));
+      setErroServicos('');
+    }).catch((error) => {
+      if (mounted) setErroServicos(getErrorMessage(error));
+    }).finally(() => {
+      if (mounted) setCarregandoServicos(false);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  function valorMonetario(value: string) {
+    return Number(value.replace(/\D/g, '')) / 100;
+  }
 
   function validarEtapaAtual() {
     if (etapa === 1) {
@@ -232,7 +201,33 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
       } else {
         setErroComodos('');
       }
+      const selecionados = servicos.filter((servico) => servicosSelecionados.includes(servico.key));
+      if (!selecionados.length) {
+        Alert.alert('Serviços obrigatórios', 'Selecione ao menos um serviço que você oferece.');
+        etapaValida = false;
+      } else if (selecionados.some((servico) => valorMonetario(servico.preco) <= 0)) {
+        Alert.alert('Valores obrigatórios', 'Informe um valor maior que zero para cada serviço selecionado.');
+        etapaValida = false;
+      }
       if (!etapaValida) return false;
+    }
+    if (etapa === 5) {
+      if (nomeCombo.trim().length < 2) {
+        Alert.alert('Nome obrigatório', 'Informe o nome do combo.');
+        return false;
+      }
+      if (valorMonetario(valorCombo) <= 0) {
+        Alert.alert('Valor inválido', 'Informe um valor maior que zero para o combo.');
+        return false;
+      }
+      if (!servicosComboSelecionados.length) {
+        Alert.alert('Serviços obrigatórios', 'Selecione ao menos um serviço para o combo.');
+        return false;
+      }
+      if (!tamanhosSelecionados.length) {
+        Alert.alert('Tamanho obrigatório', 'Selecione ao menos um tamanho de residência atendido pelo combo.');
+        return false;
+      }
     }
     if (etapa === 6) {
       const erro = validarEnderecoForm(endereco);
@@ -244,6 +239,9 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
   function handleProximo() {
     if (!validarEtapaAtual()) return;
+    if (etapa === 4) {
+      setServicosComboSelecionados([...servicosSelecionados]);
+    }
     if (etapa < 6) {
       setEtapa((etapaAtual) => etapaAtual + 1);
     }
@@ -263,7 +261,8 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
   }
 
   async function handleEnviar() {
-    if (!validarEtapaAtual() || enviando) return;
+    if (envioEmAndamento.current || enviando || !validarEtapaAtual()) return;
+    envioEmAndamento.current = true;
     setEnviando(true);
     try {
       const perfil = {
@@ -271,6 +270,24 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
         frequencia_resposta: null,
         qtd_max_comodos: Number(qtdMaxComodos),
         endereco: enderecoFormParaApi(endereco),
+        servicos: servicos
+          .filter((servico) => servicosSelecionados.includes(servico.key))
+          .map((servico) => ({
+            ...(servico.id_servico
+              ? { id_servico: servico.id_servico }
+              : { nome_servico: servico.nome_servico, descricao: servico.descricao ?? null }),
+            preco: valorMonetario(servico.preco),
+            faz_parte_combo_base: servicosComboSelecionados.includes(servico.key),
+          })),
+        combo_base: {
+          nome_combo: nomeCombo.trim(),
+          valor_base: valorMonetario(valorCombo),
+          descricao: descricaoCombo.trim() || null,
+          qtd_comodos_casa: Number(qtdMaxComodos),
+          atende_casa_pequena: tamanhosSelecionados.includes('pequena'),
+          atende_casa_media: tamanhosSelecionados.includes('media'),
+          atende_casa_grande: tamanhosSelecionados.includes('grande'),
+        },
       };
       if (adicionandoPerfil) {
         await cadastroService.adicionarPerfilDiarista(perfil);
@@ -296,21 +313,23 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
     } catch (error) {
       Alert.alert('Não foi possível cadastrar', getErrorMessage(error));
     } finally {
+      envioEmAndamento.current = false;
       setEnviando(false);
     }
   }
 
-  function alternarServicoIndividual(id: number) {
+  function alternarServicoIndividual(key: string) {
     setServicosSelecionados((selecionadosAtuais) => {
-      const estaSelecionado = selecionadosAtuais.includes(id);
+      const estaSelecionado = selecionadosAtuais.includes(key);
 
       if (estaSelecionado) {
+        setServicosComboSelecionados((atuais) => atuais.filter((item) => item !== key));
         return selecionadosAtuais.filter(
-          (servicoId) => servicoId !== id
+          (servicoKey) => servicoKey !== key
         );
       }
 
-      return [...selecionadosAtuais, id];
+      return [...selecionadosAtuais, key];
     });
   }
 
@@ -333,21 +352,30 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
     setNovoValor(formatarValorEmReais(valor));
   }
 
-  function handlePrecoPacote(valor: string) {
-    setPrecoPacote(formatarValorEmReais(valor));
+  function handleValorCombo(valor: string) {
+    setValorCombo(formatarValorEmReais(valor));
+  }
+
+  function atualizarPrecoServico(key: string, valor: string) {
+    const preco = formatarValorEmReais(valor);
+    setServicos((atuais) => atuais.map((servico) => (
+      servico.key === key ? { ...servico, preco } : servico
+    )));
   }
 
   function handleAdicionarServico() {
-    if (!novoServico.trim()) {
+    if (novoServico.trim().length < 2 || valorMonetario(novoValor) <= 0) {
+      Alert.alert('Serviço incompleto', 'Informe o nome e um valor maior que zero.');
       return;
     }
 
-    const novoId = Date.now();
+    const key = `novo-${Date.now()}`;
 
     const servicoAdicionado: ServicoIndividual = {
-      id: novoId,
-      nome: novoServico.trim(),
-      valor: novoValor || 'R$ 0,00',
+      key,
+      nome_servico: novoServico.trim(),
+      descricao: null,
+      preco: novoValor,
     };
 
     setServicos((servicosAtuais) => [
@@ -357,15 +385,15 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
     setServicosSelecionados((selecionadosAtuais) => [
       ...selecionadosAtuais,
-      novoId,
+      key,
     ]);
 
     setNovoServico('');
     setNovoValor('');
   }
 
-  function alternarServicoPacote(servico: string) {
-    setServicosPacoteSelecionados((selecionadosAtuais) => {
+  function alternarServicoCombo(servico: string) {
+    setServicosComboSelecionados((selecionadosAtuais) => {
       const estaSelecionado =
         selecionadosAtuais.includes(servico);
 
@@ -377,6 +405,12 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
       return [...selecionadosAtuais, servico];
     });
+  }
+
+  function alternarTamanho(id: string) {
+    setTamanhosSelecionados((atuais) => (
+      atuais.includes(id) ? atuais.filter((item) => item !== id) : [...atuais, id]
+    ));
   }
 
   function getTituloEtapa() {
@@ -394,7 +428,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
         return 'Sobre você!';
 
       case 5:
-        return 'Quais são os pacotes oferecidos?';
+        return 'Monte seu combo inicial';
 
       case 6:
         return 'Onde você atende?';
@@ -424,14 +458,6 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
       default:
         return '';
     }
-  }
-
-  function getNomePacoteSelecionado() {
-    const pacote = tiposPacote.find(
-      (item) => item.id === pacoteSelecionado
-    );
-
-    return pacote?.nome ?? '';
   }
 
   return (
@@ -683,68 +709,34 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
                 <View style={styles.divider} />
 
-                <Text style={styles.sectionDescription}>
-                  Informe as limitações exigidas em relação ao
-                  tamanho de residência aceita.
-                </Text>
-
-                <View style={styles.sizeOptions}>
-                  {tamanhosResidencia.map((tamanho) => {
-                    const estaSelecionado =
-                      tamanhoSelecionado === tamanho;
-
-                    return (
-                      <TouchableOpacity
-                        key={tamanho}
-                        style={[
-                          styles.sizeButton,
-                          estaSelecionado &&
-                            styles.sizeButtonSelected,
-                        ]}
-                        onPress={() =>
-                          setTamanhoSelecionado(tamanho)
-                        }
-                        activeOpacity={0.8}
-                      >
-                        <Text
-                          style={[
-                            styles.sizeButtonText,
-                            estaSelecionado &&
-                              styles.sizeButtonTextSelected,
-                          ]}
-                        >
-                          {tamanho}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                <View style={styles.divider} />
-
                 <Text style={styles.sectionTitle}>
                   Quais são os seus serviços individuais?
                 </Text>
 
                 <Text style={styles.sectionHint}>
-                  Toque nos serviços para selecionar ou desmarcar.
+                  Selecione no catálogo e informe quanto cobra por cada serviço.
                 </Text>
 
-                <View style={styles.servicesGrid}>
-                  {servicos.map((servico) => {
+                {carregandoServicos ? (
+                  <ActivityIndicator color="#FF6B2C" />
+                ) : erroServicos ? (
+                  <Text style={styles.catalogError}>{erroServicos}</Text>
+                ) : (
+                  <View style={styles.servicesGrid}>
+                    {servicos.map((servico) => {
                     const estaSelecionado =
-                      servicosSelecionados.includes(servico.id);
+                      servicosSelecionados.includes(servico.key);
 
                     return (
                       <TouchableOpacity
-                        key={servico.id}
+                        key={servico.key}
                         style={[
                           styles.serviceItem,
                           estaSelecionado &&
                             styles.serviceItemSelected,
                         ]}
                         onPress={() =>
-                          alternarServicoIndividual(servico.id)
+                          alternarServicoIndividual(servico.key)
                         }
                         activeOpacity={0.8}
                       >
@@ -766,7 +758,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                           ]}
                         >
                           <Text style={styles.servicePriceText}>
-                            {servico.valor}
+                            {servico.preco || 'Definir valor'}
                           </Text>
                         </View>
 
@@ -777,12 +769,30 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                               styles.serviceNameSelected,
                           ]}
                         >
-                          {servico.nome}
+                          {servico.nome_servico}
                         </Text>
                       </TouchableOpacity>
                     );
-                  })}
-                </View>
+                    })}
+                  </View>
+                )}
+
+                {servicos
+                  .filter((servico) => servicosSelecionados.includes(servico.key))
+                  .map((servico) => (
+                    <View key={`preco-${servico.key}`} style={styles.selectedServiceRow}>
+                      <Text style={styles.selectedServiceName}>{servico.nome_servico}</Text>
+                      <TextInput
+                        style={styles.selectedServicePriceInput}
+                        placeholder="R$ 0,00"
+                        placeholderTextColor="#FF6B2C"
+                        value={servico.preco}
+                        onChangeText={(value) => atualizarPrecoServico(servico.key, value)}
+                        keyboardType="number-pad"
+                        maxLength={18}
+                      />
+                    </View>
+                  ))}
 
                 <View style={styles.divider} />
 
@@ -846,81 +856,87 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
             {etapa === 5 && (
               <View style={styles.packagesContent}>
-                <View style={styles.packageCards}>
-                  {tiposPacote.map((pacote) => {
-                    const estaSelecionado =
-                      pacoteSelecionado === pacote.id;
+                <Text style={styles.packageHelp}>
+                  O combo reúne serviços por um valor único. Você poderá criar outros depois.
+                </Text>
 
+                <Text style={styles.professionalFieldLabel}>Nome do combo *</Text>
+                <TextInput
+                  style={styles.newServiceInput}
+                  placeholder="Ex.: Limpeza completa"
+                  placeholderTextColor="#A0A0A0"
+                  value={nomeCombo}
+                  onChangeText={setNomeCombo}
+                  maxLength={100}
+                />
+
+                <Text style={styles.comboFieldLabel}>Descrição do combo</Text>
+                <TextInput
+                  style={styles.comboDescriptionInput}
+                  placeholder="Explique o que está incluído neste combo"
+                  placeholderTextColor="#A0A0A0"
+                  value={descricaoCombo}
+                  onChangeText={setDescricaoCombo}
+                  multiline
+                  textAlignVertical="top"
+                  maxLength={2000}
+                />
+
+                <View style={styles.divider} />
+
+                <Text style={styles.sectionTitle}>
+                  Tamanhos de residência atendidos pelo combo
+                </Text>
+
+                <View style={styles.sizeOptions}>
+                  {tamanhosResidencia.map((tamanho) => {
+                    const estaSelecionado = tamanhosSelecionados.includes(tamanho.id);
                     return (
                       <TouchableOpacity
-                        key={pacote.id}
-                        style={styles.packageOption}
-                        onPress={() =>
-                          setPacoteSelecionado(pacote.id)
-                        }
+                        key={tamanho.id}
+                        style={[styles.sizeButton, estaSelecionado && styles.sizeButtonSelected]}
+                        onPress={() => alternarTamanho(tamanho.id)}
                         activeOpacity={0.8}
                       >
-                        <View
-                          style={[
-                            styles.packageCard,
-                            pacote.id === 'leve' &&
-                              styles.lightPackage,
-                            pacote.id === 'pesado' &&
-                              styles.heavyPackage,
-                            pacote.id === 'completo' &&
-                              styles.completePackage,
-                            estaSelecionado &&
-                              styles.packageCardSelected,
-                          ]}
-                        >
-                          {estaSelecionado && (
-                            <View style={styles.checkIcon}>
-                              <Ionicons
-                                name="checkmark"
-                                size={11}
-                                color="#FFFFFF"
-                              />
-                            </View>
-                          )}
-                        </View>
-
-                        <Text style={styles.packageName}>
-                          {pacote.nome}
+                        <Text style={[styles.sizeButtonText, estaSelecionado && styles.sizeButtonTextSelected]}>
+                          {tamanho.label}
                         </Text>
                       </TouchableOpacity>
                     );
                   })}
                 </View>
 
-                <Text style={styles.packageHelp}>
-                  Toque em cada pacote para definir os serviços
-                  oferecidos.
+                <Text style={styles.comboRoomsText}>
+                  Limite do combo: até {qtdMaxComodos} cômodos
                 </Text>
 
                 <View style={styles.divider} />
 
                 <Text style={styles.sectionTitle}>
-                  O que o pacote {getNomePacoteSelecionado()} irá
-                  oferecer?
+                  Serviços incluídos no combo
+                </Text>
+
+                <Text style={styles.sectionHint}>
+                  São exibidos somente os serviços individuais selecionados na etapa anterior.
                 </Text>
 
                 <View style={styles.packageServicesGrid}>
-                  {opcoesServicosPacote.map((servico) => {
+                  {servicos
+                    .filter((servico) => servicosSelecionados.includes(servico.key))
+                    .map((servico) => {
                     const estaSelecionado =
-                      servicosPacoteSelecionados.includes(
-                        servico
-                      );
+                      servicosComboSelecionados.includes(servico.key);
 
                     return (
                       <TouchableOpacity
-                        key={servico}
+                        key={servico.key}
                         style={[
                           styles.packageServiceButton,
                           estaSelecionado &&
                             styles.packageServiceSelected,
                         ]}
                         onPress={() =>
-                          alternarServicoPacote(servico)
+                          alternarServicoCombo(servico.key)
                         }
                         activeOpacity={0.8}
                       >
@@ -931,7 +947,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                               styles.packageServiceTextSelected,
                           ]}
                         >
-                          {servico}
+                          {servico.nome_servico}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -941,21 +957,20 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                 <View style={styles.divider} />
 
                 <Text style={styles.priceLabel}>
-                  Definir preço para:{' '}
-                  {getNomePacoteSelecionado()}
+                  Valor total do combo *
                 </Text>
 
                 <View style={styles.packagePriceContainer}>
                   <Text style={styles.packagePriceDescription}>
-                    Digite o valor do pacote
+                    Digite o valor do combo
                   </Text>
 
                   <TextInput
                     style={styles.packagePriceInput}
                     placeholder="R$ 0,00"
                     placeholderTextColor="#FF6B2C"
-                    value={precoPacote}
-                    onChangeText={handlePrecoPacote}
+                    value={valorCombo}
+                    onChangeText={handleValorCombo}
                     keyboardType="number-pad"
                     maxLength={18}
                   />

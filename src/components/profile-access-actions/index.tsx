@@ -1,9 +1,20 @@
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/GlobalContext';
 import { colors, fonts, fontSizes } from '../../global';
 
-export function ProfileAccessActions({ navigation }: any) {
+type ProfileAccessActionsProps = {
+  navigation: any;
+  style?: StyleProp<ViewStyle>;
+};
+
+export function ProfileAccessActions({ navigation, style }: ProfileAccessActionsProps) {
   const { user } = useAuth();
   if (!user) return null;
 
@@ -17,7 +28,7 @@ export function ProfileAccessActions({ navigation }: any) {
 
   return (
     <TouchableOpacity
-      style={styles.button}
+      style={[styles.button, style]}
       onPress={() => navigation.navigate(destination.route)}
       activeOpacity={0.8}
       accessibilityRole="button"

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -24,6 +25,8 @@ export default function PerfilDiaristaScreen({
   const [profile, setProfile] = useState<Diarista | null>(null);
   const [loading, setLoading] = useState(true);
   const diaristaId = Number(route.params?.diaristaId);
+  const currency = (value: number | string) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const rating = Number(profile?.avaliacao_media ?? 0);
 
   useEffect(() => {
     if (!diaristaId) {
@@ -69,11 +72,11 @@ export default function PerfilDiaristaScreen({
           </TouchableOpacity>
 
           <View style={styles.imagePlaceholder}>
-            <Ionicons
-              name="person"
-              size={84}
-              color="#D1D1D1"
-            />
+            {profile?.usuario?.foto_perfil ? (
+              <Image source={{ uri: profile.usuario.foto_perfil }} style={styles.profileImage} />
+            ) : (
+              <Ionicons name="person" size={84} color="#D1D1D1" />
+            )}
           </View>
         </View>
 
@@ -84,13 +87,13 @@ export default function PerfilDiaristaScreen({
 
           <View style={styles.ratingRow}>
             <Text style={styles.ratingValue}>
-              {Number(profile?.avaliacao_media ?? 0).toFixed(1)}
+              {rating.toFixed(1)}
             </Text>
 
             {[1, 2, 3, 4, 5].map((item) => (
               <Ionicons
                 key={item}
-                name="star"
+                name={rating >= item ? 'star' : 'star-outline'}
                 size={19}
                 color="#FFB800"
               />
@@ -122,9 +125,60 @@ export default function PerfilDiaristaScreen({
                 <Text style={styles.serviceText}>
                   {item.servico?.nome_servico ?? `Serviço #${item.id_servico}`}
                 </Text>
+                <Text style={styles.servicePrice}>{currency(item.preco)}</Text>
               </View>
             ))}
           </View>
+
+          <Text style={styles.sectionTitle}>Combos</Text>
+          {(profile?.combo_base ?? []).length ? (
+            profile?.combo_base?.map((combo) => {
+              const sizes = [
+                combo.atende_casa_pequena && 'Pequena',
+                combo.atende_casa_media && 'Média',
+                combo.atende_casa_grande && 'Grande',
+              ].filter(Boolean).join(', ');
+              return (
+                <View key={combo.id_combo_base} style={styles.comboCard}>
+                  <View style={styles.comboHeader}>
+                    <Text style={styles.comboName}>{combo.nome_combo}</Text>
+                    <Text style={styles.comboPrice}>{currency(combo.valor_base)}</Text>
+                  </View>
+                  {combo.descricao ? <Text style={styles.comboDescription}>{combo.descricao}</Text> : null}
+                  <Text style={styles.comboMeta}>Até {combo.qtd_comodos_casa} cômodos • {sizes || 'Tamanho não informado'}</Text>
+                  <Text style={styles.comboServices}>
+                    {(combo.combo_servico ?? []).map((item) => item.servico?.nome_servico).filter(Boolean).join(' • ') || 'Sem serviços vinculados'}
+                  </Text>
+                </View>
+              );
+            })
+          ) : <Text style={styles.emptyText}>Nenhum combo cadastrado.</Text>}
+
+          <Text style={styles.sectionTitle}>Localização de atendimento</Text>
+          <Text style={styles.infoText}>
+            {profile?.endereco?.[0]
+              ? `${profile.endereco[0].bairro} - ${profile.endereco[0].cidade}/${profile.endereco[0].estado}`
+              : 'Localização não informada.'}
+          </Text>
+
+          <Text style={styles.sectionTitle}>Próximas disponibilidades</Text>
+          {(profile?.disponibilidade_diarista ?? []).length ? (
+            profile?.disponibilidade_diarista?.slice(0, 5).map((item) => (
+              <Text key={item.id_agenda} style={styles.infoText}>
+                {new Date(item.dia_semana).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} • {new Date(item.horario_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}
+              </Text>
+            ))
+          ) : <Text style={styles.emptyText}>Nenhuma disponibilidade cadastrada.</Text>}
+
+          <Text style={styles.sectionTitle}>Avaliações</Text>
+          {(profile?.avaliacao ?? []).length ? (
+            profile?.avaliacao?.map((item) => (
+              <View key={item.id_avaliacao} style={styles.reviewCard}>
+                <Text style={styles.reviewTitle}>{item.autor ?? 'Cliente'} • {Number(item.nota).toFixed(1)}</Text>
+                <Text style={styles.reviewText}>{item.comentario || 'Avaliação sem comentário.'}</Text>
+              </View>
+            ))
+          ) : <Text style={styles.emptyText}>Ainda não há avaliações públicas.</Text>}
 
           <TouchableOpacity
   style={styles.scheduleButton}

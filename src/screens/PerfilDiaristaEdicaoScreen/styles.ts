@@ -15,6 +15,13 @@ export const styles = StyleSheet.create({
     backgroundColor: diaristaColor,
   },
 
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+
   scroll: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -96,6 +103,12 @@ export const styles = StyleSheet.create({
     marginTop: -65,
 
     position: 'relative',
+  },
+
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 53,
   },
 
   editPhotoButton: {
@@ -205,6 +218,25 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  sectionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  addButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: diaristaColor,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  disabledButton: {
+    opacity: 0.4,
+  },
+
   // =========================
   // SOBRE
   // =========================
@@ -294,28 +326,51 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // =========================
-  // CONFIRMAR
-  // =========================
-
-  confirmButton: {
+  serviceDataRow: {
     width: '100%',
-    height: 52,
-
-    borderRadius: 14,
-
-    backgroundColor: diaristaColor,
-
+    minHeight: 34,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-
-    marginTop: 15,
+    justifyContent: 'space-between',
+    gap: 10,
   },
 
-  confirmButtonText: {
-    color: '#FFFFFF',
+  serviceDataName: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm ?? 12,
+  },
+
+  serviceDataPrice: {
+    color: diaristaColor,
     fontFamily: fonts.semibold,
-    fontSize: fontSizes.md ?? 15,
+    fontSize: fontSizes.sm ?? 12,
+  },
+
+  comboCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#FFD2BF',
+    borderRadius: 14,
+    backgroundColor: '#FFF7F3',
+    padding: 14,
+    marginTop: 9,
+    gap: 6,
+  },
+
+  comboMeta: {
+    color: '#777777',
+    fontFamily: fonts.regular,
+    fontSize: 10,
+    lineHeight: 16,
+  },
+
+  emptyText: {
+    color: '#999999',
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 12,
+    marginTop: 7,
   },
 
   // =========================

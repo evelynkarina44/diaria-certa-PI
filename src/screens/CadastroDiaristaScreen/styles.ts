@@ -294,6 +294,44 @@ export const styles = StyleSheet.create({
     rowGap: 18,
   },
 
+  catalogError: {
+    color: '#B42318',
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 12,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+
+  selectedServiceRow: {
+    width: '100%',
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 12,
+  },
+
+  selectedServiceName: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm ?? 13,
+  },
+
+  selectedServicePriceInput: {
+    width: 112,
+    height: 44,
+    borderWidth: 1.5,
+    borderColor: diaristaColor,
+    borderRadius: 9,
+    backgroundColor: diaristaLightColor,
+    paddingHorizontal: 7,
+    textAlign: 'center',
+    color: diaristaColor,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+  },
+
   serviceItem: {
     width: '47%',
     minHeight: 40,
@@ -454,6 +492,36 @@ export const styles = StyleSheet.create({
 
   packagesContent: {
     width: '100%',
+  },
+
+  comboFieldLabel: {
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    marginTop: 16,
+    marginBottom: 6,
+  },
+
+  comboDescriptionInput: {
+    width: '100%',
+    minHeight: 92,
+    borderWidth: 1.5,
+    borderColor: '#C8C8C8',
+    borderRadius: 9,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.text,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 13,
+  },
+
+  comboRoomsText: {
+    color: colors.cinza,
+    fontFamily: fonts.regular,
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 10,
   },
 
   packageCards: {

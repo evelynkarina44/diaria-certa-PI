@@ -42,6 +42,12 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  profileImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+
   contentCard: {
     flex: 1,
     minHeight: 390,
@@ -119,6 +125,100 @@ export const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: 11,
     textAlign: 'center',
+  },
+
+  servicePrice: {
+    color: '#168E90',
+    fontFamily: fonts.semibold,
+    fontSize: 10,
+    marginTop: 2,
+  },
+
+  comboCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#FFD2BF',
+    borderRadius: 14,
+    backgroundColor: '#FFF7F3',
+    padding: 14,
+    marginBottom: 10,
+  },
+
+  comboHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  comboName: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: fontSizes.md ?? 15,
+  },
+
+  comboPrice: {
+    color: '#FF6B2C',
+    fontFamily: fonts.semibold,
+    fontSize: fontSizes.sm ?? 13,
+  },
+
+  comboDescription: {
+    color: '#555555',
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 12,
+    lineHeight: 19,
+    marginTop: 7,
+  },
+
+  comboMeta: {
+    color: '#777777',
+    fontFamily: fonts.medium,
+    fontSize: 10,
+    marginTop: 8,
+  },
+
+  comboServices: {
+    color: '#777777',
+    fontFamily: fonts.regular,
+    fontSize: 10,
+    lineHeight: 16,
+    marginTop: 5,
+  },
+
+  infoText: {
+    color: '#555555',
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 12,
+    lineHeight: 20,
+    marginBottom: 5,
+  },
+
+  emptyText: {
+    color: '#999999',
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 12,
+  },
+
+  reviewCard: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+    paddingVertical: 10,
+  },
+
+  reviewTitle: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: fontSizes.sm ?? 12,
+  },
+
+  reviewText: {
+    color: '#666666',
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 12,
+    lineHeight: 19,
+    marginTop: 3,
   },
 
   scheduleButton: {

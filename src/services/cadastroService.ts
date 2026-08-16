@@ -14,6 +14,11 @@ import type {
 async function criarUsuarioEAutenticar(
   usuario: UsuarioCreate,
 ): Promise<Usuario> {
+  const restoredUser = await authService.restore();
+  if (restoredUser?.email.toLowerCase() === usuario.email.trim().toLowerCase()) {
+    return restoredUser;
+  }
+
   let usuarioJaExistia = false;
   try {
     await usuarioService.criar(usuario);
@@ -63,7 +68,14 @@ export const cadastroService = {
     if (user.diarista?.length) {
       throw new ApiError('Esta conta já possui perfil de diarista.', { status: 409 });
     }
-    await diaristaService.criar({ ...perfil, id_usuario: user.id_usuario });
+    try {
+      await diaristaService.criar({ ...perfil, id_usuario: user.id_usuario });
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 409) throw error;
+      const refreshedUser = await authService.me();
+      if (!refreshedUser.diarista?.length) throw error;
+      return refreshedUser;
+    }
     return authService.me();
   },
 
@@ -98,10 +110,16 @@ export const cadastroService = {
     const user = await criarUsuarioEAutenticar(usuario);
 
     if (!user.diarista?.length) {
-      await diaristaService.criar({
-        ...perfil,
-        id_usuario: user.id_usuario,
-      });
+      try {
+        await diaristaService.criar({
+          ...perfil,
+          id_usuario: user.id_usuario,
+        });
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 409) throw error;
+        const refreshedUser = await authService.me();
+        if (!refreshedUser.diarista?.length) throw error;
+      }
     } else {
       const enderecos = await enderecoService.listar({ limit: 1 });
       if (!enderecos.pagination.total) {

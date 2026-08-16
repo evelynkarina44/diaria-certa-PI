@@ -1,6 +1,8 @@
-import { Text, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 import { styles } from './styles';
 import type { EnderecoCadastro } from '../../services/types';
+import { buscarEnderecoPorCep } from '../../services/cepService';
 
 export type EnderecoFormValue = {
   cep: string;
@@ -55,13 +57,44 @@ type EnderecoCadastroFormProps = {
 };
 
 export function EnderecoCadastroForm({ value, onChange, error }: EnderecoCadastroFormProps) {
+  const [consultandoCep, setConsultandoCep] = useState(false);
+  const [cepError, setCepError] = useState('');
+  const consultaAtual = useRef(0);
+
   function update(field: keyof EnderecoFormValue, fieldValue: string) {
     onChange({ ...value, [field]: fieldValue });
   }
 
-  function updateCep(input: string) {
+  async function updateCep(input: string) {
     const digits = input.replace(/\D/g, '').slice(0, 8);
-    update('cep', digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits);
+    const formatted = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+    onChange({ ...value, cep: formatted });
+    setCepError('');
+    const requestId = ++consultaAtual.current;
+    if (digits.length !== 8) {
+      setConsultandoCep(false);
+      return;
+    }
+    setConsultandoCep(true);
+    try {
+      const address = await buscarEnderecoPorCep(digits);
+      if (requestId !== consultaAtual.current) return;
+      onChange({
+        ...value,
+        cep: address.cep,
+        logradouro: address.logradouro,
+        complemento: address.complemento || value.complemento,
+        bairro: address.bairro,
+        cidade: address.cidade,
+        estado: address.estado,
+      });
+    } catch (cause) {
+      if (requestId === consultaAtual.current) {
+        setCepError(cause instanceof Error ? cause.message : 'Não foi possível consultar o CEP.');
+      }
+    } finally {
+      if (requestId === consultaAtual.current) setConsultandoCep(false);
+    }
   }
 
   return (
@@ -74,7 +107,12 @@ export function EnderecoCadastroForm({ value, onChange, error }: EnderecoCadastr
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Text style={styles.label}>CEP *</Text>
-      <TextInput style={styles.input} value={value.cep} onChangeText={updateCep} placeholder='00000-000' keyboardType='number-pad' maxLength={9} />
+      <View style={styles.cepInputContainer}>
+        <TextInput style={[styles.input, styles.cepInput]} value={value.cep} onChangeText={updateCep} placeholder='00000-000' keyboardType='number-pad' maxLength={9} />
+        {consultandoCep ? <ActivityIndicator style={styles.cepLoader} color="#18C7C8" size="small" /> : null}
+      </View>
+      {cepError ? <Text style={styles.cepError}>{cepError}</Text> : null}
+      {consultandoCep ? <Text style={styles.cepHint}>Buscando endereço...</Text> : null}
 
       <Text style={styles.label}>Logradouro *</Text>
       <TextInput style={styles.input} value={value.logradouro} onChangeText={(text) => update('logradouro', text)} placeholder='Rua, avenida, praça...' autoCapitalize='words' />

@@ -11,18 +11,27 @@ export const styles = StyleSheet.create({
     backgroundColor: clienteColor,
   },
 
-header: {
-  height: 0,
-  backgroundColor: clienteColor,
-  alignItems: 'flex-end',
-  paddingHorizontal: 18,
-  paddingTop: 14,
-},
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+
+  header: {
+    width: '100%',
+    height: 155,
+    backgroundColor: clienteColor,
+    position: 'relative',
+  },
 
   backButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
+    position: 'absolute',
+    top: 14,
+    right: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     backgroundColor: laranja,
     alignItems: 'center',
     justifyContent: 'center',
@@ -30,41 +39,70 @@ header: {
 
   scroll: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: clienteColor,
   },
 
   scrollContent: {
     flexGrow: 1,
+    backgroundColor: '#FFFFFF',
     paddingBottom: 30,
   },
 
-profileCard: {
-  minHeight: 135,
-  backgroundColor: '#FFFFFF',
-  borderTopLeftRadius: 25,
-  borderTopRightRadius: 25,
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingHorizontal: 28,
-  paddingTop: 15,
-},
+  content: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    marginTop: -20,
+    paddingHorizontal: 20,
+    paddingTop: 25,
+  },
 
-avatar: {
-  width: 92,
-  height: 92,
-  borderRadius: 46,
-  borderWidth: 2,
-  borderColor: laranja,
-  backgroundColor: '#D5D5D5',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginTop: -40,
-},
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+
+  avatar: {
+    width: 105,
+    height: 105,
+    borderRadius: 53,
+    borderWidth: 3,
+    borderColor: clienteColor,
+    backgroundColor: '#D5D5D5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -65,
+    position: 'relative',
+  },
+
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 53,
+  },
+
+  editPhotoButton: {
+    position: 'absolute',
+    top: 5,
+    right: 2,
+    width: 25,
+    height: 25,
+    borderRadius: 13,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 3,
+  },
 
   profileInfo: {
     flex: 1,
-    marginLeft: 15,
-    marginTop: -18,
+    marginLeft: 17,
   },
 
   nameRow: {
@@ -76,7 +114,29 @@ avatar: {
   name: {
     color: colors.text,
     fontFamily: fonts.semibold,
-    fontSize: fontSizes.xl ?? 19,
+    fontSize: fontSizes['2xl'] ?? 21,
+  },
+
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 2,
+    marginTop: 5,
+  },
+
+  ratingNumber: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+    marginRight: 3,
+  },
+
+  ratingCount: {
+    color: '#999999',
+    fontFamily: fonts.regular,
+    fontSize: 9,
+    marginLeft: 3,
   },
 
   historyRow: {
@@ -113,44 +173,6 @@ avatar: {
     textAlign: 'center',
   },
 
-  locationCard: {
-    marginHorizontal: 20,
-    marginTop: 32,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 15,
-    paddingVertical: 17,
-    gap: 20,
-
-    shadowColor: '#000000',
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-
-    elevation: 4,
-  },
-
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 13,
-  },
-
-  locationTitle: {
-    color: colors.text,
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.sm ?? 12,
-  },
-
-  address: {
-    color: '#999999',
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.sm ?? 11,
-  },
-
   imagesTitle: {
     color: colors.text,
     fontFamily: fonts.semibold,
@@ -181,18 +203,76 @@ avatar: {
     marginTop: 5,
   },
 
+  profileAccessButton: {
+    width: 'auto',
+    alignSelf: 'stretch',
+    marginTop: 30,
+  },
+
+  errorText: {
+    color: '#B42318',
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 12,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+
+  detailsCard: {
+    marginTop: 16,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    gap: 6,
+    shadowColor: '#000000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+
+  cardTitle: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: fontSizes.md ?? 15,
+  },
+
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 3,
+  },
+
+  editButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#EEEEEE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  detailText: {
+    color: '#666666',
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm ?? 12,
+    lineHeight: 20,
+  },
+
   logoutButton: {
-  height: 52,
-  marginHorizontal: 20,
-  marginTop: 30,
-  borderWidth: 1.5,
-  borderColor: '#FF3338',
-  borderRadius: 14,
-  backgroundColor: '#FFFFFF',
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 8,
-},
+    width: 'auto',
+    height: 52,
+    alignSelf: 'stretch',
+    marginTop: 22,
+    borderWidth: 1.5,
+    borderColor: '#FF3338',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
 
 });

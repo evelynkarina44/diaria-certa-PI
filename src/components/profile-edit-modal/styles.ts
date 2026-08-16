@@ -1,0 +1,28 @@
+import { StyleSheet } from 'react-native';
+import { colors, fonts, fontSizes } from '../../global';
+
+export const styles = StyleSheet.create({
+  overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.55)', paddingHorizontal: 20, paddingVertical: 28 },
+  dialog: { width: '100%', maxWidth: 420, maxHeight: '90%', borderRadius: 20, backgroundColor: colors.white, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 18 },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
+  icon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  title: { flex: 1, color: colors.text, fontFamily: fonts.semibold, fontSize: fontSizes.xl ?? 19, marginLeft: 11 },
+  closeButton: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F1F1' },
+  fieldsScroll: { flexGrow: 0 },
+  fields: { gap: 15 },
+  fieldGroup: { gap: 6 },
+  label: { color: colors.text, fontFamily: fonts.medium, fontSize: fontSizes.sm ?? 12 },
+  input: { width: '100%', minHeight: 48, borderWidth: 1, borderColor: '#D5D5D5', borderRadius: 12, backgroundColor: '#FFFFFF', color: colors.text, fontFamily: fonts.regular, fontSize: fontSizes.sm ?? 13, paddingHorizontal: 13, paddingVertical: 11 },
+  multilineInput: { minHeight: 115, textAlignVertical: 'top' },
+  cepStatus: { fontFamily: fonts.medium, fontSize: fontSizes.sm ?? 11 },
+  cepError: { color: '#B42318', fontFamily: fonts.medium, fontSize: fontSizes.sm ?? 11 },
+  optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  option: { flexGrow: 1, flexBasis: 95, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#D5D5D5', borderRadius: 11, backgroundColor: '#FFFFFF', paddingHorizontal: 5 },
+  optionText: { color: '#666666', fontFamily: fonts.medium, fontSize: 10, textAlign: 'center' },
+  error: { color: '#B42318', fontFamily: fonts.medium, fontSize: fontSizes.sm ?? 12, textAlign: 'center', marginTop: 12 },
+  actions: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  cancelButton: { flex: 1, height: 48, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#C8C8C8', borderRadius: 13, backgroundColor: '#FFFFFF' },
+  cancelText: { color: colors.text, fontFamily: fonts.semibold, fontSize: fontSizes.md ?? 14 },
+  saveButton: { flex: 1, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 13 },
+  saveText: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: fontSizes.md ?? 14 },
+});

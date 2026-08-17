@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getErrorMessage } from '../../services/api';
 import { styles } from './styles';
 import { buscarEnderecoPorCep } from '../../services/cepService';
+import { formatCurrencyInput } from '../../utils/currency';
 
 export type ProfileEditField = {
   name: string;
@@ -26,6 +27,8 @@ export type ProfileEditField = {
   maxLength?: number;
   options?: Array<{ label: string; value: string }>;
   multiple?: boolean;
+  validate?: (value: string) => string | null;
+  currency?: boolean;
 };
 
 type ProfileEditModalProps = {
@@ -45,6 +48,7 @@ export function ProfileEditModal({ visible, title, accentColor, fields, initialV
   const [error, setError] = useState('');
   const [consultandoCep, setConsultandoCep] = useState(false);
   const [cepError, setCepError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const consultaAtual = useRef(0);
 
   useEffect(() => {
@@ -52,10 +56,21 @@ export function ProfileEditModal({ visible, title, accentColor, fields, initialV
       setValues(initialValues);
       setError('');
       setCepError('');
+      setFieldErrors({});
     }
   }, [visible, initialValues]);
 
   async function save() {
+    const validationErrors = Object.fromEntries(
+      fields
+        .map((field) => [field.name, field.validate?.(values[field.name] ?? '') ?? ''] as const)
+        .filter(([, message]) => Boolean(message)),
+    );
+    if (Object.keys(validationErrors).length) {
+      setFieldErrors(validationErrors);
+      setError('Revise os campos destacados.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -69,10 +84,14 @@ export function ProfileEditModal({ visible, title, accentColor, fields, initialV
   }
 
   async function updateField(name: string, input: string) {
-    const value = name === 'cep'
-      ? input.replace(/\D/g, '').slice(0, 8).replace(/^(\d{5})(\d+)/, '$1-$2')
-      : input;
+    const field = fields.find((item) => item.name === name);
+    const value = field?.currency
+      ? formatCurrencyInput(input)
+      : name === 'cep'
+        ? input.replace(/\D/g, '').slice(0, 8).replace(/^(\d{5})(\d+)/, '$1-$2')
+        : input;
     setValues((current) => ({ ...current, [name]: value }));
+    setFieldErrors((current) => ({ ...current, [name]: '' }));
     if (!addressAutoFill || name !== 'cep') return;
 
     setCepError('');
@@ -147,7 +166,7 @@ export function ProfileEditModal({ visible, title, accentColor, fields, initialV
                   </View>
                 ) : (
                   <TextInput
-                    style={[styles.input, field.multiline && styles.multilineInput]}
+                    style={[styles.input, field.multiline && styles.multilineInput, fieldErrors[field.name] && styles.invalidInput]}
                     value={values[field.name] ?? ''}
                     onChangeText={(value) => updateField(field.name, value)}
                     placeholder={field.placeholder}
@@ -158,6 +177,12 @@ export function ProfileEditModal({ visible, title, accentColor, fields, initialV
                     autoCapitalize={field.keyboardType === 'email-address' || field.keyboardType === 'url' ? 'none' : 'sentences'}
                   />
                 )}
+                {!field.options && field.maxLength ? (
+                  <View style={styles.fieldFeedback}>
+                    <Text style={styles.fieldError}>{fieldErrors[field.name] ?? ''}</Text>
+                    <Text style={styles.characterCount}>{(values[field.name] ?? '').length}/{field.maxLength}</Text>
+                  </View>
+                ) : fieldErrors[field.name] ? <Text style={styles.fieldError}>{fieldErrors[field.name]}</Text> : null}
                 {field.name === 'cep' && consultandoCep ? <Text style={[styles.cepStatus, { color: accentColor }]}>Buscando endereço...</Text> : null}
                 {field.name === 'cep' && cepError ? <Text style={styles.cepError}>{cepError}</Text> : null}
               </View>

@@ -16,24 +16,16 @@ import { styles } from './styles';
 import { useAuth } from '../../contexts/GlobalContext';
 import { diaristaService } from '../../services/diaristaService';
 import { enderecoService } from '../../services/enderecoService';
-import type { Diarista, Endereco, Servico } from '../../services/types';
+import type { Diarista, Endereco } from '../../services/types';
 import { LogoutButton } from '../../components/logout-button';
 import { ProfileAccessActions } from '../../components/profile-access-actions';
-import { ProfileEditModal, type ProfileEditField } from '../../components/profile-edit-modal';
+import { ProfileEditModal } from '../../components/profile-edit-modal';
 import { usuarioService } from '../../services/usuarioService';
-import { diaristaServicoService } from '../../services/diaristaServicoService';
-import { servicoService } from '../../services/servicoService';
-import { comboBaseService } from '../../services/comboBaseService';
-import { comboServicoService } from '../../services/comboServicoService';
 
 type EditSection =
   | 'photo'
   | 'professional'
   | 'about'
-  | 'services'
-  | 'addService'
-  | 'combos'
-  | 'addCombo'
   | 'address'
   | null;
 
@@ -43,7 +35,6 @@ export default function PerfilDiaristaEdicaoScreen({
   const { user, refreshSession } = useAuth();
   const [profile, setProfile] = useState<Diarista | null>(null);
   const [endereco, setEndereco] = useState<Endereco | null>(null);
-  const [catalogo, setCatalogo] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(true);
   const [editSection, setEditSection] = useState<EditSection>(null);
 
@@ -54,18 +45,15 @@ export default function PerfilDiaristaEdicaoScreen({
       return;
     }
     try {
-      const [diarista, enderecos, servicos] = await Promise.all([
+      const [diarista, enderecos] = await Promise.all([
         diaristaService.buscarPorId(diaristaId),
         enderecoService.listar({ limit: 1 }),
-        servicoService.listar({ limit: 100 }),
       ]);
       setProfile(diarista);
       setEndereco(enderecos.data[0] ?? null);
-      setCatalogo(servicos);
     } catch {
       setProfile(null);
       setEndereco(null);
-      setCatalogo([]);
     } finally {
       setLoading(false);
     }
@@ -74,9 +62,6 @@ export default function PerfilDiaristaEdicaoScreen({
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
-  const currency = (value: number | string) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const parseMoney = (value: string) => Number(value.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.'));
-  const selectedIds = (value = '') => value.split(',').filter(Boolean).map(Number);
   const rating = Number(profile?.avaliacao_media ?? 0);
   function voltar() {
     navigation.goBack();
@@ -110,79 +95,6 @@ export default function PerfilDiaristaEdicaoScreen({
     await Promise.all([refreshSession(), loadProfile()]);
   }
 
-  async function saveServices(values: Record<string, string>) {
-    if (!profile?.id_diarista) return;
-    const updates = (profile.diarista_servico ?? [])
-      .filter((item) => values[`preco_${item.id_diarista_servico}`])
-      .map((item) => diaristaServicoService.atualizar(item.id_diarista_servico, {
-        preco: parseMoney(values[`preco_${item.id_diarista_servico}`]),
-      }));
-    await Promise.all(updates);
-    await loadProfile();
-  }
-
-  async function saveAddService(values: Record<string, string>) {
-    if (!profile?.id_diarista) return;
-    if (!values.id_servico) throw new Error('Selecione um serviço.');
-    if (!values.preco || parseMoney(values.preco) <= 0) throw new Error('Informe um preço válido.');
-    await diaristaServicoService.criar({
-      id_diarista: profile.id_diarista,
-      id_servico: Number(values.id_servico),
-      preco: parseMoney(values.preco),
-      faz_parte_combo_base: false,
-    });
-    await loadProfile();
-  }
-
-  async function syncComboServices(idCombo: number, selected: number[], current: NonNullable<Diarista['combo_base']>[number]['combo_servico'] = []) {
-    const currentIds = current.map((item) => item.id_servico);
-    await Promise.all([
-      ...selected.filter((id) => !currentIds.includes(id)).map((id_servico) => comboServicoService.criar({ id_combo_base: idCombo, id_servico })),
-      ...current.filter((item) => !selected.includes(item.id_servico)).map((item) => comboServicoService.remover(item.id_combo_servico)),
-    ]);
-  }
-
-  async function saveCombos(values: Record<string, string>) {
-    const combos = profile?.combo_base ?? [];
-    await Promise.all(combos.map(async (combo) => {
-      const prefix = `combo_${combo.id_combo_base}`;
-      const tamanhos = (values[`${prefix}_tamanhos`] ?? '').split(',').filter(Boolean);
-      const services = selectedIds(values[`${prefix}_servicos`]);
-      if (!services.length) throw new Error(`Selecione ao menos um serviço para ${combo.nome_combo}.`);
-      await comboBaseService.atualizar(combo.id_combo_base, {
-        nome_combo: values[`${prefix}_nome`].trim(),
-        descricao: values[`${prefix}_descricao`].trim() || null,
-        valor_base: parseMoney(values[`${prefix}_valor`]),
-        qtd_comodos_casa: Number(values[`${prefix}_comodos`]),
-        atende_casa_pequena: tamanhos.includes('pequena'),
-        atende_casa_media: tamanhos.includes('media'),
-        atende_casa_grande: tamanhos.includes('grande'),
-      });
-      await syncComboServices(combo.id_combo_base, services, combo.combo_servico);
-    }));
-    await loadProfile();
-  }
-
-  async function saveAddCombo(values: Record<string, string>) {
-    if (!profile?.id_diarista) return;
-    const services = selectedIds(values.servicos);
-    const tamanhos = (values.tamanhos ?? '').split(',').filter(Boolean);
-    if (!services.length) throw new Error('Selecione ao menos um serviço para o combo.');
-    if (!tamanhos.length) throw new Error('Selecione ao menos um tamanho de residência.');
-    const combo = await comboBaseService.criar({
-      id_diarista: profile.id_diarista,
-      nome_combo: values.nome.trim(),
-      descricao: values.descricao.trim() || null,
-      valor_base: parseMoney(values.valor),
-      qtd_comodos_casa: Number(values.comodos),
-      atende_casa_pequena: tamanhos.includes('pequena'),
-      atende_casa_media: tamanhos.includes('media'),
-      atende_casa_grande: tamanhos.includes('grande'),
-    });
-    await syncComboServices(combo.id_combo_base, services);
-    await loadProfile();
-  }
-
   async function saveAddress(values: Record<string, string>) {
     if (!profile?.id_diarista) return;
     const data = {
@@ -202,53 +114,6 @@ export default function PerfilDiaristaEdicaoScreen({
     }
     await loadProfile();
   }
-
-  const servicosAtuais = profile?.diarista_servico ?? [];
-  const idsAtuais = new Set(servicosAtuais.map((item) => item.id_servico));
-  const novosServicos = catalogo.filter((item) => !idsAtuais.has(item.id_servico));
-  const serviceFields: ProfileEditField[] = [
-    ...servicosAtuais.map((item) => ({
-      name: `preco_${item.id_diarista_servico}`,
-      label: `${item.servico?.nome_servico ?? `Serviço #${item.id_servico}`} — preço`,
-      keyboardType: 'decimal-pad' as const,
-    })),
-  ];
-  const offeredServiceOptions = servicosAtuais.map((item) => ({
-    label: item.servico?.nome_servico ?? `Serviço #${item.id_servico}`,
-    value: String(item.id_servico),
-  }));
-  const residenceSizeOptions = [
-    { label: 'Pequena', value: 'pequena' },
-    { label: 'Média', value: 'media' },
-    { label: 'Grande', value: 'grande' },
-  ];
-  const comboFields: ProfileEditField[] = (profile?.combo_base ?? []).flatMap((combo) => {
-    const prefix = `combo_${combo.id_combo_base}`;
-    return [
-      { name: `${prefix}_nome`, label: `${combo.nome_combo} — nome` },
-      { name: `${prefix}_descricao`, label: 'Descrição', multiline: true },
-      { name: `${prefix}_valor`, label: 'Valor total', keyboardType: 'decimal-pad' as const },
-      { name: `${prefix}_comodos`, label: 'Limite de cômodos', keyboardType: 'number-pad' as const },
-      { name: `${prefix}_tamanhos`, label: 'Tamanhos de residência', options: residenceSizeOptions, multiple: true },
-      { name: `${prefix}_servicos`, label: 'Serviços incluídos', options: offeredServiceOptions, multiple: true },
-    ];
-  });
-  const comboInitialValues = Object.fromEntries((profile?.combo_base ?? []).flatMap((combo) => {
-    const prefix = `combo_${combo.id_combo_base}`;
-    const tamanhos = [
-      combo.atende_casa_pequena ? 'pequena' : '',
-      combo.atende_casa_media ? 'media' : '',
-      combo.atende_casa_grande ? 'grande' : '',
-    ].filter(Boolean).join(',');
-    return [
-      [`${prefix}_nome`, combo.nome_combo],
-      [`${prefix}_descricao`, combo.descricao ?? ''],
-      [`${prefix}_valor`, String(combo.valor_base).replace('.', ',')],
-      [`${prefix}_comodos`, String(combo.qtd_comodos_casa)],
-      [`${prefix}_tamanhos`, tamanhos],
-      [`${prefix}_servicos`, (combo.combo_servico ?? []).map((item) => item.id_servico).join(',')],
-    ];
-  }));
 
   if (loading) {
     return <SafeAreaView style={styles.loading}><ActivityIndicator color="#FF6B2C" /></SafeAreaView>;
@@ -376,84 +241,6 @@ export default function PerfilDiaristaEdicaoScreen({
             </View>
           </View>
 
-          {/* SERVIÇOS */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                Serviços
-              </Text>
-
-              <View style={styles.sectionActions}>
-                <TouchableOpacity
-                  style={[styles.editButton, !servicosAtuais.length && styles.disabledButton]}
-                  onPress={() => setEditSection('services')}
-                  disabled={!servicosAtuais.length}
-                  activeOpacity={0.7}
-                  accessibilityLabel="Editar serviços"
-                >
-                  <Ionicons name="pencil" size={14} color="#111111" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.addButton, !novosServicos.length && styles.disabledButton]}
-                  onPress={() => setEditSection('addService')}
-                  disabled={!novosServicos.length}
-                  activeOpacity={0.7}
-                  accessibilityLabel="Adicionar serviço"
-                >
-                  <Ionicons name="add" size={18} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.servicesCard}>
-              {(profile?.diarista_servico ?? []).map((item) => (
-                <View key={item.id_diarista_servico} style={styles.serviceDataRow}>
-                  <Text style={styles.serviceDataName}>{item.servico?.nome_servico ?? `Serviço #${item.id_servico}`}</Text>
-                  <Text style={styles.serviceDataPrice}>{currency(item.preco)}</Text>
-                </View>
-              ))}
-              {!profile?.diarista_servico?.length ? <Text style={styles.emptyText}>Nenhum serviço cadastrado.</Text> : null}
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Combos</Text>
-              <View style={styles.sectionActions}>
-                <TouchableOpacity
-                  style={[styles.editButton, !profile?.combo_base?.length && styles.disabledButton]}
-                  onPress={() => setEditSection('combos')}
-                  disabled={!profile?.combo_base?.length}
-                  activeOpacity={0.7}
-                  accessibilityLabel="Editar combos"
-                >
-                  <Ionicons name="pencil" size={14} color="#111111" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.addButton, !servicosAtuais.length && styles.disabledButton]}
-                  onPress={() => setEditSection('addCombo')}
-                  disabled={!servicosAtuais.length}
-                  activeOpacity={0.7}
-                  accessibilityLabel="Adicionar combo"
-                >
-                  <Ionicons name="add" size={18} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </View>
-            {(profile?.combo_base ?? []).map((combo) => (
-              <View key={combo.id_combo_base} style={styles.comboCard}>
-                <View style={styles.serviceDataRow}>
-                  <Text style={styles.serviceDataName}>{combo.nome_combo}</Text>
-                  <Text style={styles.serviceDataPrice}>{currency(combo.valor_base)}</Text>
-                </View>
-                {combo.descricao ? <Text style={styles.aboutText}>{combo.descricao}</Text> : null}
-                <Text style={styles.comboMeta}>Até {combo.qtd_comodos_casa} cômodos</Text>
-                <Text style={styles.comboMeta}>{(combo.combo_servico ?? []).map((item) => item.servico?.nome_servico).filter(Boolean).join(' • ')}</Text>
-              </View>
-            ))}
-            {!profile?.combo_base?.length ? <Text style={styles.emptyText}>Nenhum combo cadastrado.</Text> : null}
-          </View>
-
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Endereço de atendimento</Text>
@@ -514,54 +301,6 @@ export default function PerfilDiaristaEdicaoScreen({
         initialValues={{ descricao: profile?.descricao ?? '' }}
         onClose={() => setEditSection(null)}
         onSave={saveAbout}
-      />
-      <ProfileEditModal
-        visible={editSection === 'services'}
-        title="Editar serviços"
-        accentColor="#FF6B2C"
-        fields={serviceFields}
-        initialValues={{
-          ...Object.fromEntries(servicosAtuais.map((item) => [`preco_${item.id_diarista_servico}`, String(item.preco).replace('.', ',')])),
-        }}
-        onClose={() => setEditSection(null)}
-        onSave={saveServices}
-      />
-      <ProfileEditModal
-        visible={editSection === 'addService'}
-        title="Adicionar serviço"
-        accentColor="#FF6B2C"
-        fields={[
-          { name: 'id_servico', label: 'Serviço', options: novosServicos.map((item) => ({ label: item.nome_servico, value: String(item.id_servico) })) },
-          { name: 'preco', label: 'Preço', placeholder: 'R$ 0,00', keyboardType: 'decimal-pad' },
-        ]}
-        initialValues={{ id_servico: '', preco: '' }}
-        onClose={() => setEditSection(null)}
-        onSave={saveAddService}
-      />
-      <ProfileEditModal
-        visible={editSection === 'combos'}
-        title="Editar combos"
-        accentColor="#FF6B2C"
-        fields={comboFields}
-        initialValues={comboInitialValues}
-        onClose={() => setEditSection(null)}
-        onSave={saveCombos}
-      />
-      <ProfileEditModal
-        visible={editSection === 'addCombo'}
-        title="Adicionar combo base"
-        accentColor="#FF6B2C"
-        fields={[
-          { name: 'nome', label: 'Nome do combo' },
-          { name: 'descricao', label: 'Descrição', multiline: true },
-          { name: 'valor', label: 'Valor total', placeholder: 'R$ 0,00', keyboardType: 'decimal-pad' },
-          { name: 'comodos', label: 'Limite de cômodos', keyboardType: 'number-pad' },
-          { name: 'tamanhos', label: 'Tamanhos de residência', options: residenceSizeOptions, multiple: true },
-          { name: 'servicos', label: 'Serviços incluídos', options: offeredServiceOptions, multiple: true },
-        ]}
-        initialValues={{ nome: '', descricao: '', valor: '', comodos: '', tamanhos: '', servicos: '' }}
-        onClose={() => setEditSection(null)}
-        onSave={saveAddCombo}
       />
       <ProfileEditModal
         visible={editSection === 'address'}

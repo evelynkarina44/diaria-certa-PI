@@ -1,0 +1,30 @@
+import { StyleSheet } from 'react-native';
+import { colors, fonts, fontSizes } from '../../global';
+
+export const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#FF6B2C' },
+  header: { minHeight: 132, backgroundColor: '#FF6B2C', paddingHorizontal: 20, paddingTop: 10 },
+  headerText: { marginTop: 16 },
+  title: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: fontSizes['2xl'] ?? 22 },
+  subtitle: { color: '#FFFFFF', fontFamily: fonts.regular, fontSize: fontSizes.sm ?? 12, marginTop: 3 },
+  scroll: { flex: 1, backgroundColor: '#FFFFFF', borderTopLeftRadius: 22, borderTopRightRadius: 22 },
+  content: { paddingHorizontal: 18, paddingTop: 22, paddingBottom: 36 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  sectionTitle: { color: colors.text, fontFamily: fonts.semibold, fontSize: fontSizes.lg ?? 17 },
+  actions: { flexDirection: 'row', gap: 8 },
+  editButton: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#EEEEEE', alignItems: 'center', justifyContent: 'center' },
+  addButton: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#FF6B2C', alignItems: 'center', justifyContent: 'center' },
+  disabled: { opacity: 0.4 },
+  loader: { marginTop: 30 },
+  error: { color: '#B42318', fontFamily: fonts.medium, textAlign: 'center', marginVertical: 18 },
+  emptyCard: { minHeight: 80, borderRadius: 14, backgroundColor: '#FFFFFF', justifyContent: 'center', padding: 18, elevation: 3, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, shadowOffset: { width: 0, height: 2 } },
+  emptyText: { color: '#999999', fontFamily: fonts.regular, fontSize: fontSizes.sm ?? 12 },
+  card: { flexDirection: 'row', alignItems: 'center', minHeight: 82, borderRadius: 15, backgroundColor: '#FFFFFF', padding: 14, marginBottom: 12, elevation: 3, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, shadowOffset: { width: 0, height: 2 } },
+  cardIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFF0EA', alignItems: 'center', justifyContent: 'center' },
+  cardContent: { flex: 1, marginHorizontal: 12 },
+  cardTitle: { color: colors.text, fontFamily: fonts.semibold, fontSize: fontSizes.md ?? 14 },
+  cardDescription: { color: '#888888', fontFamily: fonts.regular, fontSize: 10, marginTop: 3 },
+  price: { color: '#FF6B2C', fontFamily: fonts.semibold, fontSize: fontSizes.sm ?? 12 },
+  cardActions: { alignItems: 'flex-end', gap: 9 },
+  cardEditButton: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#EEEEEE', alignItems: 'center', justifyContent: 'center' },
+});

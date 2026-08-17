@@ -36,6 +36,8 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
   const items = profile === 'diarista'
     ? [
         { route: 'PerfilDiaristaEdicao', label: 'Meu perfil', icon: 'person-outline' as const },
+        { route: 'ServicosDiarista', label: 'Meus serviços', icon: 'sparkles-outline' as const },
+        { route: 'CombosDiarista', label: 'Meus combos', icon: 'layers-outline' as const },
         { route: 'HistoricoDiarista', label: 'Histórico', icon: 'clipboard-outline' as const },
       ]
     : [

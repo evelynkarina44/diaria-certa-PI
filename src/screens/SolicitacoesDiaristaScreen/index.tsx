@@ -16,6 +16,8 @@ import { styles } from './styles';
 import { agendamentoService } from '../../services/agendamentoService';
 import { getErrorMessage } from '../../services/api';
 import type { Agendamento } from '../../services/types';
+import { HeaderMenu } from '../../components/header-menu';
+import { useAuth } from '../../contexts/GlobalContext';
 
 type Solicitacao = {
   id: number;
@@ -34,6 +36,7 @@ export default function SolicitacoesDiaristaScreen({
 
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     carregarSolicitacoes();
@@ -101,34 +104,11 @@ export default function SolicitacoesDiaristaScreen({
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.headerIcons}>
-          <TouchableOpacity
-            style={styles.messageButton}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="chatbox-outline"
-              size={22}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() =>
-              navigation.navigate('PerfilDiaristaEdicao')
-            }
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="person"
-              size={20}
-              color="#FF6B2C"
-            />
-          </TouchableOpacity>
+          <HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />
         </View>
 
         <Text style={styles.welcome}>
-          Olá, Maria!
+          Olá, {user?.nome?.split(' ')[0] ?? 'diarista'}!
         </Text>
 
         <Text style={styles.subtitle}>

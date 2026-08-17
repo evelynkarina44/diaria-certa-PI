@@ -17,7 +17,7 @@ import { useAuth } from '../../contexts/GlobalContext';
 import { agendamentoService } from '../../services/agendamentoService';
 import { getErrorMessage } from '../../services/api';
 import type { Agendamento } from '../../services/types';
-import { LogoutButton } from '../../components/logout-button';
+import { HeaderMenu } from '../../components/header-menu';
 
 export default function HomeDiaristaScreen({ navigation }: any) {
   const [aba, setAba] = useState<'agenda' | 'solicitacoes'>(
@@ -42,38 +42,8 @@ export default function HomeDiaristaScreen({ navigation }: any) {
       <View style={styles.header}>
 
         <View style={styles.headerIcons}>
-  <TouchableOpacity
-    style={styles.headerIconButton}
-    onPress={() =>
-      navigation.navigate('HistoricoDiarista')
-    }
-    activeOpacity={0.7}
-    accessibilityLabel="Abrir histórico"
-  >
-    <Ionicons
-      name="clipboard-outline"
-      size={21}
-      color="#FF6B2C"
-    />
-  </TouchableOpacity>
-
-  <TouchableOpacity
-    style={styles.profileButton}
-    onPress={() =>
-      navigation.navigate('PerfilDiaristaEdicao')
-    }
-    activeOpacity={0.7}
-    accessibilityLabel="Abrir perfil"
-  >
-    <Ionicons
-      name="person"
-      size={20}
-      color="#FF6B2C"
-    />
-  </TouchableOpacity>
-
-  <LogoutButton navigation={navigation} variant='icon' />
-</View>
+          <HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />
+        </View>
 
         <Text style={styles.welcome}>
           Olá, {user?.nome?.split(' ')[0] ?? 'diarista'}!

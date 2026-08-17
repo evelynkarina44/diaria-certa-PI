@@ -20,7 +20,7 @@ export const styles = StyleSheet.create({
 
   headerIcons: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     gap: 10,
   },

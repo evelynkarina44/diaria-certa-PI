@@ -17,6 +17,10 @@ type LogoutButtonProps = {
   navigation: any;
   variant?: 'full' | 'icon';
   style?: StyleProp<ViewStyle>;
+  onBeforeOpen?: () => void;
+  visible?: boolean;
+  onVisibleChange?: (visible: boolean) => void;
+  hideTrigger?: boolean;
 };
 
 function blurActiveElement() {
@@ -28,14 +32,25 @@ export function LogoutButton({
   navigation,
   variant = 'full',
   style,
+  onBeforeOpen,
+  visible,
+  onVisibleChange,
+  hideTrigger = false,
 }: LogoutButtonProps) {
   const { logout } = useAuth();
-  const [confirmationVisible, setConfirmationVisible] = useState(false);
+  const [internalVisible, setInternalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const confirmationVisible = visible ?? internalVisible;
+
+  function setConfirmationVisible(nextVisible: boolean) {
+    if (visible === undefined) setInternalVisible(nextVisible);
+    onVisibleChange?.(nextVisible);
+  }
 
   function openConfirmation() {
     blurActiveElement();
+    onBeforeOpen?.();
     setError('');
     setConfirmationVisible(true);
   }
@@ -69,25 +84,27 @@ export function LogoutButton({
 
   return (
     <>
-      <TouchableOpacity
-        style={[
-          iconOnly ? styles.iconButton : styles.fullButton,
-          style,
-        ]}
-        onPress={openConfirmation}
-        activeOpacity={0.8}
-        accessibilityRole='button'
-        accessibilityLabel='Sair da conta'
-      >
-        <Ionicons
-          name='log-out-outline'
-          size={iconOnly ? 20 : 23}
-          color='#D92D20'
-        />
-        {!iconOnly && (
-          <Text style={styles.fullButtonText}>Sair da conta</Text>
-        )}
-      </TouchableOpacity>
+      {!hideTrigger && (
+        <TouchableOpacity
+          style={[
+            iconOnly ? styles.iconButton : styles.fullButton,
+            style,
+          ]}
+          onPress={openConfirmation}
+          activeOpacity={0.8}
+          accessibilityRole='button'
+          accessibilityLabel='Sair da conta'
+        >
+          <Ionicons
+            name='log-out-outline'
+            size={iconOnly ? 20 : 23}
+            color='#D92D20'
+          />
+          {!iconOnly && (
+            <Text style={styles.fullButtonText}>Sair da conta</Text>
+          )}
+        </TouchableOpacity>
+      )}
 
       <Modal
         visible={confirmationVisible}

@@ -24,6 +24,7 @@ import type {
   Favorito,
   Servico,
 } from '../../services/types';
+import { HeaderMenu } from '../../components/header-menu';
 
 type Diarista = {
   id: number;
@@ -188,14 +189,6 @@ export default function EncontrarDiaristaScreen({
     navigation.navigate('PerfilDiarista', {
       diaristaId: diarista.id,
     });
-  }
-
-  function abrirHistorico() {
-    navigation.navigate('HistoricoCliente');
-  }
-
-  function abrirPerfilCliente() {
-    navigation.navigate('PerfilCliente');
   }
 
   async function alternarFavorito(id: number) {
@@ -524,50 +517,13 @@ export default function EncontrarDiaristaScreen({
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
-              accessibilityLabel="Voltar"
-            >
-              <Ionicons
-                name="chevron-back"
-                size={30}
-                color="#FFFFFF"
-              />
-            </TouchableOpacity>
-
             <View style={styles.headerActions}>
-              <TouchableOpacity
-                style={styles.headerIconButton}
-                onPress={abrirHistorico}
-                activeOpacity={0.7}
-                accessibilityLabel="Abrir histórico e favoritos"
-              >
-                <Ionicons
-                  name="clipboard-outline"
-                  size={22}
-                  color="#111111"
-                />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.headerIconButton}
-                onPress={abrirPerfilCliente}
-                activeOpacity={0.7}
-                accessibilityLabel="Abrir perfil"
-              >
-                <Ionicons
-                  name="person"
-                  size={21}
-                  color="#111111"
-                />
-              </TouchableOpacity>
+              <HeaderMenu navigation={navigation} profile="cliente" accentColor="#18C7C8" />
             </View>
           </View>
 
           <Text style={styles.welcome}>
-            Olá, usuário!
+            Olá, {user?.nome?.split(' ')[0] ?? 'cliente'}!
           </Text>
 
           <Text style={styles.headerDescription}>

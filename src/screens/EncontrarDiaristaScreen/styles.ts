@@ -30,7 +30,7 @@ export const styles = StyleSheet.create({
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
 
   backButton: {
@@ -43,7 +43,6 @@ export const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
   },
 
   headerIconButton: {

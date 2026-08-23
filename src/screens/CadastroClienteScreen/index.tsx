@@ -31,6 +31,7 @@ import {
   enderecoFormParaApi,
   validarEnderecoForm,
 } from '../../components/endereco-cadastro-form';
+import { formatCpf, formatPhone, isValidCpf, onlyDigits } from '../../utils/inputMasks';
 
 function normalizarData(value: string): string | null {
   const texto = value.trim();
@@ -90,8 +91,8 @@ export default function CadastroClienteScreen({ navigation }: any) {
     const nomes = user.nome.trim().split(/\s+/);
     setPrimeiroNome(nomes.shift() ?? '');
     setUltimoNome(nomes.join(' '));
-    setCpf(user.cpf ?? '');
-    setTelefone(user.telefone);
+    setCpf(formatCpf(user.cpf ?? ''));
+    setTelefone(formatPhone(user.telefone));
     setEmail(user.email);
     setConfirmarEmail(user.email);
     enderecoService.listar({ limit: 1 }).then((response) => {
@@ -120,8 +121,8 @@ export default function CadastroClienteScreen({ navigation }: any) {
         Alert.alert('Telefone inválido', 'Informe o telefone com DDD.');
         return false;
       }
-      if (!adicionandoPerfil && cpf.replace(/\D/g, '').length !== 11) {
-        Alert.alert('CPF inválido', 'Informe os 11 números do CPF.');
+      if (!adicionandoPerfil && !isValidCpf(cpf)) {
+        Alert.alert('CPF inválido', 'Informe um CPF válido. Verifique os números digitados.');
         return false;
       }
       if (!normalizarData(dataNascimento)) {
@@ -210,9 +211,9 @@ export default function CadastroClienteScreen({ navigation }: any) {
           nome: `${primeiroNome} ${ultimoNome}`.trim(),
           email: email.trim().toLowerCase(),
           senha,
-          telefone: telefone.trim(),
+          telefone: onlyDigits(telefone),
           foto_perfil: '',
-          cpf: cpf.replace(/\D/g, ''),
+          cpf: onlyDigits(cpf),
           tipo: 'CLIENTE',
         },
         perfil,
@@ -316,7 +317,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
                   placeholder="CPF"
                   placeholderTextColor="#9B9B9B"
                   value={cpf}
-                  onChangeText={setCpf}
+                  onChangeText={(value) => setCpf(formatCpf(value))}
                   keyboardType="number-pad"
                   maxLength={14}
                 />
@@ -326,9 +327,9 @@ export default function CadastroClienteScreen({ navigation }: any) {
                   placeholder='Telefone com DDD'
                   placeholderTextColor='#9B9B9B'
                   value={telefone}
-                  onChangeText={setTelefone}
+                  onChangeText={(value) => setTelefone(formatPhone(value))}
                   keyboardType='phone-pad'
-                  maxLength={20}
+                  maxLength={15}
                 />
                 </>)}
 

@@ -18,7 +18,9 @@ export type DiaristaSearchQuery = {
   preco_min?: number;
   preco_max?: number;
   id_servico?: number;
-  ordenar?: 'avaliacao' | 'preco_asc' | 'preco_desc' | 'nome';
+  cep_origem?: string;
+  distancia_max?: number;
+  ordenar?: 'avaliacao' | 'preco_asc' | 'preco_desc' | 'nome' | 'distancia';
 };
 
 const crud = createCrudService<

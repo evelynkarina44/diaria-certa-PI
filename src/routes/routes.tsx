@@ -31,6 +31,7 @@ import HistoricoClienteScreen from '../screens/HistoricoClienteScreen';
 import SelecionarPerfilScreen from '../screens/SelecionarPerfilScreen';
 import ServicosDiaristaScreen from '../screens/ServicosDiaristaScreen';
 import CombosDiaristaScreen from '../screens/CombosDiaristaScreen';
+import AgendaDiaristaScreen from '../screens/AgendaDiaristaScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -135,6 +136,11 @@ export function Routes() {
 <Stack.Screen
   name="CombosDiarista"
   component={CombosDiaristaScreen}
+/>
+
+<Stack.Screen
+  name="AgendaDiarista"
+  component={AgendaDiaristaScreen}
 />
 
 <Stack.Screen

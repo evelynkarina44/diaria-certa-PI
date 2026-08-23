@@ -31,6 +31,7 @@ import {
   enderecoFormParaApi,
   validarEnderecoForm,
 } from '../../components/endereco-cadastro-form';
+import { formatCpf, formatPhone, isValidCpf, onlyDigits } from '../../utils/inputMasks';
 
 type ServicoIndividual = {
   key: string;
@@ -104,8 +105,8 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
     const nomes = user.nome.trim().split(/\s+/);
     setPrimeiroNome(nomes.shift() ?? '');
     setUltimoNome(nomes.join(' '));
-    setCpf(user.cpf ?? '');
-    setTelefone(user.telefone);
+    setCpf(formatCpf(user.cpf ?? ''));
+    setTelefone(formatPhone(user.telefone));
     setEmail(user.email);
     setConfirmarEmail(user.email);
     enderecoService.listar({ limit: 1 }).then((response) => {
@@ -161,8 +162,8 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
         Alert.alert('Telefone inválido', 'Informe o telefone com DDD.');
         return false;
       }
-      if (cpf.replace(/\D/g, '').length !== 11) {
-        Alert.alert('CPF inválido', 'Informe os 11 números do CPF.');
+      if (!isValidCpf(cpf)) {
+        Alert.alert('CPF inválido', 'Informe um CPF válido. Verifique os números digitados.');
         return false;
       }
     }
@@ -300,9 +301,9 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
           nome: `${primeiroNome} ${ultimoNome}`.trim(),
           email: email.trim().toLowerCase(),
           senha,
-          telefone: telefone.trim(),
+          telefone: onlyDigits(telefone),
           foto_perfil: '',
-          cpf: cpf.replace(/\D/g, ''),
+          cpf: onlyDigits(cpf),
           tipo: 'DIARISTA',
         },
         perfil,
@@ -539,7 +540,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                   placeholder="CPF"
                   placeholderTextColor="#9B9B9B"
                   value={cpf}
-                  onChangeText={setCpf}
+                  onChangeText={(value) => setCpf(formatCpf(value))}
                   keyboardType="number-pad"
                   maxLength={14}
                 />
@@ -549,9 +550,9 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                   placeholder='Telefone com DDD'
                   placeholderTextColor='#9B9B9B'
                   value={telefone}
-                  onChangeText={setTelefone}
+                  onChangeText={(value) => setTelefone(formatPhone(value))}
                   keyboardType='phone-pad'
-                  maxLength={20}
+                  maxLength={15}
                 />
               </View>
             )}

@@ -317,6 +317,47 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
+  filterActions: {
+    flexDirection: 'row',
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#EEEEEE',
+    paddingTop: 14,
+    marginTop: 16,
+  },
+
+  clearFilterButton: {
+    flex: 1,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#BDBDBD',
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+  },
+
+  clearFilterText: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: fontSizes.sm ?? 12,
+  },
+
+  applyFilterButton: {
+    flex: 1.25,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    backgroundColor: clienteColor,
+  },
+
+  applyFilterText: {
+    color: '#FFFFFF',
+    fontFamily: fonts.semibold,
+    fontSize: fontSizes.sm ?? 12,
+  },
+
   listTitle: {
     color: colors.text,
     fontFamily: fonts.semibold,

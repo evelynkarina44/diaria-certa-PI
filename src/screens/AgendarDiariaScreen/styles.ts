@@ -10,6 +10,8 @@ export const styles = StyleSheet.create({
     backgroundColor: clienteColor,
   },
 
+  loader: { flex: 1 },
+
   header: {
     height: 70,
     flexDirection: 'row',
@@ -73,6 +75,8 @@ export const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
+  calendarArrow: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 17 },
+
   month: {
     color: colors.text,
     fontFamily: fonts.semibold,
@@ -116,6 +120,8 @@ export const styles = StyleSheet.create({
     backgroundColor: clienteColor,
   },
 
+  dayCircleAvailable: { borderWidth: 1, borderColor: '#A6E7E7' },
+
   dayText: {
     color: colors.text,
     fontFamily: fonts.medium,
@@ -126,20 +132,24 @@ export const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
+  dayTextDisabled: { color: '#C8C8C8' },
+
   timeOptions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
     marginBottom: 30,
   },
 
   timeButton: {
-    flex: 1,
+    minWidth: 72,
     height: 38,
     borderWidth: 1.5,
     borderColor: '#C8C8C8',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 14,
   },
 
   timeButtonSelected: {
@@ -156,6 +166,28 @@ export const styles = StyleSheet.create({
   timeTextSelected: {
     color: '#FFFFFF',
   },
+
+  helperText: { color: '#999999', fontFamily: fonts.regular, fontSize: fontSizes.sm ?? 11 },
+
+  comboOptions: { gap: 9, marginBottom: 24 },
+  comboButton: { borderWidth: 1, borderColor: '#DEDEDE', borderRadius: 12, backgroundColor: '#FFFFFF', padding: 12 },
+  comboButtonSelected: { borderColor: clienteColor, backgroundColor: '#F0FDFD' },
+  comboHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  comboName: { flex: 1, color: colors.text, fontFamily: fonts.semibold, fontSize: fontSizes.sm ?? 13 },
+  comboNameSelected: { color: '#087E80' },
+  comboPrice: { color: '#FF6B2C', fontFamily: fonts.semibold, fontSize: fontSizes.sm ?? 12 },
+  comboDescription: { color: '#777777', fontFamily: fonts.regular, fontSize: 10, lineHeight: 16, marginTop: 5 },
+  comboMeta: { color: '#999999', fontFamily: fonts.regular, fontSize: 9, marginTop: 6 },
+  includedServices: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 24 },
+  includedServiceChip: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 16, backgroundColor: '#DFF8F8', paddingHorizontal: 10 },
+  includedServiceText: { color: '#087E80', fontFamily: fonts.medium, fontSize: 10 },
+
+  serviceOptions: { gap: 8, marginBottom: 28 },
+  serviceButton: { minHeight: 43, flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10, backgroundColor: '#FFFFFF', paddingHorizontal: 11 },
+  serviceButtonSelected: { borderColor: clienteColor, backgroundColor: '#EAFBFB' },
+  serviceText: { flex: 1, color: '#777777', fontFamily: fonts.regular, fontSize: fontSizes.sm ?? 12 },
+  serviceTextSelected: { color: colors.text, fontFamily: fonts.medium },
+  servicePrice: { color: '#FF6B2C', fontFamily: fonts.semibold, fontSize: 10 },
 
   requestLabel: {
     color: colors.text,
@@ -198,6 +230,9 @@ export const styles = StyleSheet.create({
     marginTop: 3,
   },
 
+  estimateLoader: { alignSelf: 'flex-start', marginTop: 8 },
+  errorText: { color: '#B42318', fontFamily: fonts.medium, fontSize: fontSizes.sm ?? 11, marginBottom: 10 },
+
   confirmButton: {
     width: '100%',
     height: 54,
@@ -213,4 +248,6 @@ export const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: fontSizes.md ?? 15,
   },
+
+  confirmButtonDisabled: { opacity: 0.5 },
 });

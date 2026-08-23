@@ -27,6 +27,8 @@ export type ProfileEditField = {
   maxLength?: number;
   options?: Array<{ label: string; value: string }>;
   multiple?: boolean;
+  multiplePicker?: boolean;
+  selectionPlaceholder?: string;
   validate?: (value: string) => string | null;
   currency?: boolean;
 };
@@ -49,6 +51,7 @@ export function ProfileEditModal({ visible, title, accentColor, fields, initialV
   const [consultandoCep, setConsultandoCep] = useState(false);
   const [cepError, setCepError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [expandedOptions, setExpandedOptions] = useState<string | null>(null);
   const consultaAtual = useRef(0);
 
   useEffect(() => {
@@ -57,6 +60,7 @@ export function ProfileEditModal({ visible, title, accentColor, fields, initialV
       setError('');
       setCepError('');
       setFieldErrors({});
+      setExpandedOptions(null);
     }
   }, [visible, initialValues]);
 
@@ -135,11 +139,88 @@ export function ProfileEditModal({ visible, title, accentColor, fields, initialV
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.fieldsScroll} contentContainerStyle={styles.fields} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            style={styles.fieldsScroll}
+            contentContainerStyle={styles.fields}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+          >
             {fields.map((field) => (
               <View key={field.name} style={styles.fieldGroup}>
                 <Text style={styles.label}>{field.label}</Text>
-                {field.options ? (
+                {field.options && field.multiple && field.multiplePicker ? (
+                  <View style={styles.multiSelect}>
+                    <TouchableOpacity
+                      style={styles.selectTrigger}
+                      onPress={() => setExpandedOptions((current) => current === field.name ? null : field.name)}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: expandedOptions === field.name }}
+                    >
+                      <Text style={styles.selectTriggerText}>
+                        {field.selectionPlaceholder ?? 'Selecione uma ou mais opções'}
+                      </Text>
+                      <Ionicons
+                        name={expandedOptions === field.name ? 'chevron-up' : 'chevron-down'}
+                        size={18}
+                        color="#666666"
+                      />
+                    </TouchableOpacity>
+
+                    {expandedOptions === field.name ? (
+                      <View style={styles.optionsList}>
+                        {field.options.map((option) => {
+                          const selectedValues = (values[field.name] ?? '').split(',').filter(Boolean);
+                          const selected = selectedValues.includes(option.value);
+                          return (
+                            <TouchableOpacity
+                              key={option.value}
+                              style={[styles.listOption, selected && { backgroundColor: `${accentColor}12` }]}
+                              onPress={() => setValues((current) => {
+                                const currentValues = (current[field.name] ?? '').split(',').filter(Boolean);
+                                const nextValues = currentValues.includes(option.value)
+                                  ? currentValues.filter((item) => item !== option.value)
+                                  : [...currentValues, option.value];
+                                return { ...current, [field.name]: nextValues.join(',') };
+                              })}
+                            >
+                              <Text style={[styles.listOptionText, selected && { color: accentColor }]}>{option.label}</Text>
+                              <Ionicons
+                                name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                                size={19}
+                                color={selected ? accentColor : '#B8B8B8'}
+                              />
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    ) : null}
+
+                    <View style={styles.selectedOptions}>
+                      {field.options
+                        .filter((option) => (values[field.name] ?? '').split(',').filter(Boolean).includes(option.value))
+                        .map((option) => (
+                          <View key={option.value} style={[styles.selectedChip, { borderColor: accentColor, backgroundColor: `${accentColor}12` }]}>
+                            <Text style={[styles.selectedChipText, { color: accentColor }]}>{option.label}</Text>
+                            <TouchableOpacity
+                              style={styles.removeChipButton}
+                              onPress={() => setValues((current) => ({
+                                ...current,
+                                [field.name]: (current[field.name] ?? '').split(',').filter(Boolean).filter((item) => item !== option.value).join(','),
+                              }))}
+                              accessibilityLabel={`Remover ${option.label}`}
+                            >
+                              <Ionicons name="close-circle" size={18} color={accentColor} />
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      {!(values[field.name] ?? '').split(',').filter(Boolean).length ? (
+                        <Text style={styles.noSelectionText}>Nenhum serviço selecionado.</Text>
+                      ) : null}
+                    </View>
+                  </View>
+                ) : field.options ? (
                   <View style={styles.optionsRow}>
                     {field.options.map((option) => {
                       const selectedValues = (values[field.name] ?? '').split(',').filter(Boolean);

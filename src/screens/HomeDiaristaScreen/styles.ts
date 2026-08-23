@@ -114,6 +114,14 @@ headerIconButton: {
     fontSize: fontSizes.sm ?? 13,
   },
 
+  calendarArrow: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 17,
+  },
+
   week: {
     flexDirection: 'row',
     marginTop: 14,
@@ -138,6 +146,12 @@ headerIconButton: {
     height: 33,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  dayToday: {
+    borderWidth: 1,
+    borderColor: '#FF6B2C',
+    borderRadius: 18,
   },
 
   dayCompleted: {

@@ -19,6 +19,7 @@ import { getErrorMessage } from '../../services/api';
 import { diaristaService } from '../../services/diaristaService';
 import { favoritoService } from '../../services/favoritoService';
 import { servicoService } from '../../services/servicoService';
+import { clienteService } from '../../services/clienteService';
 import type {
   Diarista as ApiDiarista,
   Favorito,
@@ -68,24 +69,32 @@ export default function EncontrarDiaristaScreen({
   const [catalogoServicos, setCatalogoServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
+  const [cepCliente, setCepCliente] = useState<string | null>(null);
+  const [loadingEndereco, setLoadingEndereco] = useState(true);
+  const [favoritosEmAtualizacao, setFavoritosEmAtualizacao] = useState<number[]>([]);
   const { user } = useAuth();
 
   const [filtroAberto, setFiltroAberto] = useState('');
 
   const [avaliacaoSelecionada, setAvaliacaoSelecionada] =
-    useState('4 estrelas ou mais');
+    useState('');
+  const [avaliacaoAplicada, setAvaliacaoAplicada] = useState('');
 
   const [servicosSelecionados, setServicosSelecionados] =
     useState<string[]>([]);
+  const [servicosAplicados, setServicosAplicados] = useState<string[]>([]);
 
   const [distanciaSelecionada, setDistanciaSelecionada] =
-    useState('Até 5 km');
+    useState('');
+  const [distanciaAplicada, setDistanciaAplicada] = useState('');
 
   const [precoSelecionado, setPrecoSelecionado] =
-    useState('De R$ 100 a R$ 150');
+    useState('');
+  const [precoAplicado, setPrecoAplicado] = useState('');
 
   const [somenteRespostaRapida, setSomenteRespostaRapida] =
     useState(false);
+  const [respostaRapidaAplicada, setRespostaRapidaAplicada] = useState(false);
 
   useEffect(() => {
     servicoService
@@ -95,37 +104,92 @@ export default function EncontrarDiaristaScreen({
   }, []);
 
   useEffect(() => {
+    async function sincronizarFavoritos() {
+      if (user?.activeProfile !== 'CLIENTE') return;
+      try {
+        const response = await favoritoService.listar({ limit: 100 });
+        setDiaristas((current) => current.map((diarista) => {
+          const favorito = response.data.find((item) => item.id_diarista === diarista.id);
+          return {
+            ...diarista,
+            favorito: Boolean(favorito),
+            favoritoId: favorito?.id_favorito,
+          };
+        }));
+      } catch {
+        // A busca principal continua disponível mesmo se a sincronização falhar.
+      }
+    }
+
+    const unsubscribe = navigation.addListener('focus', sincronizarFavoritos);
+    return unsubscribe;
+  }, [navigation, user?.activeProfile]);
+
+  useEffect(() => {
+    const idCliente = user?.cliente?.[0]?.id_cliente;
+    if (!idCliente || user?.activeProfile !== 'CLIENTE') {
+      setCepCliente('');
+      setLoadingEndereco(false);
+      return;
+    }
+
+    setLoadingEndereco(true);
+    clienteService.buscarPorId(idCliente)
+      .then((cliente) => setCepCliente(cliente.endereco?.[0]?.cep ?? ''))
+      .catch((error) => {
+        setCepCliente('');
+        setErro(getErrorMessage(error));
+      })
+      .finally(() => setLoadingEndereco(false));
+  }, [user?.activeProfile, user?.cliente]);
+
+  useEffect(() => {
+    if (loadingEndereco) return;
     const timer = setTimeout(() => {
       carregarDiaristas();
     }, 300);
     return () => clearTimeout(timer);
   }, [
     busca,
-    avaliacaoSelecionada,
-    precoSelecionado,
-    servicosSelecionados,
-    somenteRespostaRapida,
+    avaliacaoAplicada,
+    precoAplicado,
+    servicosAplicados,
+    respostaRapidaAplicada,
+    distanciaAplicada,
+    cepCliente,
+    loadingEndereco,
     user?.id_usuario,
     catalogoServicos,
   ]);
 
   function avaliacaoMinima() {
-    if (avaliacaoSelecionada.startsWith('5')) return 5;
-    if (avaliacaoSelecionada.startsWith('4')) return 4;
-    return 3;
+    if (avaliacaoAplicada.startsWith('5')) return 5;
+    if (avaliacaoAplicada.startsWith('4')) return 4;
+    if (avaliacaoAplicada.startsWith('3')) return 3;
+    return undefined;
   }
 
   function faixaPreco() {
-    if (precoSelecionado.includes('Até R$ 100')) {
+    if (precoAplicado.includes('Até R$ 100')) {
       return { preco_max: 100 };
     }
-    if (precoSelecionado.includes('150 a R$ 200')) {
+    if (precoAplicado.includes('150 a R$ 200')) {
       return { preco_min: 150, preco_max: 200 };
     }
-    if (precoSelecionado.includes('Acima')) {
+    if (precoAplicado.includes('Acima')) {
       return { preco_min: 200 };
     }
-    return { preco_min: 100, preco_max: 150 };
+    if (precoAplicado.includes('100 a R$ 150')) {
+      return { preco_min: 100, preco_max: 150 };
+    }
+    return {};
+  }
+
+  function distanciaMaxima() {
+    if (distanciaAplicada.includes('2 km')) return 2;
+    if (distanciaAplicada.includes('5 km')) return 5;
+    if (distanciaAplicada.includes('10 km')) return 10;
+    return undefined;
   }
 
   function apresentarDiarista(
@@ -141,8 +205,10 @@ export default function EncontrarDiaristaScreen({
       nome: profile.usuario?.nome ?? 'Diarista',
       avaliacao: Number(profile.avaliacao_media ?? 0).toFixed(1),
       quantidadeAvaliacoes: String(profile.avaliacao?.length ?? 0),
-      distancia: endereco
-        ? `${endereco.bairro}, ${endereco.cidade} - ${endereco.estado}`
+      distancia: profile.distancia_km !== null && profile.distancia_km !== undefined
+        ? `${profile.distancia_km.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km de distância`
+        : endereco
+          ? `${endereco.bairro}, ${endereco.cidade} - ${endereco.estado}`
         : 'Localização não informada',
       favorito: Boolean(favorito),
       favoritoId: favorito?.id_favorito,
@@ -154,27 +220,43 @@ export default function EncontrarDiaristaScreen({
     try {
       setLoading(true);
       setErro('');
+      if (!cepCliente) {
+        setDiaristas([]);
+        setErro('Cadastre um endereço com CEP para encontrar as diaristas mais próximas.');
+        return;
+      }
       const servicoSelecionado = catalogoServicos.find(
-        (item) => item.nome_servico === servicosSelecionados[0],
+        (item) => item.nome_servico === servicosAplicados[0],
       );
-      const [response, favoritosResponse] = await Promise.all([
-        diaristaService.listar({
-          nome: busca.trim() || undefined,
-          avaliacao_min: avaliacaoMinima(),
-          ...faixaPreco(),
-          id_servico: servicoSelecionado?.id_servico,
-        }),
-        user?.activeProfile === 'CLIENTE'
-          ? favoritoService.listar({ limit: 100 })
-          : Promise.resolve({ data: [] as Favorito[] }),
-      ]);
+      const query = {
+        nome: busca.trim() || undefined,
+        avaliacao_min: avaliacaoMinima(),
+        ...faixaPreco(),
+        id_servico: servicoSelecionado?.id_servico,
+        cep_origem: cepCliente,
+        distancia_max: distanciaMaxima(),
+        ordenar: 'distancia' as const,
+        limit: 100,
+      };
+      const firstPage = await diaristaService.listar({ ...query, page: 1 });
+      const remainingPages = firstPage.pagination.pages > 1
+        ? await Promise.all(
+            Array.from({ length: firstPage.pagination.pages - 1 }, (_, index) =>
+              diaristaService.listar({ ...query, page: index + 2 }),
+            ),
+          )
+        : [];
+      const profiles = [firstPage, ...remainingPages].flatMap((response) => response.data);
+      const favoritosResponse = user?.activeProfile === 'CLIENTE'
+        ? await favoritoService.listar({ limit: 100 }).catch(() => ({ data: [] as Favorito[] }))
+        : { data: [] as Favorito[] };
       setDiaristas(
-        response.data
+        profiles
           .map((item) =>
             apresentarDiarista(item, favoritosResponse.data),
           )
           .filter(
-            (item) => !somenteRespostaRapida || item.respostaRapida,
+            (item) => !respostaRapidaAplicada || item.respostaRapida,
           ),
       );
     } catch (error) {
@@ -197,22 +279,77 @@ export default function EncontrarDiaristaScreen({
       return;
     }
     const diarista = diaristas.find((item) => item.id === id);
-    if (!diarista) return;
+    if (!diarista || favoritosEmAtualizacao.includes(id)) return;
+    setFavoritosEmAtualizacao((current) => [...current, id]);
     try {
       if (diarista.favorito && diarista.favoritoId) {
         await favoritoService.remover(diarista.favoritoId);
+        setDiaristas((current) => current.map((item) => item.id === id
+          ? { ...item, favorito: false, favoritoId: undefined }
+          : item));
       } else {
-        await favoritoService.criar(id);
+        const favorito = await favoritoService.criar(id);
+        setDiaristas((current) => current.map((item) => item.id === id
+          ? { ...item, favorito: true, favoritoId: favorito.id_favorito }
+          : item));
       }
-      await carregarDiaristas();
     } catch (error) {
       Alert.alert('Não foi possível atualizar', getErrorMessage(error));
+    } finally {
+      setFavoritosEmAtualizacao((current) => current.filter((item) => item !== id));
     }
   }
 
   function alternarFiltro(filtro: string) {
-    setFiltroAberto((filtroAtual) =>
-      filtroAtual === filtro ? '' : filtro
+    if (filtroAberto === filtro) {
+      setFiltroAberto('');
+      return;
+    }
+
+    if (filtro === 'Avaliação') setAvaliacaoSelecionada(avaliacaoAplicada);
+    if (filtro === 'Serviços realizados') setServicosSelecionados([...servicosAplicados]);
+    if (filtro === 'Distância') setDistanciaSelecionada(distanciaAplicada);
+    if (filtro === 'Preço') setPrecoSelecionado(precoAplicado);
+    if (filtro === 'Responde rápido') setSomenteRespostaRapida(respostaRapidaAplicada);
+    setFiltroAberto(filtro);
+  }
+
+  function aplicarFiltro() {
+    if (filtroAberto === 'Avaliação') setAvaliacaoAplicada(avaliacaoSelecionada);
+    if (filtroAberto === 'Serviços realizados') setServicosAplicados([...servicosSelecionados]);
+    if (filtroAberto === 'Distância') setDistanciaAplicada(distanciaSelecionada);
+    if (filtroAberto === 'Preço') setPrecoAplicado(precoSelecionado);
+    if (filtroAberto === 'Responde rápido') setRespostaRapidaAplicada(somenteRespostaRapida);
+    setFiltroAberto('');
+  }
+
+  function limparRascunhoFiltro() {
+    if (filtroAberto === 'Avaliação') setAvaliacaoSelecionada('');
+    if (filtroAberto === 'Serviços realizados') setServicosSelecionados([]);
+    if (filtroAberto === 'Distância') setDistanciaSelecionada('');
+    if (filtroAberto === 'Preço') setPrecoSelecionado('');
+    if (filtroAberto === 'Responde rápido') setSomenteRespostaRapida(false);
+  }
+
+  function filtroAplicado(filtro: string) {
+    if (filtro === 'Avaliação') return Boolean(avaliacaoAplicada);
+    if (filtro === 'Serviços realizados') return servicosAplicados.length > 0;
+    if (filtro === 'Distância') return Boolean(distanciaAplicada);
+    if (filtro === 'Preço') return Boolean(precoAplicado);
+    if (filtro === 'Responde rápido') return respostaRapidaAplicada;
+    return false;
+  }
+
+  function renderAcoesFiltro() {
+    return (
+      <View style={styles.filterActions}>
+        <TouchableOpacity style={styles.clearFilterButton} onPress={limparRascunhoFiltro} activeOpacity={0.8}>
+          <Text style={styles.clearFilterText}>Limpar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.applyFilterButton} onPress={aplicarFiltro} activeOpacity={0.8}>
+          <Text style={styles.applyFilterText}>Aplicar filtro</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
@@ -281,6 +418,7 @@ export default function EncontrarDiaristaScreen({
             );
           })}
         </View>
+        {renderAcoesFiltro()}
       </View>
     );
   }
@@ -341,6 +479,7 @@ export default function EncontrarDiaristaScreen({
             );
           })}
         </View>
+        {renderAcoesFiltro()}
       </View>
     );
   }
@@ -389,6 +528,7 @@ export default function EncontrarDiaristaScreen({
             );
           })}
         </View>
+        {renderAcoesFiltro()}
       </View>
     );
   }
@@ -437,6 +577,7 @@ export default function EncontrarDiaristaScreen({
             );
           })}
         </View>
+        {renderAcoesFiltro()}
       </View>
     );
   }
@@ -481,6 +622,7 @@ export default function EncontrarDiaristaScreen({
             Mostrar apenas quem responde rápido
           </Text>
         </TouchableOpacity>
+        {renderAcoesFiltro()}
       </View>
     );
   }
@@ -577,13 +719,14 @@ export default function EncontrarDiaristaScreen({
             {filtros.map((filtro) => {
               const estaAberto =
                 filtroAberto === filtro;
+              const estaAtivo = estaAberto || filtroAplicado(filtro);
 
               return (
                 <TouchableOpacity
                   key={filtro}
                   style={[
                     styles.filterButton,
-                    estaAberto &&
+                    estaAtivo &&
                       styles.filterButtonSelected,
                   ]}
                   onPress={() =>
@@ -594,7 +737,7 @@ export default function EncontrarDiaristaScreen({
                   <Text
                     style={[
                       styles.filterText,
-                      estaAberto &&
+                      estaAtivo &&
                         styles.filterTextSelected,
                     ]}
                   >
@@ -609,7 +752,7 @@ export default function EncontrarDiaristaScreen({
                     }
                     size={13}
                     color={
-                      estaAberto
+                      estaAtivo
                         ? '#18C7C8'
                         : '#777777'
                     }
@@ -699,6 +842,7 @@ export default function EncontrarDiaristaScreen({
                   onPress={() =>
                     alternarFavorito(diarista.id)
                   }
+                  disabled={favoritosEmAtualizacao.includes(diarista.id)}
                   activeOpacity={0.7}
                 >
                   <Ionicons

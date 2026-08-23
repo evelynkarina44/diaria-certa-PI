@@ -179,7 +179,7 @@ export default function CombosDiaristaScreen({ navigation }: any) {
           { name: 'valor', label: 'Valor total', placeholder: 'R$ 0,00', keyboardType: 'decimal-pad', currency: true },
           { name: 'comodos', label: 'Limite de cômodos', keyboardType: 'number-pad' },
           { name: 'tamanhos', label: 'Tamanhos de residência', options: sizeOptions, multiple: true },
-          { name: 'servicos', label: 'Serviços incluídos', options: serviceOptions, multiple: true },
+          { name: 'servicos', label: 'Serviços incluídos', options: serviceOptions, multiple: true, multiplePicker: true, selectionPlaceholder: 'Selecionar serviços' },
         ]}
         initialValues={{
           nome: editingCombo?.nome_combo ?? '',
@@ -199,7 +199,7 @@ export default function CombosDiaristaScreen({ navigation }: any) {
           { name: 'valor', label: 'Valor total', placeholder: 'R$ 0,00', keyboardType: 'decimal-pad', currency: true },
           { name: 'comodos', label: 'Limite de cômodos', keyboardType: 'number-pad' },
           { name: 'tamanhos', label: 'Tamanhos de residência', options: sizeOptions, multiple: true },
-          { name: 'servicos', label: 'Serviços incluídos', options: serviceOptions, multiple: true },
+          { name: 'servicos', label: 'Serviços incluídos', options: serviceOptions, multiple: true, multiplePicker: true, selectionPlaceholder: 'Selecionar serviços' },
         ]}
         initialValues={{ nome: '', descricao: '', valor: '', comodos: '', tamanhos: '', servicos: '' }}
         onClose={() => setAddVisible(false)} onSave={saveAdd}

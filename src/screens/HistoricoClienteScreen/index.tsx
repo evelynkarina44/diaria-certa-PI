@@ -44,10 +44,14 @@ export default function HistoricoClienteScreen({
   const [historico, setHistorico] = useState<Diarista[]>([]);
   const [favoritos, setFavoritos] = useState<Diarista[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroHistorico, setErroHistorico] = useState('');
+  const [erroFavoritos, setErroFavoritos] = useState('');
 
   useEffect(() => {
     carregarDados();
-  }, []);
+    const unsubscribe = navigation.addListener('focus', carregarDados);
+    return unsubscribe;
+  }, [navigation]);
 
   function apresentarPerfil(
     profile: ApiDiarista,
@@ -95,27 +99,41 @@ export default function HistoricoClienteScreen({
   }
 
   async function carregarDados() {
-    try {
-      setLoading(true);
-      const [appointments, favoritesResponse] = await Promise.all([
-        agendamentoService.listar({ visao: 'historico', limit: 100 }),
-        favoritoService.listar({ limit: 100 }),
-      ]);
+    setLoading(true);
+    const [appointmentsResult, favoritesResult] = await Promise.allSettled([
+      agendamentoService.listar({ visao: 'historico', limit: 100 }),
+      favoritoService.listar({ limit: 100 }),
+    ]);
+
+    const favorites = favoritesResult.status === 'fulfilled'
+      ? favoritesResult.value.data
+      : [];
+
+    if (appointmentsResult.status === 'fulfilled') {
       setHistorico(
-        appointments.data.map((item) =>
-          apresentarHistorico(item, favoritesResponse.data),
+        appointmentsResult.value.data.map((item) =>
+          apresentarHistorico(item, favorites),
         ),
       );
+      setErroHistorico('');
+    } else {
+      setHistorico([]);
+      setErroHistorico(getErrorMessage(appointmentsResult.reason));
+    }
+
+    if (favoritesResult.status === 'fulfilled') {
       setFavoritos(
-        favoritesResponse.data
+        favorites
           .filter((item) => item.diarista)
           .map((item) => apresentarPerfil(item.diarista!, item)),
       );
-    } catch (error) {
-      Alert.alert('Não foi possível carregar o histórico', getErrorMessage(error));
-    } finally {
-      setLoading(false);
+      setErroFavoritos('');
+    } else {
+      setFavoritos([]);
+      setErroFavoritos(getErrorMessage(favoritesResult.reason));
     }
+
+    setLoading(false);
   }
 
   async function alternarFavorito(item: Diarista) {
@@ -280,6 +298,7 @@ export default function HistoricoClienteScreen({
           {loading && <ActivityIndicator color={'#18C7C8'} />}
           {aba === 'historico' ? (
             <>
+              {Boolean(erroHistorico) && <Text style={styles.emptyText}>{erroHistorico}</Text>}
               {historico.map((item) => (
                 <React.Fragment key={item.id}>
                   <Text style={styles.dateTitle}>
@@ -299,7 +318,9 @@ export default function HistoricoClienteScreen({
                 {favoritos.map((item) => renderCard(item))}
               </View>
 
-              {favoritos.length === 0 && (
+              {Boolean(erroFavoritos) && <Text style={styles.emptyText}>{erroFavoritos}</Text>}
+
+              {!loading && !erroFavoritos && favoritos.length === 0 && (
                 <View style={styles.emptyState}>
                   <Ionicons
                     name="heart-outline"

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -18,24 +18,103 @@ import { agendamentoService } from '../../services/agendamentoService';
 import { getErrorMessage } from '../../services/api';
 import type { Agendamento } from '../../services/types';
 import { HeaderMenu } from '../../components/header-menu';
+import { diaristaService } from '../../services/diaristaService';
+
+const scheduledStatuses: Agendamento['status'][] = ['Aceito', 'Em_andamento'];
+const futureStatuses: Agendamento['status'][] = ['Pendente', 'Aceito', 'Em_andamento'];
+
+function localDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function appointmentDateKey(value: string) {
+  return value.slice(0, 10);
+}
+
+function monthTitle(date: Date) {
+  const title = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(date);
+  return title.charAt(0).toUpperCase() + title.slice(1);
+}
 
 export default function HomeDiaristaScreen({ navigation }: any) {
   const [aba, setAba] = useState<'agenda' | 'solicitacoes'>(
     'agenda'
   );
   const [proximas, setProximas] = useState<Agendamento[]>([]);
+  const [agenda, setAgenda] = useState<Agendamento[]>([]);
+  const [mesExibido, setMesExibido] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
   const [loadingAgenda, setLoadingAgenda] = useState(true);
   const { user } = useAuth();
+  const agendaReminderShown = useRef(false);
 
   useEffect(() => {
-    agendamentoService
-      .listar({ visao: 'futuros', limit: 100 })
-      .then((response) => setProximas(response.data))
-      .catch((error) =>
-        Alert.alert('Não foi possível carregar a agenda', getErrorMessage(error)),
-      )
-      .finally(() => setLoadingAgenda(false));
-  }, []);
+    const diaristaId = user?.diarista?.[0]?.id_diarista;
+    if (!diaristaId || agendaReminderShown.current) return;
+    diaristaService.buscarPorId(diaristaId).then((profile) => {
+      if (agendaReminderShown.current || (profile.disponibilidade_diarista ?? []).length) return;
+      agendaReminderShown.current = true;
+      Alert.alert(
+        'Cadastre sua agenda',
+        'Para receber solicitações, informe os dias e horários em que você está disponível.',
+        [
+          { text: 'Agora não', style: 'cancel' },
+          { text: 'Cadastrar agenda', onPress: () => navigation.navigate('AgendaDiarista') },
+        ],
+      );
+    }).catch(() => undefined);
+  }, [navigation, user?.diarista]);
+
+  useEffect(() => {
+    async function carregarAgenda() {
+      setLoadingAgenda(true);
+      try {
+        const firstPage = await agendamentoService.listar({ visao: 'todos', page: 1, limit: 100 });
+        const remainingPages = firstPage.pagination.pages > 1
+          ? await Promise.all(
+              Array.from({ length: firstPage.pagination.pages - 1 }, (_, index) =>
+                agendamentoService.listar({ visao: 'todos', page: index + 2, limit: 100 }),
+              ),
+            )
+          : [];
+        const appointments = [firstPage, ...remainingPages].flatMap((response) => response.data);
+        const today = localDateKey(new Date());
+        const upcoming = appointments
+          .filter((item) => appointmentDateKey(item.data_agendamento) >= today && futureStatuses.includes(item.status))
+          .sort((a, b) => {
+            const dateComparison = appointmentDateKey(a.data_agendamento).localeCompare(appointmentDateKey(b.data_agendamento));
+            return dateComparison || (a.horario_inicio ?? '').localeCompare(b.horario_inicio ?? '');
+          });
+
+        setAgenda(appointments);
+        setProximas(upcoming);
+      } catch (error) {
+        Alert.alert('Não foi possível carregar a agenda', getErrorMessage(error));
+      } finally {
+        setLoadingAgenda(false);
+      }
+    }
+
+    carregarAgenda();
+    const unsubscribe = navigation.addListener('focus', carregarAgenda);
+    return unsubscribe;
+  }, [navigation]);
+
+  const anoExibido = mesExibido.getFullYear();
+  const numeroMesExibido = mesExibido.getMonth();
+  const primeiroDiaSemana = new Date(anoExibido, numeroMesExibido, 1).getDay();
+  const quantidadeDias = new Date(anoExibido, numeroMesExibido + 1, 0).getDate();
+  const quantidadeCelulas = Math.ceil((primeiroDiaSemana + quantidadeDias) / 7) * 7;
+  const todayKey = localDateKey(new Date());
+
+  function alterarMes(offset: number) {
+    setMesExibido((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -103,21 +182,25 @@ export default function HomeDiaristaScreen({ navigation }: any) {
             <>
               <View style={styles.calendar}>
                 <View style={styles.calendarHeader}>
-                  <Ionicons
-                    name="chevron-back"
-                    size={20}
-                    color="#777777"
-                  />
+                  <TouchableOpacity
+                    style={styles.calendarArrow}
+                    onPress={() => alterarMes(-1)}
+                    accessibilityLabel="Exibir mês anterior"
+                  >
+                    <Ionicons name="chevron-back" size={20} color="#777777" />
+                  </TouchableOpacity>
 
                   <Text style={styles.calendarMonth}>
-                    Maio 2024
+                    {monthTitle(mesExibido)}
                   </Text>
 
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color="#777777"
-                  />
+                  <TouchableOpacity
+                    style={styles.calendarArrow}
+                    onPress={() => alterarMes(1)}
+                    accessibilityLabel="Exibir próximo mês"
+                  >
+                    <Ionicons name="chevron-forward" size={20} color="#777777" />
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.week}>
@@ -134,11 +217,11 @@ export default function HomeDiaristaScreen({ navigation }: any) {
                 </View>
 
                 <View style={styles.days}>
-                  {Array.from({ length: 35 }).map(
+                  {Array.from({ length: quantidadeCelulas }).map(
                     (_, index) => {
-                      const numero = index - 2;
+                      const numero = index - primeiroDiaSemana + 1;
 
-                      if (numero <= 0 || numero > 31) {
+                      if (numero <= 0 || numero > quantidadeDias) {
                         return (
                           <View
                             key={index}
@@ -147,17 +230,18 @@ export default function HomeDiaristaScreen({ navigation }: any) {
                         );
                       }
 
-                      const concluido =
-                        numero === 1 || numero === 5;
-
-                      const marcado =
-                        numero === 15 || numero === 30;
+                      const dateKey = localDateKey(new Date(anoExibido, numeroMesExibido, numero));
+                      const appointments = agenda.filter((item) => appointmentDateKey(item.data_agendamento) === dateKey);
+                      const marcado = appointments.some((item) => scheduledStatuses.includes(item.status));
+                      const concluido = !marcado && appointments.some((item) => item.status === 'Concluido');
+                      const hoje = dateKey === todayKey;
 
                       return (
                         <View
-                          key={index}
+                          key={dateKey}
                           style={[
                             styles.day,
+                            hoje && styles.dayToday,
                             concluido &&
                               styles.dayCompleted,
                             marcado &&

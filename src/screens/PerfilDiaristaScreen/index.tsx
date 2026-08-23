@@ -154,21 +154,12 @@ export default function PerfilDiaristaScreen({
             })
           ) : <Text style={styles.emptyText}>Nenhum combo cadastrado.</Text>}
 
-          <Text style={styles.sectionTitle}>Localização de atendimento</Text>
+          <Text style={styles.sectionTitle}>Localização da diarista</Text>
           <Text style={styles.infoText}>
             {profile?.endereco?.[0]
               ? `${profile.endereco[0].bairro} - ${profile.endereco[0].cidade}/${profile.endereco[0].estado}`
               : 'Localização não informada.'}
           </Text>
-
-          <Text style={styles.sectionTitle}>Próximas disponibilidades</Text>
-          {(profile?.disponibilidade_diarista ?? []).length ? (
-            profile?.disponibilidade_diarista?.slice(0, 5).map((item) => (
-              <Text key={item.id_agenda} style={styles.infoText}>
-                {new Date(item.dia_semana).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} • {new Date(item.horario_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })}
-              </Text>
-            ))
-          ) : <Text style={styles.emptyText}>Nenhuma disponibilidade cadastrada.</Text>}
 
           <Text style={styles.sectionTitle}>Avaliações</Text>
           {(profile?.avaliacao ?? []).length ? (

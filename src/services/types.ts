@@ -145,6 +145,7 @@ export type Diarista = {
   qtd_max_comodos: number;
   avaliacao_media?: number | null;
   valor_medio_diaria?: number | null;
+  distancia_km?: number | null;
   usuario?: Pick<Usuario, 'nome' | 'foto_perfil' | 'telefone'>;
   endereco?: Endereco[];
   diarista_servico?: DiaristaServico[];
@@ -191,6 +192,7 @@ export type Agendamento = {
   id_cliente: number;
   id_diarista: number;
   id_endereco?: number | null;
+  id_combo_base?: number | null;
   data_agendamento: string;
   horario_inicio?: string | null;
   horario_fim?: string | null;
@@ -302,6 +304,7 @@ export type DisponibilidadeCreate = Omit<Disponibilidade, 'id_agenda'>;
 export type AgendamentoCreate = {
   id_diarista: number;
   id_endereco: number;
+  id_combo_base?: number;
   data_agendamento: string;
   horario_inicio: string;
   horario_fim: string;

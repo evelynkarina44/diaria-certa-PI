@@ -99,7 +99,34 @@ export async function request<T>(
   return response.data;
 }
 
+function getValidationDetails(details: unknown): string | null {
+  if (!details || typeof details !== 'object') return null;
+
+  const fieldErrors = (details as { fieldErrors?: unknown }).fieldErrors;
+  if (!fieldErrors || typeof fieldErrors !== 'object') return null;
+
+  const labels: Record<string, string> = {
+    cpf: 'CPF',
+    telefone: 'Telefone',
+    email: 'E-mail',
+    senha: 'Senha',
+    nome: 'Nome',
+  };
+  const messages = Object.entries(fieldErrors as Record<string, unknown>)
+    .flatMap(([field, value]) => {
+      const errors = Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === 'string')
+        : [];
+      return errors.map((message) => `${labels[field] ?? field}: ${message}`);
+    });
+
+  return messages.length ? messages.join('\n') : null;
+}
+
 export function getErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    return getValidationDetails(error.details) ?? error.message;
+  }
   return error instanceof Error
     ? error.message
     : 'Não foi possível concluir a operação.';

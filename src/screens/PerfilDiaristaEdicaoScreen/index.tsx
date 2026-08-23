@@ -207,7 +207,6 @@ export default function PerfilDiaristaEdicaoScreen({
             </View>
             <View style={styles.aboutCard}>
               <Text style={styles.aboutText}>Máximo de cômodos: {profile?.qtd_max_comodos ?? 'Não informado'}</Text>
-              <Text style={styles.aboutText}>Frequência de resposta: {profile?.frequencia_resposta || 'Não informada'}</Text>
               <Text style={styles.aboutText}>E-mail: {user?.email ?? 'Não informado'}</Text>
               <Text style={styles.aboutText}>Telefone: {user?.telefone ?? 'Não informado'}</Text>
               <Text style={styles.aboutText}>CPF: {user?.cpf ?? 'Não informado'}</Text>
@@ -243,7 +242,7 @@ export default function PerfilDiaristaEdicaoScreen({
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Endereço de atendimento</Text>
+              <Text style={styles.sectionTitle}>Endereço</Text>
               <TouchableOpacity style={styles.editButton} onPress={() => setEditSection('address')} activeOpacity={0.7} accessibilityLabel="Editar endereço de atendimento">
                 <Ionicons name="pencil" size={14} color="#111111" />
               </TouchableOpacity>

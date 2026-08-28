@@ -34,6 +34,27 @@ type Diarista = {
   diaristaId?: number;
   favoritoId?: number;
   data?: string;
+  status?: Agendamento['status'];
+};
+
+const statusLabels: Record<Agendamento['status'], string> = {
+  Pendente: 'Pendente',
+  Aceito: 'Aceito',
+  Recusado: 'Recusado',
+  Cancelado: 'Cancelado',
+  Expirado: 'Expirado',
+  Em_andamento: 'Em andamento',
+  Concluido: 'Concluído',
+};
+
+const statusColors: Record<Agendamento['status'], string> = {
+  Pendente: '#F4B400',
+  Aceito: '#18C7C8',
+  Recusado: '#D92D20',
+  Cancelado: '#D92D20',
+  Expirado: '#777777',
+  Em_andamento: '#1570EF',
+  Concluido: '#00A817',
 };
 
 export default function HistoricoClienteScreen({
@@ -93,15 +114,16 @@ export default function HistoricoClienteScreen({
       favoritoId: favorite?.id_favorito,
       data: new Date(appointment.data_agendamento).toLocaleDateString(
         'pt-BR',
-        { day: '2-digit', month: 'long', year: 'numeric' },
+        { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' },
       ),
+      status: appointment.status,
     };
   }
 
   async function carregarDados() {
     setLoading(true);
     const [appointmentsResult, favoritesResult] = await Promise.allSettled([
-      agendamentoService.listar({ visao: 'historico', limit: 100 }),
+      agendamentoService.listar({ visao: 'todos', limit: 100 }),
       favoritoService.listar({ limit: 100 }),
     ]);
 
@@ -200,17 +222,20 @@ export default function HistoricoClienteScreen({
               {diarista.distancia}
             </Text>
 
-            <View style={styles.quickBadge}>
+            {diarista.status ? <View style={[styles.quickBadge, { backgroundColor: statusColors[diarista.status] }]}>
               <Ionicons
-                name="checkmark-circle-outline"
+                name={diarista.status === 'Concluido' ? 'checkmark-circle-outline' : 'time-outline'}
                 size={12}
-                color="#18C7C8"
+                color="#FFFFFF"
               />
 
-              <Text style={styles.quickText}>
-                Responde rápido
+              <Text style={[styles.quickText, styles.statusText]}>
+                {statusLabels[diarista.status]}
               </Text>
-            </View>
+            </View> : <View style={styles.quickBadge}>
+              <Ionicons name="checkmark-circle-outline" size={12} color="#18C7C8" />
+              <Text style={styles.quickText}>Responde rápido</Text>
+            </View>}
           </View>
         </TouchableOpacity>
 
@@ -307,6 +332,13 @@ export default function HistoricoClienteScreen({
                   {renderCard(item)}
                 </React.Fragment>
               ))}
+              {!loading && !erroHistorico && historico.length === 0 && (
+                <View style={styles.emptyState}>
+                  <Ionicons name="calendar-outline" size={48} color="#CCCCCC" />
+                  <Text style={styles.emptyTitle}>Nenhum agendamento encontrado</Text>
+                  <Text style={styles.emptyText}>Seus agendamentos aparecerão aqui.</Text>
+                </View>
+              )}
             </>
           ) : (
             <>

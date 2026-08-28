@@ -35,6 +35,7 @@ export type Usuario = {
   cpf?: string | null;
   foto_perfil: string | null;
   data_cadastro?: string;
+  tipo: 'CLIENTE' | 'DIARISTA' | 'AMBOS';
   cliente?: Array<{ id_cliente: number }>;
   diarista?: Array<{ id_diarista: number }>;
   profiles: Profile[];

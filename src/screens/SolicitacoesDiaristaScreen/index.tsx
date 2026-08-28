@@ -25,6 +25,10 @@ type Solicitacao = {
   avaliacao: string;
   endereco: string;
   data: string;
+  horario: string;
+  valor: string;
+  servicos: string;
+  observacoes?: string | null;
 };
 
 export default function SolicitacoesDiaristaScreen({
@@ -36,11 +40,14 @@ export default function SolicitacoesDiaristaScreen({
 
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<number | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
     carregarSolicitacoes();
-  }, []);
+    const unsubscribe = navigation.addListener('focus', carregarSolicitacoes);
+    return unsubscribe;
+  }, [navigation]);
 
   function apresentarSolicitacao(item: Agendamento): Solicitacao {
     const endereco = item.endereco;
@@ -52,6 +59,15 @@ export default function SolicitacoesDiaristaScreen({
         ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}`
         : 'Endereço não informado',
       data: new Date(item.data_agendamento).toLocaleDateString('pt-BR'),
+      horario: item.horario_inicio
+        ? new Date(item.horario_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
+        : 'Horário não informado',
+      valor: Number(item.valor_estimado ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      servicos: (item.agendamento_servico ?? [])
+        .map((service) => service.diarista_servico?.servico?.nome_servico)
+        .filter(Boolean)
+        .join(' • ') || 'Serviços não informados',
+      observacoes: item.observacoes,
     };
   }
 
@@ -76,6 +92,7 @@ export default function SolicitacoesDiaristaScreen({
 
   async function aceitarSolicitacao(id: number) {
     try {
+      setProcessingId(id);
       await agendamentoService.aceitar(id);
       await carregarSolicitacoes();
       Alert.alert(
@@ -84,16 +101,36 @@ export default function SolicitacoesDiaristaScreen({
       );
     } catch (error) {
       Alert.alert('Não foi possível aceitar', getErrorMessage(error));
+    } finally {
+      setProcessingId(null);
     }
   }
 
   async function negarSolicitacao(id: number) {
     try {
+      setProcessingId(id);
       await agendamentoService.recusar(id);
       await carregarSolicitacoes();
+      Alert.alert('Solicitação recusada', 'O cliente poderá visualizar a decisão no histórico.');
     } catch (error) {
       Alert.alert('Não foi possível recusar', getErrorMessage(error));
+    } finally {
+      setProcessingId(null);
     }
+  }
+
+  function confirmarAceite(item: Solicitacao) {
+    Alert.alert('Aceitar solicitação?', `${item.nome} • ${item.data} às ${item.horario}`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Aceitar', onPress: () => aceitarSolicitacao(item.id) },
+    ]);
+  }
+
+  function confirmarRecusa(item: Solicitacao) {
+    Alert.alert('Recusar solicitação?', 'O agendamento será marcado como recusado para o cliente.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Recusar', style: 'destructive', onPress: () => negarSolicitacao(item.id) },
+    ]);
   }
 
   function irParaAgenda() {
@@ -247,12 +284,18 @@ export default function SolicitacoesDiaristaScreen({
                     </View>
                   </View>
 
+                  <View style={styles.detailsBox}>
+                    <View style={styles.detailRow}><Ionicons name="time-outline" size={15} color="#FF6B2C" /><Text style={styles.detailText}>Início: {solicitacao.horario}</Text></View>
+                    <View style={styles.detailRow}><Ionicons name="sparkles-outline" size={15} color="#FF6B2C" /><Text style={styles.detailText}>{solicitacao.servicos}</Text></View>
+                    <View style={styles.detailRow}><Ionicons name="cash-outline" size={15} color="#FF6B2C" /><Text style={styles.detailValue}>{solicitacao.valor}</Text></View>
+                    {solicitacao.observacoes ? <View style={styles.detailRow}><Ionicons name="chatbubble-outline" size={15} color="#FF6B2C" /><Text style={styles.detailText}>{solicitacao.observacoes}</Text></View> : null}
+                  </View>
+
                   <View style={styles.actions}>
                     <TouchableOpacity
-                      style={styles.rejectButton}
-                      onPress={() =>
-                        negarSolicitacao(solicitacao.id)
-                      }
+                      style={[styles.rejectButton, processingId === solicitacao.id && styles.disabled]}
+                      onPress={() => confirmarRecusa(solicitacao)}
+                      disabled={processingId !== null}
                       activeOpacity={0.8}
                     >
                       <Text style={styles.rejectText}>
@@ -261,15 +304,12 @@ export default function SolicitacoesDiaristaScreen({
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.acceptButton}
-                      onPress={() =>
-                        aceitarSolicitacao(solicitacao.id)
-                      }
+                      style={[styles.acceptButton, processingId === solicitacao.id && styles.disabled]}
+                      onPress={() => confirmarAceite(solicitacao)}
+                      disabled={processingId !== null}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.acceptText}>
-                        Aceitar
-                      </Text>
+                      {processingId === solicitacao.id ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.acceptText}>Aceitar</Text>}
                     </TouchableOpacity>
                   </View>
                 </View>

@@ -35,16 +35,20 @@ export default function HistoricoDiaristaScreen({
 }: any) {
   const [historicoReal, setHistoricoReal] = useState<GrupoHistorico[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    agendamentoService
-      .listar({ visao: 'historico', limit: 100 })
+    function carregarHistorico() {
+      setLoading(true);
+      setError('');
+      agendamentoService
+      .listar({ visao: 'todos', limit: 100 })
       .then((response) => {
         const groups = new Map<string, RegistroHistorico[]>();
         response.data.forEach((item: Agendamento) => {
           const data = new Date(item.data_agendamento).toLocaleDateString(
             'pt-BR',
-            { day: '2-digit', month: 'long', year: 'numeric' },
+            { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' },
           );
           const endereco = item.endereco;
           const registros = groups.get(data) ?? [];
@@ -66,11 +70,17 @@ export default function HistoricoDiaristaScreen({
           })),
         );
       })
-      .catch((error) =>
-        Alert.alert('Não foi possível carregar o histórico', getErrorMessage(error)),
-      )
+      .catch((cause) => {
+        const message = getErrorMessage(cause);
+        setError(message);
+        Alert.alert('Não foi possível carregar o histórico', message);
+      })
       .finally(() => setLoading(false));
-  }, []);
+    }
+    carregarHistorico();
+    const unsubscribe = navigation.addListener('focus', carregarHistorico);
+    return unsubscribe;
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -101,7 +111,8 @@ export default function HistoricoDiaristaScreen({
           showsVerticalScrollIndicator={false}
         >
           {loading && <ActivityIndicator color={'#FF6B2C'} />}
-          {!loading && historicoReal.length === 0 && (
+          {Boolean(error) && <Text style={styles.smallLabel}>{error}</Text>}
+          {!loading && !error && historicoReal.length === 0 && (
             <Text style={styles.smallLabel}>Nenhum registro encontrado.</Text>
           )}
           {historicoReal.map((grupo) => (

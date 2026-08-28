@@ -198,12 +198,41 @@ export const styles = StyleSheet.create({
     marginTop: 12,
   },
 
+  detailsBox: {
+    borderRadius: 10,
+    backgroundColor: '#FFF7F3',
+    padding: 10,
+    gap: 7,
+    marginTop: 12,
+  },
+
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 7,
+  },
+
+  detailText: {
+    flex: 1,
+    color: '#666666',
+    fontFamily: fonts.regular,
+    fontSize: 10,
+    lineHeight: 15,
+  },
+
+  detailValue: {
+    color: '#E55318',
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+  },
+
   rejectButton: {
     flex: 1,
     height: 30,
     backgroundColor: '#FF3338',
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 8,
   },
 
   acceptButton: {
@@ -212,6 +241,7 @@ export const styles = StyleSheet.create({
     backgroundColor: '#00B817',
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 8,
   },
 
   rejectText: {
@@ -224,6 +254,10 @@ export const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: fonts.medium,
     fontSize: 10,
+  },
+
+  disabled: {
+    opacity: 0.55,
   },
 
   emptyState: {

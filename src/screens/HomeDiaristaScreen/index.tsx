@@ -21,7 +21,7 @@ import { HeaderMenu } from '../../components/header-menu';
 import { diaristaService } from '../../services/diaristaService';
 
 const scheduledStatuses: Agendamento['status'][] = ['Aceito', 'Em_andamento'];
-const futureStatuses: Agendamento['status'][] = ['Pendente', 'Aceito', 'Em_andamento'];
+const futureStatuses: Agendamento['status'][] = ['Aceito', 'Em_andamento'];
 
 function localDateKey(date: Date) {
   const year = date.getFullYear();

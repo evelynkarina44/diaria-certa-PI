@@ -190,6 +190,10 @@ export const styles = StyleSheet.create({
     fontSize: 8,
   },
 
+  statusText: {
+    color: '#FFFFFF',
+  },
+
   favoriteButton: {
     width: 36,
     height: 40,

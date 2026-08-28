@@ -35,6 +35,7 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
 
   const items = profile === 'diarista'
     ? [
+        { route: 'HomeDiarista', label: 'Início', icon: 'home-outline' as const },
         { route: 'PerfilDiaristaEdicao', label: 'Meu perfil', icon: 'person-outline' as const },
         { route: 'ServicosDiarista', label: 'Meus serviços', icon: 'sparkles-outline' as const },
         { route: 'CombosDiarista', label: 'Meus combos', icon: 'layers-outline' as const },
@@ -42,6 +43,7 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
         { route: 'HistoricoDiarista', label: 'Histórico', icon: 'clipboard-outline' as const },
       ]
     : [
+        { route: 'EncontrarDiarista', label: 'Início', icon: 'home-outline' as const },
         { route: 'PerfilCliente', label: 'Meu perfil', icon: 'person-outline' as const },
         { route: 'HistoricoCliente', label: 'Histórico e favoritos', icon: 'clipboard-outline' as const },
       ];

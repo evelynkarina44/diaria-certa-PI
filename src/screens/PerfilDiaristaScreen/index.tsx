@@ -73,7 +73,11 @@ export default function PerfilDiaristaScreen({
 
           <View style={styles.imagePlaceholder}>
             {profile?.usuario?.foto_perfil ? (
-              <Image source={{ uri: profile.usuario.foto_perfil }} style={styles.profileImage} />
+              <Image
+                source={{ uri: profile.usuario.foto_perfil }}
+                style={styles.profileImage}
+                resizeMode="cover"
+              />
             ) : (
               <Ionicons name="person" size={84} color="#D1D1D1" />
             )}

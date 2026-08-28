@@ -20,10 +20,10 @@ export const styles = StyleSheet.create({
   },
 
   imageArea: {
-    minHeight: 330,
+    height: 330,
     backgroundColor: '#A9A9A9',
-    paddingHorizontal: 20,
-    paddingTop: 15,
+    position: 'relative',
+    overflow: 'hidden',
   },
 
   backButton: {
@@ -33,11 +33,14 @@ export const styles = StyleSheet.create({
     backgroundColor: clienteColor,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'absolute',
+    top: 15,
+    left: 20,
     zIndex: 2,
   },
 
   imagePlaceholder: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -45,7 +48,6 @@ export const styles = StyleSheet.create({
   profileImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
 
   contentCard: {

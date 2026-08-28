@@ -19,6 +19,16 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
 
+  headerTitle: {
+    position: 'absolute',
+    left: 60,
+    right: 60,
+    textAlign: 'center',
+    color: '#FFFFFF',
+    fontFamily: fonts.semibold,
+    fontSize: fontSizes.lg ?? 17,
+  },
+
   backButton: {
     width: 34,
     height: 34,
@@ -34,34 +44,6 @@ export const styles = StyleSheet.create({
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
     overflow: 'hidden',
-  },
-
-  tabs: {
-    flexDirection: 'row',
-    height: 58,
-    paddingHorizontal: 30,
-  },
-
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-
-  tabActive: {
-    borderBottomColor: laranja,
-  },
-
-  tabText: {
-    color: colors.text,
-    fontFamily: fonts.semibold,
-    fontSize: fontSizes.lg ?? 17,
-  },
-
-  tabTextActive: {
-    color: laranja,
   },
 
   scroll: {

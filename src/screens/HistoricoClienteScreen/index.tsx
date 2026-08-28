@@ -22,8 +22,6 @@ import type {
   Favorito,
 } from '../../services/types';
 
-type Aba = 'historico' | 'favoritos';
-
 type Diarista = {
   id: number;
   nome: string;
@@ -59,8 +57,9 @@ const statusColors: Record<Agendamento['status'], string> = {
 
 export default function HistoricoClienteScreen({
   navigation,
+  route,
 }: any) {
-  const [aba, setAba] = useState<Aba>('historico');
+  const exibirFavoritos = route?.name === 'FavoritosCliente';
 
   const [historico, setHistorico] = useState<Diarista[]>([]);
   const [favoritos, setFavoritos] = useState<Diarista[]>([]);
@@ -265,6 +264,9 @@ export default function HistoricoClienteScreen({
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
+        <Text style={styles.headerTitle}>
+          {exibirFavoritos ? 'Favoritos' : 'Histórico'}
+        </Text>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -279,49 +281,13 @@ export default function HistoricoClienteScreen({
       </View>
 
       <View style={styles.body}>
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              aba === 'historico' && styles.tabActive,
-            ]}
-            onPress={() => setAba('historico')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                aba === 'historico' && styles.tabTextActive,
-              ]}
-            >
-              Histórico
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              aba === 'favoritos' && styles.tabActive,
-            ]}
-            onPress={() => setAba('favoritos')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                aba === 'favoritos' && styles.tabTextActive,
-              ]}
-            >
-              Favoritos
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           {loading && <ActivityIndicator color={'#18C7C8'} />}
-          {aba === 'historico' ? (
+          {!exibirFavoritos ? (
             <>
               {Boolean(erroHistorico) && <Text style={styles.emptyText}>{erroHistorico}</Text>}
               {historico.map((item) => (

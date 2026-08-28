@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   Text,
   TextInput,
@@ -36,6 +37,7 @@ type Diarista = {
   favorito: boolean;
   favoritoId?: number;
   respostaRapida?: boolean;
+  fotoPerfil?: string | null;
 };
 
 const filtros = [
@@ -72,6 +74,7 @@ export default function EncontrarDiaristaScreen({
   const [cepCliente, setCepCliente] = useState<string | null>(null);
   const [loadingEndereco, setLoadingEndereco] = useState(true);
   const [favoritosEmAtualizacao, setFavoritosEmAtualizacao] = useState<number[]>([]);
+  const [fotosComErro, setFotosComErro] = useState<number[]>([]);
   const { user } = useAuth();
 
   const [filtroAberto, setFiltroAberto] = useState('');
@@ -213,6 +216,7 @@ export default function EncontrarDiaristaScreen({
       favorito: Boolean(favorito),
       favoritoId: favorito?.id_favorito,
       respostaRapida: Boolean(profile.frequencia_resposta),
+      fotoPerfil: profile.usuario?.foto_perfil,
     };
   }
 
@@ -791,11 +795,22 @@ export default function EncontrarDiaristaScreen({
                   activeOpacity={0.85}
                 >
                   <View style={styles.avatar}>
-                    <Ionicons
-                      name="person"
-                      size={38}
-                      color="#FFFFFF"
-                    />
+                    {diarista.fotoPerfil && !fotosComErro.includes(diarista.id) ? (
+                      <Image
+                        source={{ uri: diarista.fotoPerfil }}
+                        style={styles.avatarImage}
+                        resizeMode="cover"
+                        onError={() => setFotosComErro((current) => (
+                          current.includes(diarista.id) ? current : [...current, diarista.id]
+                        ))}
+                      />
+                    ) : (
+                      <Ionicons
+                        name="person"
+                        size={38}
+                        color="#FFFFFF"
+                      />
+                    )}
                   </View>
 
                   <View style={styles.professionalInfo}>

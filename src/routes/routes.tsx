@@ -168,6 +168,11 @@ export function Routes() {
   component={HistoricoClienteScreen}
 />
 
+<Stack.Screen
+  name="FavoritosCliente"
+  component={HistoricoClienteScreen}
+/>
+
     </Stack.Navigator>
   );
 }

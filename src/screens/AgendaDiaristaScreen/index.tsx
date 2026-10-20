@@ -31,7 +31,18 @@ function monthTitle(value: Date) {
 }
 
 function displayTime(value?: string | null) {
-  return value?.slice(0, 5) ?? '';
+  if (!value) return '';
+  if (/^\d{2}:\d{2}/.test(value)) return value.slice(0, 5);
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? ''
+    : parsed.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'UTC',
+      });
 }
 
 function slotEnd(start: string) {
@@ -204,6 +215,7 @@ export default function AgendaDiaristaScreen({ navigation }: any) {
         <Text style={styles.sectionTitle}>2. Adicione os horários de início</Text>
         <Text style={styles.helper}>Exemplo: 07:00, 09:00 e 10:00. Esses horários serão aplicados a todos os dias selecionados.</Text>
         <View style={styles.timeInputRow}><TextInput style={styles.timeInput} value={newTime} onChangeText={(value) => setNewTime(formatTime(value))} placeholder="07:00" keyboardType="number-pad" maxLength={5} onSubmitEditing={addTime} /><TouchableOpacity style={styles.addTimeButton} onPress={addTime}><Ionicons name="add" size={22} color="#FFFFFF" /><Text style={styles.addTimeText}>Adicionar</Text></TouchableOpacity></View>
+        <Text style={styles.registeredTimesTitle}>Horários cadastrados</Text>
         <View style={styles.timeChips}>
           {startTimes.map((time) => <View key={time} style={styles.timeChip}><Ionicons name="time-outline" size={17} color="#E55318" /><Text style={styles.timeChipText}>{time}</Text><TouchableOpacity onPress={() => { setStartTimes((current) => current.filter((item) => item !== time)); setSaveFeedback(''); }} accessibilityLabel={`Remover ${time}`}><Ionicons name="close-circle" size={19} color="#E55318" /></TouchableOpacity></View>)}
           {!startTimes.length ? <Text style={styles.emptyText}>Nenhum horário de início adicionado.</Text> : null}

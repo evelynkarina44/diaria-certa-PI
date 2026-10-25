@@ -98,7 +98,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
           ? combo.atende_casa_media
           : combo.atende_casa_grande;
       const servicesAvailable = (combo.combo_servico ?? []).every((item) => offeredServiceIds.has(item.id_servico));
-      return combo.ativo !== false && compatibleSize && cliente.qtd_comodos <= combo.qtd_comodos_casa && servicesAvailable;
+      return combo.ativo !== false && compatibleSize && servicesAvailable;
     });
   }, [cliente, profile]);
   const combo = combosCompativeis.find((item) => item.id_combo_base === comboSelecionado);

@@ -32,6 +32,7 @@ import SelecionarPerfilScreen from '../screens/SelecionarPerfilScreen';
 import ServicosDiaristaScreen from '../screens/ServicosDiaristaScreen';
 import CombosDiaristaScreen from '../screens/CombosDiaristaScreen';
 import AgendaDiaristaScreen from '../screens/AgendaDiaristaScreen';
+import ChatbotScreen from '../screens/ChatbotScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -77,6 +78,8 @@ export function Routes() {
         name="EncontrarDiarista"
         component={EncontrarDiaristaScreen}
       />
+
+      <Stack.Screen name="Chatbot" component={ChatbotScreen} />
 
       <Stack.Screen
         name="PerfilDiarista"

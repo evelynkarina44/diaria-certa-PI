@@ -45,6 +45,7 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
     : [
         { route: 'EncontrarDiarista', label: 'Início', icon: 'home-outline' as const },
         { route: 'PerfilCliente', label: 'Meu perfil', icon: 'person-outline' as const },
+        { route: 'Chatbot', label: 'Assistente', icon: 'chatbubble-ellipses-outline' as const },
         { route: 'HistoricoCliente', label: 'Histórico', icon: 'clipboard-outline' as const },
         { route: 'FavoritosCliente', label: 'Favoritos', icon: 'heart-outline' as const },
       ];

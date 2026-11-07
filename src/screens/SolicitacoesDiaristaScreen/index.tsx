@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActionModal } from '../../components/action-modal';
 
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -31,6 +31,8 @@ type Solicitacao = {
   observacoes?: string | null;
 };
 
+type Confirmacao = { item: Solicitacao; acao: 'aceitar' | 'recusar' };
+
 export default function SolicitacoesDiaristaScreen({
   navigation,
 }: any) {
@@ -41,13 +43,27 @@ export default function SolicitacoesDiaristaScreen({
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [confirmacao, setConfirmacao] = useState<Confirmacao | null>(null);
+  const [erroLista, setErroLista] = useState('');
+  const [erroListaFechado, setErroListaFechado] = useState(false);
+  const [erroAcao, setErroAcao] = useState('');
+  const [sucesso, setSucesso] = useState('');
+  const processing = useRef(false);
+  const session = useRef(0);
+  const listRequest = useRef(0);
   const { user } = useAuth();
 
   useEffect(() => {
+    session.current++;
+    processing.current = false;
+    setProcessingId(null);
+    setConfirmacao(null);
+    setSolicitacoes([]);
+    setErroLista(''); setErroAcao(''); setSucesso('');
     carregarSolicitacoes();
     const unsubscribe = navigation.addListener('focus', carregarSolicitacoes);
-    return unsubscribe;
-  }, [navigation]);
+    return () => { session.current++; listRequest.current++; unsubscribe(); };
+  }, [navigation, user?.id_usuario, user?.activeProfile]);
 
   function apresentarSolicitacao(item: Agendamento): Solicitacao {
     const endereco = item.endereco;
@@ -58,7 +74,7 @@ export default function SolicitacoesDiaristaScreen({
       endereco: endereco
         ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}`
         : 'Endereço não informado',
-      data: new Date(item.data_agendamento).toLocaleDateString('pt-BR'),
+      data: new Date(item.data_agendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }),
       horario: item.horario_inicio
         ? new Date(item.horario_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
         : 'Horário não informado',
@@ -72,65 +88,67 @@ export default function SolicitacoesDiaristaScreen({
   }
 
   async function carregarSolicitacoes() {
+    const request = ++listRequest.current;
+    const currentSession = session.current;
     try {
       setLoading(true);
       const response = await agendamentoService.listar({
         visao: 'solicitacoes',
         limit: 100,
       });
+      if (currentSession !== session.current || request !== listRequest.current) return;
       setSolicitacoes(response.data.map(apresentarSolicitacao));
+      setErroLista('');
     } catch (error) {
-      Alert.alert(
-        'Não foi possível carregar as solicitações',
-        getErrorMessage(error),
-      );
-      setSolicitacoes([]);
+      if (currentSession === session.current && request === listRequest.current) {
+        setErroLista(getErrorMessage(error));
+        setErroListaFechado(false);
+      }
     } finally {
-      setLoading(false);
+      if (currentSession === session.current && request === listRequest.current) setLoading(false);
     }
   }
 
-  async function aceitarSolicitacao(id: number) {
+  // Só este clique de confirmação chama a API; abrir ou cancelar não altera a solicitação.
+  async function responderSolicitacao() {
+    if (!confirmacao || processing.current) return;
+    const { item, acao } = confirmacao;
+    const currentSession = session.current;
+    processing.current = true;
+    listRequest.current++;
+    setProcessingId(item.id);
+    setErroAcao('');
     try {
-      setProcessingId(id);
-      await agendamentoService.aceitar(id);
+      if (acao === 'aceitar') await agendamentoService.aceitar(item.id);
+      else await agendamentoService.recusar(item.id);
+      if (currentSession !== session.current) return;
+      setSolicitacoes((current) => current.filter((request) => request.id !== item.id));
+      setConfirmacao(null);
+      setSucesso(acao === 'aceitar'
+        ? 'Solicitação aceita! A diária está na sua agenda e o cliente já pode pagar a entrada de 50%.'
+        : 'Solicitação recusada. O cliente poderá visualizar a decisão no histórico.');
       await carregarSolicitacoes();
-      Alert.alert(
-        'Solicitação aceita',
-        'A diária foi adicionada à sua agenda.',
-      );
     } catch (error) {
-      Alert.alert('Não foi possível aceitar', getErrorMessage(error));
+      if (currentSession === session.current) { setConfirmacao(null); setErroAcao(getErrorMessage(error)); }
     } finally {
-      setProcessingId(null);
-    }
-  }
-
-  async function negarSolicitacao(id: number) {
-    try {
-      setProcessingId(id);
-      await agendamentoService.recusar(id);
-      await carregarSolicitacoes();
-      Alert.alert('Solicitação recusada', 'O cliente poderá visualizar a decisão no histórico.');
-    } catch (error) {
-      Alert.alert('Não foi possível recusar', getErrorMessage(error));
-    } finally {
-      setProcessingId(null);
+      if (currentSession === session.current) {
+        processing.current = false;
+        setProcessingId(null);
+        setLoading(false);
+      }
     }
   }
 
   function confirmarAceite(item: Solicitacao) {
-    Alert.alert('Aceitar solicitação?', `${item.nome} • ${item.data} às ${item.horario}`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Aceitar', onPress: () => aceitarSolicitacao(item.id) },
-    ]);
+    if (processing.current) return;
+    setErroAcao(''); setSucesso('');
+    setConfirmacao({ item, acao: 'aceitar' });
   }
 
   function confirmarRecusa(item: Solicitacao) {
-    Alert.alert('Recusar solicitação?', 'O agendamento será marcado como recusado para o cliente.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Recusar', style: 'destructive', onPress: () => negarSolicitacao(item.id) },
-    ]);
+    if (processing.current) return;
+    setErroAcao(''); setSucesso('');
+    setConfirmacao({ item, acao: 'recusar' });
   }
 
   function irParaAgenda() {
@@ -203,9 +221,17 @@ export default function SolicitacoesDiaristaScreen({
             Solicitações disponíveis
           </Text>
 
+
+          {Boolean(erroLista) && <View style={styles.confirmationBox}>
+
+            <TouchableOpacity accessibilityRole="button" disabled={loading || processingId !== null} onPress={carregarSolicitacoes}>
+              <Text style={styles.retryText}>Tentar carregar novamente</Text>
+            </TouchableOpacity>
+          </View>}
+
           {loading ? (
             <ActivityIndicator color={'#FF6B2C'} />
-          ) : solicitacoes.length === 0 ? (
+          ) : solicitacoes.length === 0 && !erroLista ? (
             <View style={styles.emptyState}>
               <Ionicons
                 name="checkmark-circle-outline"
@@ -312,12 +338,22 @@ export default function SolicitacoesDiaristaScreen({
                       {processingId === solicitacao.id ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.acceptText}>Aceitar</Text>}
                     </TouchableOpacity>
                   </View>
+
                 </View>
               ))}
             </View>
           )}
         </ScrollView>
       </View>
+      <ActionModal visible={Boolean((erroLista && !erroListaFechado) || erroAcao)} variant="error" title="Não foi possível concluir" message={erroAcao || erroLista}
+        onClose={() => { setErroListaFechado(true); setErroAcao(''); }} accentColor="#FF6B2C" />
+      <ActionModal visible={Boolean(sucesso) && !erroLista && !erroAcao} variant="success" title="Solicitação atualizada" message={sucesso}
+        onClose={() => setSucesso('')} accentColor="#FF6B2C" />
+      <ActionModal visible={Boolean(confirmacao) && !erroLista && !erroAcao && !sucesso} variant="confirm" accentColor="#FF6B2C"
+        title={confirmacao?.acao === 'aceitar' ? 'Aceitar solicitação?' : 'Recusar solicitação?'}
+        message={confirmacao ? `${confirmacao.item.nome} • ${confirmacao.item.data} às ${confirmacao.item.horario}. ${confirmacao.acao === 'aceitar' ? 'A diária entrará na sua agenda e o cliente poderá pagar a entrada de 50%.' : 'O cliente será informado da recusa pelo histórico.'}` : ''}
+        confirmLabel={confirmacao?.acao === 'aceitar' ? 'Sim, aceitar' : 'Sim, recusar'} cancelLabel="Voltar" busy={processingId !== null}
+        onConfirm={responderSolicitacao} onClose={() => { if (!processing.current) { setConfirmacao(null); setErroAcao(''); } }} />
     </SafeAreaView>
   );
 }

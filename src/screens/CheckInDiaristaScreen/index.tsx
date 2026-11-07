@@ -1,196 +1,167 @@
-import React, { useEffect, useState } from 'react';
-
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-
+import React, { useEffect, useRef, useState } from 'react';
+import { ActionModal } from '../../components/action-modal';
+import { ActivityIndicator, AppState, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-
 import { styles } from './styles';
 import { agendamentoService } from '../../services/agendamentoService';
 import { checkinCheckoutService } from '../../services/checkinCheckoutService';
-import { getErrorMessage } from '../../services/api';
+import { pagamentoService, type ResumoPagamento } from '../../services/pagamentoService';
+import { ApiError, getErrorMessage } from '../../services/api';
 import type { Agendamento } from '../../services/types';
 
-export default function CheckInDiaristaScreen({
-  navigation,
-  route,
-}: any) {
-  const agendamentoId = Number(route.params?.agendamentoId);
-  const [agendamento, setAgendamento] = useState<Agendamento | null>(null);
+const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const time = (value?: string | null) => value?.includes('T') ? value.slice(11, 16) : value?.slice(0, 5) ?? '';
+const stamp = (value?: string | null) => value ? new Date(value).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '';
+
+export default function CheckInDiaristaScreen(props: any) {
+  return <Diaria key={props.route.params?.agendamentoId} {...props} />;
+}
+
+function Diaria({ navigation, route }: any) {
+  const id = Number(route.params?.agendamentoId);
+  const [booking, setBooking] = useState<Agendamento | null>(null);
+  const [payment, setPayment] = useState<ResumoPagamento | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [confirmCheckout, setConfirmCheckout] = useState(false);
+  const [confirmStart, setConfirmStart] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const invalidSession = useRef(false);
+  const [now, setNow] = useState(Date.now());
+  const locked = useRef(false);
+  const alive = useRef(true);
+  const reload = useRef<() => Promise<void>>(async () => {});
+
+  function showError(cause: unknown) {
+    if (cause instanceof ApiError && cause.status === 401) {
+      invalidSession.current = true;
+      setSessionExpired(true);
+      setConfirmCheckout(false);
+      setError('Sua sessão expirou. Entre novamente no perfil de diarista e abra esta diária para confirmar o checkout.');
+    } else setError(getErrorMessage(cause));
+  }
 
   useEffect(() => {
-    if (!agendamentoId) {
-      setLoading(false);
-      return;
+    alive.current = true;
+    let active = true;
+    let fetching = false;
+    async function load(silent = false) {
+      if (!active || fetching || locked.current || invalidSession.current) return;
+      if (!Number.isSafeInteger(id) || id <= 0) {
+        setError('Abra esta tela a partir de um agendamento.'); setLoading(false); return;
+      }
+      fetching = true;
+      try {
+        const [appointment, summary] = await Promise.all([
+          agendamentoService.buscarPorId(id), pagamentoService.buscar(id),
+        ]);
+        if (active) { setBooking(appointment); setPayment(summary); if (!silent) setError(''); }
+      } catch (cause) {
+        if (active && (!silent || (cause instanceof ApiError && cause.status === 401))) showError(cause);
+      } finally { fetching = false; if (active) setLoading(false); }
     }
-    agendamentoService
-      .buscarPorId(agendamentoId)
-      .then(setAgendamento)
-      .catch((error) =>
-        Alert.alert('Não foi possível carregar a diária', getErrorMessage(error)),
-      )
-      .finally(() => setLoading(false));
-  }, [agendamentoId]);
+    reload.current = load;
+    void load();
+    const unsubscribe = navigation.addListener('focus', () => void load());
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active' && navigation.isFocused()) void load();
+    });
+    const timer = setInterval(() => {
+      setNow(Date.now());
+      if (navigation.isFocused() && AppState.currentState === 'active') void load(true);
+    }, 15000);
+    return () => {
+      active = false; alive.current = false;
+      unsubscribe(); subscription.remove(); clearInterval(timer);
+    };
+  }, [id, navigation]);
 
-  async function solicitarCheckIn() {
-    if (!agendamentoId) return;
+  const check = booking?.checkin_checkout?.[0];
+  const running = booking?.status === 'Em_andamento';
+  const finished = booking?.status === 'Concluido';
+  const entryPaid = payment?.parcelas.some(item => item.fase === 'Entrada' && item.status === 'Pago') ?? false;
+  const startsAt = booking?.horario_inicio
+    ? new Date(booking.data_agendamento.slice(0, 10) + 'T' + time(booking.horario_inicio) + ':00-03:00').getTime()
+    : NaN;
+  const canStart = booking?.status === 'Aceito' && entryPaid && Number.isFinite(startsAt) && now >= startsAt;
+  const canFinish = running && check?.status_checkin === 'Iniciado';
+
+  async function act() {
+    if (locked.current || invalidSession.current || !(canStart || canFinish)) return;
+    if (canFinish && !confirmCheckout) { setConfirmCheckout(true); return; }
+    if (canStart && !confirmStart) { setConfirmStart(true); return; }
+    locked.current = true; setSending(true); setError(''); setNotice('');
+    let updated = false;
     try {
-      setSending(true);
-      await checkinCheckoutService.solicitar(agendamentoId);
-      Alert.alert('Check-in solicitado', 'O cliente já pode confirmar o pagamento.');
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert('Não foi possível solicitar o check-in', getErrorMessage(error));
+      if (canFinish) await checkinCheckoutService.checkout(id);
+      else await checkinCheckoutService.solicitar(id);
+      updated = true;
+      if (!alive.current) return;
+      setNotice(canFinish
+        ? 'Checkout registrado. O cliente já pode pagar os 50% restantes. O valor ainda depende da aprovação do Mercado Pago.'
+        : 'Check-in registrado. A diária está em andamento.');
+      setConfirmCheckout(false); setConfirmStart(false);
+    } catch (cause) {
+      setConfirmCheckout(false); setConfirmStart(false);
+      if (alive.current) showError(cause);
     } finally {
-      setSending(false);
+      locked.current = false;
+      if (alive.current) { setSending(false); if (updated) await reload.current(); }
     }
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.orangeHeader} />
-
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {loading && <ActivityIndicator color={'#FF6B2C'} />}
-        <Text style={styles.title}>
-          Solicitar Check In
-        </Text>
-
-        <View style={styles.divider} />
-
-        <View style={styles.profileRow}>
-          <View style={styles.avatar}>
-            <Ionicons
-              name="person"
-              size={43}
-              color="#FFFFFF"
-            />
-          </View>
-
-          <View style={styles.profileInfo}>
-            <View style={styles.nameRow}>
-              <Text style={styles.name}>
-                {agendamento?.cliente?.usuario?.nome ?? 'Cliente'}
-              </Text>
-
-              <Ionicons
-                name="female"
-                size={14}
-                color="#18C7C8"
-              />
-            </View>
-
-            <View style={styles.ratingRow}>
-              <Text style={styles.rating}>
-                4.9
-              </Text>
-
-              {[1, 2, 3, 4].map((estrela) => (
-                <Ionicons
-                  key={estrela}
-                  name="star"
-                  size={13}
-                  color="#FFB800"
-                />
-              ))}
-            </View>
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>
-          Serviços solicitados
-        </Text>
-
-        <View style={styles.serviceBadge}>
-          <Text style={styles.serviceText}>
-            {agendamento?.agendamento_servico?.[0]?.diarista_servico?.servico?.nome_servico
-              ?? 'Serviço'}
-          </Text>
-        </View>
-
-        <View style={styles.locationCard}>
-          <View style={styles.locationRow}>
-            <Ionicons
-              name="location"
-              size={23}
-              color="#18C7C8"
-            />
-
-            <Text style={styles.locationTitle}>
-              Localização
-            </Text>
-          </View>
-
-          <View style={styles.locationRow}>
-            <Ionicons
-              name="search"
-              size={21}
-              color="#A0A0A0"
-            />
-
-            <Text style={styles.address}>
-              {agendamento?.endereco
-                ? `${agendamento.endereco.logradouro} ${agendamento.endereco.numero} - ${agendamento.endereco.bairro}`
-                : 'Endereço não informado'}
-            </Text>
-          </View>
-        </View>
-
-        <Text style={styles.imagesTitle}>
-          Imagens da residência
-        </Text>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.imagesRow}
-        >
-          {[1, 2, 3].map((imagem) => (
-            <View
-              key={imagem}
-              style={styles.houseImage}
-            >
-              <Ionicons
-                name="image-outline"
-                size={38}
-                color="#AAAAAA"
-              />
-
-              <Text style={styles.imagePlaceholder}>
-                Imagem {imagem}
-              </Text>
-            </View>
-          ))}
-        </ScrollView>
-
-        <TouchableOpacity
-          style={styles.checkInButton}
-          onPress={solicitarCheckIn}
-          disabled={sending || !agendamentoId}
-          activeOpacity={0.85}
-        >
-          {sending ? (
-            <ActivityIndicator color={'#FFFFFF'} />
-          ) : (
-            <Text style={styles.checkInButtonText}>
-              Solicitar Check In
-            </Text>
-          )}
+      <View style={[styles.orangeHeader, { justifyContent: 'center', paddingHorizontal: 18 }]}>
+        <TouchableOpacity accessibilityLabel="Voltar" onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
         </TouchableOpacity>
+      </View>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        <Text style={styles.title}>{finished ? 'Diária finalizada' : running ? 'Diária em andamento' : 'Check-in da diária'}</Text>
+        <View style={styles.divider} />
+        {loading && <ActivityIndicator color="#FF6B2C" />}
+        {booking && <>
+          <Text style={styles.name}>{booking.cliente?.usuario?.nome ?? 'Cliente'}</Text>
+          <Text style={styles.address}>Agendamento #{id} • {new Date(booking.data_agendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} às {time(booking.horario_inicio)}</Text>
+          <Text style={styles.sectionTitle}>Endereço</Text>
+          <Text style={styles.address}>{booking.endereco ? booking.endereco.logradouro + ', ' + booking.endereco.numero + ' — ' + booking.endereco.bairro : 'Endereço não informado'}</Text>
+          <Text style={styles.sectionTitle}>Serviços solicitados</Text>
+          {booking.agendamento_servico?.map(item => <Text key={item.id} style={styles.address}>• {item.diarista_servico?.servico?.nome_servico ?? 'Serviço'}</Text>)}
+          {booking.status === 'Aceito' && <Text style={[styles.address, { marginTop: 24 }]}>
+            {!entryPaid ? 'Aguardando o cliente pagar a entrada de 50% para iniciar a diária.' : !canStart ? 'O check-in será liberado a partir do horário agendado. Horário de Brasília.' : 'O horário chegou. Registre o check-in para iniciar a diária.'}
+          </Text>}
+          {running && <Text style={[styles.address, { marginTop: 24 }]}>Ao terminar o serviço, realize o checkout para liberar o pagamento do saldo pelo cliente.</Text>}
+          {check?.horario_checkin && <Text style={[styles.address, { marginTop: 16 }]}>Check-in: {stamp(check.horario_checkin)}</Text>}
+          {check?.horario_checkout && <Text style={[styles.address, { marginTop: 10 }]}>Checkout: {stamp(check.horario_checkout)}</Text>}
+          {finished && <Text style={[styles.address, { marginTop: 16 }]}>O checkout liberou os 50% restantes para o cliente pagar. Finalizar o serviço não confirma o pagamento.</Text>}
+          {!finished && <TouchableOpacity
+            accessibilityRole="button"
+            style={[styles.checkInButton, (loading || sending || sessionExpired || !(canStart || canFinish)) && { opacity: 0.45 }]}
+            disabled={loading || sending || sessionExpired || !(canStart || canFinish)}
+            onPress={() => void act()}>
+            {sending ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.checkInButtonText}>
+              {canFinish ? 'Realizar checkout' : 'Realizar check-in'}
+            </Text>}
+          </TouchableOpacity>}
+        </>}
+        {payment?.parcelas.map(item => <Text key={item.fase} style={[styles.address, { marginTop: 16 }]}>{item.fase}: {money(item.valor)} — {item.status.replace(/_/g, ' ')}</Text>)}
+        {sessionExpired ? <TouchableOpacity style={styles.checkInButton} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })}>
+          <Text style={styles.checkInButtonText}>Entrar novamente</Text>
+        </TouchableOpacity> : <TouchableOpacity disabled={sending} onPress={() => void reload.current()}><Text style={[styles.address, { color: '#008A99', marginTop: 24 }]}>Atualizar diária e pagamentos</Text></TouchableOpacity>}
       </ScrollView>
+      <ActionModal visible={Boolean(error)} variant="error" title={sessionExpired ? 'Sessão expirada' : 'Não foi possível concluir'} message={error}
+        confirmLabel={sessionExpired ? 'Entrar novamente' : 'Entendi'} onClose={() => setError('')}
+        onConfirm={() => { setError(''); if (sessionExpired) navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); }} />
+      <ActionModal visible={!error && Boolean(notice)} variant="success" title="Registro realizado" message={notice} onClose={() => setNotice('')} accentColor="#FF6B2C" />
+      <ActionModal visible={(confirmStart || confirmCheckout) && !error && !notice} variant="confirm" accentColor="#FF6B2C"
+        title={confirmCheckout ? 'Finalizar diária?' : 'Iniciar diária?'}
+        message={confirmCheckout ? 'Confirma que terminou o serviço? O checkout registra a finalização e libera os 50% restantes para o cliente pagar.' : 'Confirma que está iniciando o serviço? O horário do check-in será registrado agora.'}
+        confirmLabel={confirmCheckout ? 'Confirmar checkout' : 'Confirmar check-in'} cancelLabel="Cancelar" busy={sending}
+        onConfirm={act} onClose={() => { setConfirmCheckout(false); setConfirmStart(false); }} />
     </SafeAreaView>
   );
 }

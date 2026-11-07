@@ -260,6 +260,29 @@ export const styles = StyleSheet.create({
     opacity: 0.55,
   },
 
+  confirmationBox: {
+    backgroundColor: '#FFF7F3',
+    borderColor: diaristaColor,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    marginVertical: 12,
+    gap: 8,
+  },
+  confirmationTitle: { fontFamily: fonts.semibold, fontSize: fontSizes.sm, color: colors.text },
+  confirmationText: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: '#666666' },
+  cancelButton: {
+    flex: 1, minHeight: 30, borderRadius: 8, borderWidth: 1, borderColor: '#CCCCCC',
+    backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
+  },
+  cancelText: { fontFamily: fonts.medium, fontSize: 10, color: colors.text },
+  errorMessage: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: '#C62828' },
+  successMessage: {
+    fontFamily: fonts.medium, fontSize: fontSizes.xs, color: '#087F5B',
+    backgroundColor: '#EAFBF2', padding: 14, borderRadius: 12, marginBottom: 14,
+  },
+  retryText: { fontFamily: fonts.semibold, fontSize: fontSizes.xs, color: diaristaColor },
+
   emptyState: {
     alignItems: 'center',
     paddingTop: 70,

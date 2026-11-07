@@ -18,10 +18,11 @@ import { agendamentoService } from '../../services/agendamentoService';
 import { getErrorMessage } from '../../services/api';
 import type { Agendamento } from '../../services/types';
 import { HeaderMenu } from '../../components/header-menu';
+import { NotificationBell } from '../../components/notification-bell';
+import { AppointmentTracker } from '../../components/appointment-tracker';
 import { diaristaService } from '../../services/diaristaService';
 
 const scheduledStatuses: Agendamento['status'][] = ['Aceito', 'Em_andamento'];
-const futureStatuses: Agendamento['status'][] = ['Aceito', 'Em_andamento'];
 
 function localDateKey(date: Date) {
   const year = date.getFullYear();
@@ -43,7 +44,6 @@ export default function HomeDiaristaScreen({ navigation }: any) {
   const [aba, setAba] = useState<'agenda' | 'solicitacoes'>(
     'agenda'
   );
-  const [proximas, setProximas] = useState<Agendamento[]>([]);
   const [agenda, setAgenda] = useState<Agendamento[]>([]);
   const [mesExibido, setMesExibido] = useState(() => {
     const today = new Date();
@@ -83,16 +83,7 @@ export default function HomeDiaristaScreen({ navigation }: any) {
             )
           : [];
         const appointments = [firstPage, ...remainingPages].flatMap((response) => response.data);
-        const today = localDateKey(new Date());
-        const upcoming = appointments
-          .filter((item) => appointmentDateKey(item.data_agendamento) >= today && futureStatuses.includes(item.status))
-          .sort((a, b) => {
-            const dateComparison = appointmentDateKey(a.data_agendamento).localeCompare(appointmentDateKey(b.data_agendamento));
-            return dateComparison || (a.horario_inicio ?? '').localeCompare(b.horario_inicio ?? '');
-          });
-
         setAgenda(appointments);
-        setProximas(upcoming);
       } catch (error) {
         Alert.alert('Não foi possível carregar a agenda', getErrorMessage(error));
       } finally {
@@ -122,6 +113,7 @@ export default function HomeDiaristaScreen({ navigation }: any) {
 
         <View style={styles.headerIcons}>
           <HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />
+          <View style={{ marginLeft: 'auto' }}><NotificationBell navigation={navigation} accentColor="#FF6B2C" /></View>
         </View>
 
         <Text style={styles.welcome}>
@@ -180,6 +172,7 @@ export default function HomeDiaristaScreen({ navigation }: any) {
         >
           {aba === 'agenda' ? (
             <>
+              <AppointmentTracker navigation={navigation} profile="DIARISTA" compact />
               <View style={styles.calendar}>
                 <View style={styles.calendarHeader}>
                   <TouchableOpacity
@@ -292,84 +285,7 @@ export default function HomeDiaristaScreen({ navigation }: any) {
                 </View>
               </View>
 
-              <Text style={styles.sectionTitle}>
-                Próximas diárias
-              </Text>
 
-              {loadingAgenda && <ActivityIndicator color={'#FF6B2C'} />}
-              {!loadingAgenda && proximas.length === 0 && (
-                <Text style={styles.smallText}>
-                  Nenhuma diária futura encontrada.
-                </Text>
-              )}
-              {proximas.map((agendamento) => (
-              <TouchableOpacity
-                key={agendamento.id_agendamento}
-                style={styles.dailyCard}
-                onPress={() =>
-                  navigation.navigate('CheckInDiarista', {
-                    agendamentoId: agendamento.id_agendamento,
-                  })
-                }
-                activeOpacity={0.85}
-              >
-                <View style={styles.clientPhoto}>
-                  <Ionicons
-                    name="person"
-                    size={35}
-                    color="#FFFFFF"
-                  />
-                </View>
-
-                <View style={styles.dailyInfo}>
-                  <Text style={styles.clientName}>
-                    {agendamento.cliente?.usuario?.nome ?? 'Cliente'}
-                  </Text>
-
-                  <View style={styles.ratingRow}>
-                    <Text style={styles.smallText}>
-                      Avaliação
-                    </Text>
-
-                    <Text style={styles.rating}>
-                      5.0
-                    </Text>
-
-                    <Ionicons
-                      name="star"
-                      size={11}
-                      color="#FFB800"
-                    />
-                  </View>
-
-                  <View style={styles.addressRow}>
-                    <Ionicons
-                      name="search-outline"
-                      size={10}
-                      color="#999999"
-                    />
-
-                    <Text style={styles.address}>
-                      {agendamento.endereco
-                        ? `${agendamento.endereco.logradouro} ${agendamento.endereco.numero} - ${agendamento.endereco.bairro}`
-                        : 'Endereço não informado'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.statusBadge}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={10}
-                      color="#FFFFFF"
-                    />
-
-                    <Text style={styles.statusText}>
-                      {agendamento.status}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-              ))}
             </>
           ) : (
             <View style={styles.emptyState}>

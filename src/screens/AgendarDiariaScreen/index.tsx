@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActionModal } from '../../components/action-modal';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -44,6 +45,9 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
   const [saving, setSaving] = useState(false);
   const [estimating, setEstimating] = useState(false);
   const [error, setError] = useState('');
+  const [confirmBooking, setConfirmBooking] = useState(false);
+  const [bookingNotice, setBookingNotice] = useState('');
+  const bookingLock = useRef(false);
   const [estimateError, setEstimateError] = useState('');
   const [valorEstimado, setValorEstimado] = useState<number | null>(null);
   const [mesExibido, setMesExibido] = useState(() => {
@@ -181,20 +185,25 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
     setServicosSelecionados([...new Set([...incluidos, ...extrasAtuais])]);
   }
 
-  async function confirmarAgendamento() {
+  async function confirmarAgendamento(confirmed = false) {
+    if (bookingLock.current) return;
     const payload = montarPayload();
-    if (!cliente?.endereco?.length) return Alert.alert('Endereço obrigatório', 'Cadastre um endereço antes de agendar.');
-    if (!dataSelecionada || !horarioSelecionado) return Alert.alert('Data obrigatória', 'Escolha uma data e um horário disponível.');
-    if (!servicosSelecionados.length) return Alert.alert('Serviço obrigatório', 'Selecione ao menos um serviço.');
-    if (!payload) return Alert.alert('Dados incompletos', 'Revise os dados do agendamento.');
+    if (!cliente?.endereco?.length) return setError('Cadastre um endereço antes de agendar.');
+    if (!dataSelecionada || !horarioSelecionado) return setError('Escolha uma data e um horário disponível.');
+    if (!servicosSelecionados.length) return setError('Selecione ao menos um serviço.');
+    if (!payload) return setError('Revise os dados do agendamento.');
+    if (!confirmed) { setConfirmBooking(true); return; }
+    bookingLock.current = true;
     try {
       setSaving(true);
       await agendamentoService.criar(payload);
-      Alert.alert('Solicitação enviada', 'O agendamento foi enviado para a diarista confirmar.');
-      navigation.navigate('HistoricoCliente');
+      setConfirmBooking(false);
+      setBookingNotice('Acompanhe o aceite em Minhas diárias. Depois, pague a entrada de 50%. O restante será pago após o checkout.');
     } catch (cause) {
-      Alert.alert('Não foi possível agendar', getErrorMessage(cause));
+      setConfirmBooking(false);
+      setError(getErrorMessage(cause));
     } finally {
+      bookingLock.current = false;
       setSaving(false);
     }
   }
@@ -213,7 +222,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
           <Text style={styles.label}>Data</Text>
           <View style={styles.calendar}>
             <View style={styles.calendarHeader}>
@@ -321,12 +330,20 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
         <View style={styles.summary}>
           <Text style={styles.estimatedLabel}>Valor estimado:</Text>
           {estimating ? <ActivityIndicator color="#18C7C8" style={styles.estimateLoader} /> : <Text style={styles.estimatedValue}>{valorEstimado === null ? '—' : valorEstimado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>}
-          {estimateError ? <Text style={styles.errorText}>{estimateError}</Text> : null}
-          <TouchableOpacity style={[styles.confirmButton, (saving || !valorEstimado) && styles.confirmButtonDisabled]} onPress={confirmarAgendamento} disabled={saving || !valorEstimado} activeOpacity={0.85}>
+
+          <TouchableOpacity style={[styles.confirmButton, (saving || !valorEstimado) && styles.confirmButtonDisabled]} onPress={() => void confirmarAgendamento()} disabled={saving || !valorEstimado} activeOpacity={0.85}>
             {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.confirmButtonText}>Confirmar Agendamento</Text>}
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <ActionModal visible={Boolean(error || estimateError)} variant="error" title="Não foi possível agendar" message={error || estimateError}
+        onClose={() => { setError(''); setEstimateError(''); setConfirmBooking(false); }} />
+      <ActionModal visible={confirmBooking && !error && !estimateError} variant="confirm" title="Enviar solicitação?"
+        message={`Deseja solicitar esta diária para ${dataSelecionada.split('-').reverse().join('/')} às ${horarioSelecionado}? Não há cobrança agora; aguarde o aceite da diarista.`}
+        confirmLabel="Enviar solicitação" cancelLabel="Revisar" busy={saving}
+        onConfirm={() => confirmarAgendamento(true)} onClose={() => setConfirmBooking(false)} />
+      <ActionModal visible={Boolean(bookingNotice) && !error} variant="success" title="Solicitação enviada" message={bookingNotice}
+        confirmLabel="Acompanhar solicitação" onClose={() => { setBookingNotice(''); navigation.navigate('AcompanharDiarias'); }} />
     </SafeAreaView>
   );
 }

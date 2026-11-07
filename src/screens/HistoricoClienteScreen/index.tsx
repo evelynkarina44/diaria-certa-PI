@@ -33,6 +33,7 @@ type Diarista = {
   favoritoId?: number;
   data?: string;
   status?: Agendamento['status'];
+  checkinSolicitado?: boolean;
 };
 
 const statusLabels: Record<Agendamento['status'], string> = {
@@ -116,6 +117,7 @@ export default function HistoricoClienteScreen({
         { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' },
       ),
       status: appointment.status,
+      checkinSolicitado: appointment.checkin_checkout?.some((item) => ['Checkin_solicitado', 'Aguardando_pagamento'].includes(item.status_checkin)),
     };
   }
 
@@ -287,6 +289,9 @@ export default function HistoricoClienteScreen({
           showsVerticalScrollIndicator={false}
         >
           {loading && <ActivityIndicator color={'#18C7C8'} />}
+          {!exibirFavoritos && <TouchableOpacity onPress={carregarDados} disabled={loading} style={{ alignSelf: 'flex-end', marginBottom: 16 }}>
+            <Text style={{ color: '#008A99', fontFamily: 'Poppins_600SemiBold' }}>Atualizar agendamentos</Text>
+          </TouchableOpacity>}
           {!exibirFavoritos ? (
             <>
               {Boolean(erroHistorico) && <Text style={styles.emptyText}>{erroHistorico}</Text>}
@@ -296,6 +301,20 @@ export default function HistoricoClienteScreen({
                     {item.data}
                   </Text>
                   {renderCard(item)}
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: -12, marginBottom: 22, flexWrap: 'wrap' }}>
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#18C7C8', padding: 12, borderRadius: 10 }}
+                      onPress={() => navigation.push('Pagamento', { agendamentoId: item.id, dataAgendamento: item.data })}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontFamily: 'Poppins_600SemiBold' }}>Ver pagamento</Text>
+                    </TouchableOpacity>
+                    {item.status === 'Aceito' && item.checkinSolicitado && <TouchableOpacity
+                      style={{ backgroundColor: '#FF6B2C', padding: 12, borderRadius: 10 }}
+                      onPress={() => navigation.navigate('CheckIn', { agendamentoId: item.id })}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontFamily: 'Poppins_600SemiBold' }}>Confirmar check-in</Text>
+                    </TouchableOpacity>}
+                  </View>
                 </React.Fragment>
               ))}
               {!loading && !erroHistorico && historico.length === 0 && (

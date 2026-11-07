@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActionModal } from '../../components/action-modal';
 
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -17,9 +17,16 @@ import { styles } from './styles';
 import { avaliacaoService } from '../../services/avaliacaoService';
 import { denunciaService } from '../../services/denunciaService';
 import { getErrorMessage } from '../../services/api';
+import { agendamentoService } from '../../services/agendamentoService';
+import { pagamentoService } from '../../services/pagamentoService';
+import { StarRating } from '../../components/star-rating';
 
 export default function AvaliacaoScreen({ navigation, route }: any) {
-  const [avaliacao, setAvaliacao] = useState(4);
+  return <AvaliacaoDaDiaria key={route.params?.agendamentoId} navigation={navigation} route={route} />;
+}
+
+function AvaliacaoDaDiaria({ navigation, route }: any) {
+  const [avaliacao, setAvaliacao] = useState(0);
   const [comentario, setComentario] = useState('');
 
   const [modoDenuncia, setModoDenuncia] = useState(false);
@@ -28,9 +35,45 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
   const [imagens, setImagens] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const agendamentoId = Number(route.params?.agendamentoId);
-  const idUsuarioDenunciado = Number(route.params?.idUsuarioDenunciado);
+  const [idUsuarioDenunciado, setIdUsuarioDenunciado] = useState(0);
+  const [nomeDiarista, setNomeDiarista] = useState('diarista');
+  const [ready, setReady] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+  const [confirmReview, setConfirmReview] = useState(false);
+  const [successNotice, setSuccessNotice] = useState('');
+  const sending = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      if (!Number.isSafeInteger(agendamentoId) || agendamentoId <= 0) {
+        setError('Abra a avaliação pelo pagamento de uma diária.'); return;
+      }
+      try {
+        const [booking, summary] = await Promise.all([
+          agendamentoService.buscarPorId(agendamentoId), pagamentoService.buscar(agendamentoId),
+        ]);
+        if (!active) return;
+        setNomeDiarista(booking.diarista?.usuario?.nome ?? 'diarista');
+        setIdUsuarioDenunciado(booking.diarista?.id_usuario ?? 0);
+        if (summary.avaliacao_cliente) {
+          setAvaliacao(summary.avaliacao_cliente.nota);
+          setComentario(summary.avaliacao_cliente.comentario ?? '');
+          setSaved(true);
+        } else if (!summary.pode_avaliar) {
+          setError('A avaliação será liberada após a conclusão da diária e a aprovação das duas parcelas.'); return;
+        }
+        setReady(true);
+      } catch (cause) { if (active) setError(getErrorMessage(cause)); }
+    }
+    void load();
+    return () => { active = false; };
+  }, [agendamentoId]);
 
   function selecionarAvaliacao(valor: number) {
+    // A seleção é local; somente o envio depende da validação da diária na API.
+    if (saved || loading) return;
     setAvaliacao(valor);
 
     // Se mudar a nota, volta para a avaliação normal.
@@ -71,11 +114,13 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
     );
   }
 
-  async function enviarAvaliacao() {
-    if (!agendamentoId) {
-      Alert.alert('Agendamento ausente', 'Abra a avaliação pelo histórico.');
-      return;
-    }
+  async function enviarAvaliacao(confirmed = false) {
+    if (sending.current || !ready || saved) return;
+    if (avaliacao < 1 || avaliacao > 5) { setError('Escolha uma nota de 1 a 5 estrelas.'); return; }
+    if (comentario.trim().length > 2000) { setError('O comentário deve ter no máximo 2000 caracteres.'); return; }
+    if (!confirmed) { setConfirmReview(true); return; }
+    sending.current = true;
+    setError('');
     try {
       setLoading(true);
       await avaliacaoService.criar({
@@ -85,17 +130,21 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
         publica: true,
         anonima: false,
       });
-      navigation.navigate('EncontrarDiarista');
+      setSaved(true);
+      setConfirmReview(false);
+      setSuccessNotice('Sua avaliação da diarista foi registrada. Obrigado!');
     } catch (error) {
-      Alert.alert('Não foi possível enviar a avaliação', getErrorMessage(error));
+      setConfirmReview(false);
+      setError(getErrorMessage(error));
     } finally {
+      sending.current = false;
       setLoading(false);
     }
   }
 
   async function enviarDenuncia() {
     if (!idUsuarioDenunciado || !denuncia.trim()) {
-      Alert.alert('Dados incompletos', 'Informe a denúncia e abra esta tela por uma diária.');
+      setError('Informe a denúncia e abra esta tela por uma diária.');
       return;
     }
     try {
@@ -107,7 +156,7 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
       });
       navigation.navigate('EncontrarDiarista');
     } catch (error) {
-      Alert.alert('Não foi possível enviar a denúncia', getErrorMessage(error));
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -142,6 +191,11 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+
+        {saved && <View style={{ padding: 18 }}>
+
+          <TouchableOpacity onPress={() => navigation.navigate('AcompanharDiarias')}><Text style={{ color: '#008A99', marginTop: 16 }}>Voltar às minhas diárias</Text></TouchableOpacity>
+        </View>}
         {!modoDenuncia ? (
           /* =========================================
              AVALIAÇÃO NORMAL
@@ -149,34 +203,14 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
           <View style={styles.content}>
             <Text style={styles.title}>
               Como foi o serviço de{'\n'}
-              Maria da Silva?
+              {nomeDiarista}?
             </Text>
 
             {/* ESTRELAS */}
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map((estrela) => (
-                <TouchableOpacity
-                  key={estrela}
-                  style={styles.starButton}
-                  onPress={() =>
-                    selecionarAvaliacao(estrela)
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={
-                      estrela <= avaliacao
-                        ? 'star'
-                        : 'star-outline'
-                    }
-                    size={35}
-                    color="#FFB800"
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
+            <StarRating value={avaliacao} onChange={selecionarAvaliacao} disabled={saved || loading} />
 
             <View style={styles.divider} />
+            {avaliacao > 0 && <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: '#555555', marginBottom: 12 }}>Nota: {avaliacao} de 5 estrelas</Text>}
 
             {/* COMENTÁRIO */}
             <TextInput
@@ -185,13 +219,16 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
               placeholderTextColor="#9B9B9B"
               value={comentario}
               onChangeText={setComentario}
+              editable={ready && !saved && !loading}
+              maxLength={2000}
+              accessibilityLabel="Comentário sobre a diarista"
               multiline
               textAlignVertical="top"
             />
 
             <View style={styles.bottomArea}>
               {/* DENÚNCIA SOMENTE COM 1 ESTRELA */}
-              {avaliacao === 1 && (
+              {avaliacao === 1 && ready && !saved && (
                 <View style={styles.reportArea}>
                   <Text style={styles.reportDescription}>
                     Se deseja criar uma denúncia, clique no botão
@@ -212,15 +249,15 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
 
               <TouchableOpacity
                 style={styles.sendButton}
-                onPress={enviarAvaliacao}
-                disabled={loading}
+                onPress={() => void enviarAvaliacao()}
+                disabled={loading || !ready || saved}
                 activeOpacity={0.85}
               >
                 {loading ? (
                   <ActivityIndicator color={'#FFFFFF'} />
                 ) : (
                   <Text style={styles.sendButtonText}>
-                    Enviar
+                    {saved ? 'Avaliação enviada' : 'Enviar avaliação'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -233,7 +270,7 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
           <View style={styles.content}>
             <Text style={styles.title}>
               Como foi o serviço de{'\n'}
-              Maria da Silva?
+              {nomeDiarista}?
             </Text>
 
             {/* CAMPO DA DENÚNCIA */}
@@ -335,6 +372,14 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
           </View>
         )}
       </ScrollView>
+      <ActionModal visible={Boolean(error)} variant="error" title="Confira os dados" message={error} onClose={() => setError('')} />
+      <ActionModal visible={confirmReview && !error} variant="confirm" title="Enviar avaliação?"
+        message={`Deseja enviar a nota ${avaliacao} de 5 estrelas${comentario.trim() ? ' e seu comentário' : ''} para esta diária?`}
+        confirmLabel="Enviar avaliação" cancelLabel="Revisar" busy={loading}
+        onConfirm={() => enviarAvaliacao(true)} onClose={() => setConfirmReview(false)} />
+      <ActionModal visible={Boolean(successNotice) && !error} variant="success" title="Avaliação enviada"
+        message={successNotice} confirmLabel="Voltar às minhas diárias"
+        onClose={() => { setSuccessNotice(''); navigation.navigate('AcompanharDiarias'); }} />
     </SafeAreaView>
   );
 }

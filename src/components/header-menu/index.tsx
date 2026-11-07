@@ -13,6 +13,11 @@ type HeaderMenuProps = {
   accentColor: string;
 };
 
+// Mantém os rótulos em português mesmo com tradução automática no navegador.
+const menuLanguageProps = Platform.OS === 'web'
+  ? { translate: 'no' as const, className: 'notranslate', lang: 'pt-BR' }
+  : {};
+
 function blurActiveElement() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
   (document.activeElement as HTMLElement | null)?.blur?.();
@@ -35,7 +40,8 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
 
   const items = profile === 'diarista'
     ? [
-        { route: 'HomeDiarista', label: 'Início', icon: 'home-outline' as const },
+        { route: 'HomeDiarista', label: 'Página inicial', icon: 'home-outline' as const },
+        { route: 'AcompanharDiarias', label: 'Minhas diárias', icon: 'list-circle-outline' as const },
         { route: 'PerfilDiaristaEdicao', label: 'Meu perfil', icon: 'person-outline' as const },
         { route: 'ServicosDiarista', label: 'Meus serviços', icon: 'sparkles-outline' as const },
         { route: 'CombosDiarista', label: 'Meus combos', icon: 'layers-outline' as const },
@@ -43,7 +49,8 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
         { route: 'HistoricoDiarista', label: 'Histórico', icon: 'clipboard-outline' as const },
       ]
     : [
-        { route: 'EncontrarDiarista', label: 'Início', icon: 'home-outline' as const },
+        { route: 'EncontrarDiarista', label: 'Página inicial', icon: 'home-outline' as const },
+        { route: 'AcompanharDiarias', label: 'Minhas diárias', icon: 'list-circle-outline' as const },
         { route: 'PerfilCliente', label: 'Meu perfil', icon: 'person-outline' as const },
         { route: 'Chatbot', label: 'Assistente', icon: 'chatbubble-ellipses-outline' as const },
         { route: 'HistoricoCliente', label: 'Histórico', icon: 'clipboard-outline' as const },
@@ -96,7 +103,7 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={() => close()}>
-        <View style={styles.overlay}>
+        <View {...menuLanguageProps} style={styles.overlay}>
           <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
             <Pressable style={styles.dismissArea} onPress={() => close()} accessibilityLabel="Fechar menu" />
           </Animated.View>

@@ -27,6 +27,7 @@ import type {
   Servico,
 } from '../../services/types';
 import { HeaderMenu } from '../../components/header-menu';
+import { NotificationBell } from '../../components/notification-bell';
 
 type Diarista = {
   id: number;
@@ -662,10 +663,11 @@ export default function EncontrarDiaristaScreen({
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <View style={styles.headerTop}>
+          <View style={[styles.headerTop, { justifyContent: 'space-between' }]}>
             <View style={styles.headerActions}>
               <HeaderMenu navigation={navigation} profile="cliente" accentColor="#18C7C8" />
             </View>
+            <NotificationBell navigation={navigation} accentColor="#18C7C8" />
           </View>
 
           <Text style={styles.welcome}>

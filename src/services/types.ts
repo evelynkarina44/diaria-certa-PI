@@ -171,6 +171,7 @@ export type CheckinCheckout = {
   horario_checkout?: string | null;
   status_checkin:
     | 'N_o_iniciado'
+    | 'Pago_legado'
     | 'Checkin_solicitado'
     | 'Aguardando_pagamento'
     | 'Iniciado'

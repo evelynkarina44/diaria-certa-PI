@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, Text, View, Image } from 'react-native';
+import { Text, View, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ActionButton from '../../components/action-button';
 import { styles } from './styles';
 

@@ -87,7 +87,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
     const normalized = normalizeError(error);
-    if (normalized.status === 401) await tokenStorage.clear();
+    if (normalized.status === 401 && axios.isAxiosError(error)) {
+      // Uma resposta antiga não pode apagar o token de um login/perfil mais recente.
+      const rejectedToken = error.config?.headers?.Authorization;
+      const currentToken = await tokenStorage.get();
+      if (currentToken && rejectedToken === `Bearer ${currentToken}`) await tokenStorage.clear();
+    }
     return Promise.reject(normalized);
   },
 );

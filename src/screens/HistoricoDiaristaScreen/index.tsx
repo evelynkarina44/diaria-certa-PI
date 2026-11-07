@@ -196,6 +196,16 @@ export default function HistoricoDiaristaScreen({
                           {registro.status}
                         </Text>
                       </View>
+                      {['Aceito', 'Em_andamento', 'Concluído'].includes(registro.status) && (
+                        <TouchableOpacity
+                          style={{ backgroundColor: '#FF6B2C', borderRadius: 10, padding: 10, marginTop: 10 }}
+                          onPress={() => navigation.navigate('CheckInDiarista', { agendamentoId: registro.id })}
+                        >
+                          <Text style={{ color: '#FFFFFF', fontFamily: 'Poppins_600SemiBold' }}>
+                            {registro.status === 'Em_andamento' ? 'Finalizar diária' : 'Ver diária e pagamentos'}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 );

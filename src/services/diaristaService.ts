@@ -15,9 +15,11 @@ export type DiaristaSearchQuery = {
   cidade?: string;
   estado?: string;
   avaliacao_min?: number;
+  responde_rapido?: boolean;
   preco_min?: number;
   preco_max?: number;
   id_servico?: number;
+  servico_nome?: string;
   cep_origem?: string;
   distancia_max?: number;
   ordenar?: 'avaliacao' | 'preco_asc' | 'preco_desc' | 'nome' | 'distancia';

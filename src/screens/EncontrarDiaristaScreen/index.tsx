@@ -19,13 +19,13 @@ import { useAuth } from '../../contexts/GlobalContext';
 import { getErrorMessage } from '../../services/api';
 import { diaristaService } from '../../services/diaristaService';
 import { favoritoService } from '../../services/favoritoService';
-import { servicoService } from '../../services/servicoService';
 import { clienteService } from '../../services/clienteService';
 import type {
   Diarista as ApiDiarista,
   Favorito,
-  Servico,
 } from '../../services/types';
+import { ActionModal } from '../../components/action-modal';
+import { updateServiceDraft } from '../../utils/serviceFilterDraft';
 import { HeaderMenu } from '../../components/header-menu';
 import { NotificationBell } from '../../components/notification-bell';
 
@@ -67,9 +67,9 @@ export default function EncontrarDiaristaScreen({
   navigation,
 }: any) {
   const [busca, setBusca] = useState('');
+  const [atualizacaoBusca, setAtualizacaoBusca] = useState(0);
 
   const [diaristas, setDiaristas] = useState<Diarista[]>([]);
-  const [catalogoServicos, setCatalogoServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [cepCliente, setCepCliente] = useState<string | null>(null);
@@ -84,9 +84,11 @@ export default function EncontrarDiaristaScreen({
     useState('');
   const [avaliacaoAplicada, setAvaliacaoAplicada] = useState('');
 
-  const [servicosSelecionados, setServicosSelecionados] =
-    useState<string[]>([]);
-  const [servicosAplicados, setServicosAplicados] = useState<string[]>([]);
+  const [servicoDigitado, setServicoDigitado] = useState('');
+  const [servicoAplicado, setServicoAplicado] = useState('');
+  const [servicosSelecionados, setServicosSelecionados] = useState<string[]>([]);
+  const [servicoEmEdicao, setServicoEmEdicao] = useState<string | null>(null);
+  const [erroServico, setErroServico] = useState('');
 
   const [distanciaSelecionada, setDistanciaSelecionada] =
     useState('');
@@ -101,15 +103,9 @@ export default function EncontrarDiaristaScreen({
   const [respostaRapidaAplicada, setRespostaRapidaAplicada] = useState(false);
 
   useEffect(() => {
-    servicoService
-      .listar()
-      .then(setCatalogoServicos)
-      .catch(() => setCatalogoServicos([]));
-  }, []);
-
-  useEffect(() => {
     async function sincronizarFavoritos() {
       if (user?.activeProfile !== 'CLIENTE') return;
+      setAtualizacaoBusca((current) => current + 1);
       try {
         const response = await favoritoService.listar({ limit: 100 });
         setDiaristas((current) => current.map((diarista) => {
@@ -155,15 +151,15 @@ export default function EncontrarDiaristaScreen({
     return () => clearTimeout(timer);
   }, [
     busca,
+    atualizacaoBusca,
     avaliacaoAplicada,
     precoAplicado,
-    servicosAplicados,
+    servicoAplicado,
     respostaRapidaAplicada,
     distanciaAplicada,
     cepCliente,
     loadingEndereco,
     user?.id_usuario,
-    catalogoServicos,
   ]);
 
   function avaliacaoMinima() {
@@ -216,7 +212,7 @@ export default function EncontrarDiaristaScreen({
         : 'Localização não informada',
       favorito: Boolean(favorito),
       favoritoId: favorito?.id_favorito,
-      respostaRapida: Boolean(profile.frequencia_resposta),
+      respostaRapida: profile.responde_rapido === true,
       fotoPerfil: profile.usuario?.foto_perfil,
     };
   }
@@ -230,14 +226,12 @@ export default function EncontrarDiaristaScreen({
         setErro('Cadastre um endereço com CEP para encontrar as diaristas mais próximas.');
         return;
       }
-      const servicoSelecionado = catalogoServicos.find(
-        (item) => item.nome_servico === servicosAplicados[0],
-      );
       const query = {
         nome: busca.trim() || undefined,
+        responde_rapido: respostaRapidaAplicada ? true : undefined,
         avaliacao_min: avaliacaoMinima(),
         ...faixaPreco(),
-        id_servico: servicoSelecionado?.id_servico,
+        servico_nome: servicoAplicado.trim() || undefined,
         cep_origem: cepCliente,
         distancia_max: distanciaMaxima(),
         ordenar: 'distancia' as const,
@@ -312,7 +306,10 @@ export default function EncontrarDiaristaScreen({
     }
 
     if (filtro === 'Avaliação') setAvaliacaoSelecionada(avaliacaoAplicada);
-    if (filtro === 'Serviços realizados') setServicosSelecionados([...servicosAplicados]);
+    if (filtro === 'Serviços realizados') {
+      setServicosSelecionados(servicoAplicado.split(',').map(value => value.trim()).filter(Boolean));
+      setServicoDigitado(''); setServicoEmEdicao(null);
+    }
     if (filtro === 'Distância') setDistanciaSelecionada(distanciaAplicada);
     if (filtro === 'Preço') setPrecoSelecionado(precoAplicado);
     if (filtro === 'Responde rápido') setSomenteRespostaRapida(respostaRapidaAplicada);
@@ -321,7 +318,17 @@ export default function EncontrarDiaristaScreen({
 
   function aplicarFiltro() {
     if (filtroAberto === 'Avaliação') setAvaliacaoAplicada(avaliacaoSelecionada);
-    if (filtroAberto === 'Serviços realizados') setServicosAplicados([...servicosSelecionados]);
+    if (filtroAberto === 'Serviços realizados') {
+      let services = servicosSelecionados;
+      if (servicoDigitado.trim() || servicoEmEdicao !== null) {
+        const result = updateServiceDraft(services, servicoDigitado, servicoEmEdicao);
+        if (result.error !== undefined) { setErroServico(result.error); return; }
+        services = result.services;
+      }
+      setServicosSelecionados(services);
+      setServicoAplicado(services.join(', '));
+      setServicoDigitado(''); setServicoEmEdicao(null);
+    }
     if (filtroAberto === 'Distância') setDistanciaAplicada(distanciaSelecionada);
     if (filtroAberto === 'Preço') setPrecoAplicado(precoSelecionado);
     if (filtroAberto === 'Responde rápido') setRespostaRapidaAplicada(somenteRespostaRapida);
@@ -330,7 +337,9 @@ export default function EncontrarDiaristaScreen({
 
   function limparRascunhoFiltro() {
     if (filtroAberto === 'Avaliação') setAvaliacaoSelecionada('');
-    if (filtroAberto === 'Serviços realizados') setServicosSelecionados([]);
+    if (filtroAberto === 'Serviços realizados') {
+      setServicosSelecionados([]); setServicoDigitado(''); setServicoEmEdicao(null);
+    }
     if (filtroAberto === 'Distância') setDistanciaSelecionada('');
     if (filtroAberto === 'Preço') setPrecoSelecionado('');
     if (filtroAberto === 'Responde rápido') setSomenteRespostaRapida(false);
@@ -338,7 +347,7 @@ export default function EncontrarDiaristaScreen({
 
   function filtroAplicado(filtro: string) {
     if (filtro === 'Avaliação') return Boolean(avaliacaoAplicada);
-    if (filtro === 'Serviços realizados') return servicosAplicados.length > 0;
+    if (filtro === 'Serviços realizados') return servicoAplicado.length > 0;
     if (filtro === 'Distância') return Boolean(distanciaAplicada);
     if (filtro === 'Preço') return Boolean(precoAplicado);
     if (filtro === 'Responde rápido') return respostaRapidaAplicada;
@@ -356,21 +365,6 @@ export default function EncontrarDiaristaScreen({
         </TouchableOpacity>
       </View>
     );
-  }
-
-  function alternarServico(servico: string) {
-    setServicosSelecionados((selecionadosAtuais) => {
-      const estaSelecionado =
-        selecionadosAtuais.includes(servico);
-
-      if (estaSelecionado) {
-        return selecionadosAtuais.filter(
-          (item) => item !== servico
-        );
-      }
-
-      return [...selecionadosAtuais, servico];
-    });
   }
 
   function renderFiltroAvaliacao() {
@@ -428,61 +422,56 @@ export default function EncontrarDiaristaScreen({
     );
   }
 
+  function adicionarServico() {
+    const result = updateServiceDraft(servicosSelecionados, servicoDigitado, servicoEmEdicao);
+    if (result.error !== undefined) { setErroServico(result.error); return; }
+    setServicosSelecionados(result.services);
+    setServicoDigitado(''); setServicoEmEdicao(null);
+  }
+
   function renderFiltroServicos() {
     return (
       <View style={styles.filterPanel}>
-        <Text style={styles.filterPanelTitle}>
-          Serviços realizados
-        </Text>
-
-        <Text style={styles.filterPanelDescription}>
-          Selecione um ou mais serviços.
-        </Text>
-
-        <View style={styles.checkboxGrid}>
-          {catalogoServicos.map((item) => item.nome_servico).map((servico) => {
-            const selecionado =
-              servicosSelecionados.includes(servico);
-
-            return (
-              <TouchableOpacity
-                key={servico}
-                style={[
-                  styles.checkboxOption,
-                  selecionado &&
-                    styles.checkboxOptionSelected,
-                ]}
-                onPress={() =>
-                  alternarServico(servico)
-                }
-                activeOpacity={0.75}
-              >
-                <Ionicons
-                  name={
-                    selecionado
-                      ? 'checkbox'
-                      : 'square-outline'
-                  }
-                  size={20}
-                  color={
-                    selecionado
-                      ? '#18C7C8'
-                      : '#999999'
-                  }
-                />
-
-                <Text
-                  style={[
-                    styles.checkboxLabel,
-                    selecionado &&
-                      styles.checkboxLabelSelected,
-                  ]}
-                >
-                  {servico}
-                </Text>
+        <Text style={styles.filterPanelTitle}>Serviços realizados</Text>
+        <Text style={styles.filterPanelDescription}>Digite e adicione os serviços desejados. Use o lápis para editar ou o X para remover. A busca só muda ao aplicar o filtro.</Text>
+        <View style={styles.serviceEntryRow}>
+          <View style={[styles.serviceSearchRow, { flex: 1 }]}>
+            <Ionicons name="search-outline" size={20} color="#667085" />
+            <TextInput
+              style={styles.searchInput}
+              accessibilityLabel="Nome do serviço"
+              placeholder="Ex.: limpeza de janelas"
+              placeholderTextColor="#98A2B3"
+              value={servicoDigitado}
+              onChangeText={setServicoDigitado}
+              maxLength={100}
+              returnKeyType="done"
+              onSubmitEditing={adicionarServico}
+            />
+          </View>
+          <TouchableOpacity accessibilityRole="button" style={styles.addServiceButton} onPress={adicionarServico}>
+            <Ionicons name={servicoEmEdicao ? 'checkmark' : 'add'} size={20} color="#FFFFFF" />
+            <Text style={styles.addServiceText}>{servicoEmEdicao ? 'Alterar' : 'Adicionar'}</Text>
+          </TouchableOpacity>
+        </View>
+        {servicoEmEdicao && <TouchableOpacity onPress={() => { setServicoEmEdicao(null); setServicoDigitado(''); }}><Text style={styles.serviceHint}>Cancelar edição de {servicoEmEdicao}</Text></TouchableOpacity>}
+        <Text style={styles.serviceListTitle}>Serviços selecionados ({servicosSelecionados.length}/10)</Text>
+        <View style={styles.serviceChips}>
+          {servicosSelecionados.map(service => (
+            <View key={service} style={styles.serviceChip}>
+              <Text style={styles.serviceChipText}>{service}</Text>
+              <TouchableOpacity style={styles.serviceChipAction} accessibilityLabel={`Editar serviço ${service}`} onPress={() => { setServicoEmEdicao(service); setServicoDigitado(service); }}>
+                <Ionicons name="create-outline" size={19} color="#008A99" />
               </TouchableOpacity>
-            );
-          })}
+              <TouchableOpacity style={styles.serviceChipAction} accessibilityLabel={`Remover serviço ${service}`} onPress={() => {
+                setServicosSelecionados(current => current.filter(value => value !== service));
+                if (servicoEmEdicao === service) { setServicoEmEdicao(null); setServicoDigitado(''); }
+              }}>
+                <Ionicons name="close-circle" size={19} color="#008A99" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          {!servicosSelecionados.length && <Text style={styles.serviceHint}>Nenhum serviço adicionado.</Text>}
         </View>
         {renderAcoesFiltro()}
       </View>
@@ -595,7 +584,7 @@ export default function EncontrarDiaristaScreen({
         </Text>
 
         <Text style={styles.filterPanelDescription}>
-          Exiba apenas profissionais que respondem rapidamente.
+          Exiba apenas quem aceita ou recusa todas as solicitações em até 24 horas. É preciso ter ao menos uma resposta; pedidos atrasados ou expirados impedem o selo.
         </Text>
 
         <TouchableOpacity
@@ -840,7 +829,7 @@ export default function EncontrarDiaristaScreen({
                       {diarista.distancia}
                     </Text>
 
-                    <View style={styles.quickResponse}>
+                    {diarista.respostaRapida && <View style={styles.quickResponse}>
                       <Ionicons
                         name="time-outline"
                         size={11}
@@ -850,7 +839,7 @@ export default function EncontrarDiaristaScreen({
                       <Text style={styles.quickResponseText}>
                         Responde rápido
                       </Text>
-                    </View>
+                    </View>}
                   </View>
                 </TouchableOpacity>
 
@@ -881,6 +870,7 @@ export default function EncontrarDiaristaScreen({
           </View>
         </View>
       </ScrollView>
+      <ActionModal visible={Boolean(erroServico)} variant="error" title="Confira os serviços" message={erroServico} onClose={() => setErroServico('')} />
     </SafeAreaView>
   );
 }

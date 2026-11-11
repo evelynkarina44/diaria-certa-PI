@@ -120,6 +120,26 @@ export const styles = StyleSheet.create({
     borderTopColor: '#EEEEEE',
   },
 
+  serviceEntryRow: { flexDirection: 'row', gap: 8 },
+  addServiceButton: { minHeight: 48, borderRadius: 10, backgroundColor: '#18C7C8', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 12 },
+  addServiceText: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: 12 },
+  serviceListTitle: { color: colors.text, fontFamily: fonts.semibold, fontSize: 12, marginTop: 18, marginBottom: 8 },
+  serviceChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  serviceChip: { flexDirection: 'row', alignItems: 'center', maxWidth: '100%', backgroundColor: '#EAFBFB', borderWidth: 1, borderColor: '#18C7C8', borderRadius: 20, paddingLeft: 12, paddingRight: 4 },
+  serviceChipText: { flexShrink: 1, color: '#008A99', fontFamily: fonts.medium, fontSize: 12 },
+  serviceChipAction: { padding: 8 },
+  serviceHint: { color: '#667085', fontFamily: fonts.regular, fontSize: 12, paddingVertical: 8 },
+  serviceSearchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: '#D0D5DD',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+
   searchInput: {
     flex: 1,
     color: colors.text,

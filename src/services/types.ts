@@ -139,6 +139,7 @@ export type Disponibilidade = {
 };
 
 export type Diarista = {
+  responde_rapido?: boolean;
   id_diarista: number;
   id_usuario: number;
   descricao: string;

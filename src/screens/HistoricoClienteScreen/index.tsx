@@ -29,6 +29,7 @@ type Diarista = {
   quantidadeAvaliacoes: string;
   distancia: string;
   favorito: boolean;
+  respostaRapida?: boolean;
   diaristaId?: number;
   favoritoId?: number;
   data?: string;
@@ -89,6 +90,7 @@ export default function HistoricoClienteScreen({
         ? `${endereco.bairro}, ${endereco.cidade} - ${endereco.estado}`
         : 'Localização não informada',
       favorito: Boolean(favorito),
+      respostaRapida: profile.responde_rapido === true,
       favoritoId: favorito?.id_favorito,
     };
   }
@@ -233,10 +235,10 @@ export default function HistoricoClienteScreen({
               <Text style={[styles.quickText, styles.statusText]}>
                 {statusLabels[diarista.status]}
               </Text>
-            </View> : <View style={styles.quickBadge}>
+            </View> : diarista.respostaRapida ? <View style={styles.quickBadge}>
               <Ionicons name="checkmark-circle-outline" size={12} color="#18C7C8" />
               <Text style={styles.quickText}>Responde rápido</Text>
-            </View>}
+            </View> : null}
           </View>
         </TouchableOpacity>
 

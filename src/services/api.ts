@@ -108,7 +108,8 @@ function getValidationDetails(details: unknown): string | null {
   if (!details || typeof details !== 'object') return null;
 
   const fieldErrors = (details as { fieldErrors?: unknown }).fieldErrors;
-  if (!fieldErrors || typeof fieldErrors !== 'object') return null;
+  const formErrors = (details as { formErrors?: unknown }).formErrors;
+  const general = Array.isArray(formErrors) ? formErrors.filter((item): item is string => typeof item === 'string') : [];
 
   const labels: Record<string, string> = {
     cpf: 'CPF',
@@ -116,8 +117,16 @@ function getValidationDetails(details: unknown): string | null {
     email: 'E-mail',
     senha: 'Senha',
     nome: 'Nome',
+    data_nascimento: 'Data de nascimento',
+    qtd_comodos: 'Quantidade de cômodos',
+    qtd_max_comodos: 'Limite de cômodos',
+    tamanho_casa: 'Tamanho da residência',
+    endereco: 'Endereço',
+    descricao: 'Descrição',
+    servicos: 'Serviços',
+    combo_base: 'Combo base',
   };
-  const messages = Object.entries(fieldErrors as Record<string, unknown>)
+  const messages = Object.entries(fieldErrors && typeof fieldErrors === 'object' ? fieldErrors as Record<string, unknown> : {})
     .flatMap(([field, value]) => {
       const errors = Array.isArray(value)
         ? value.filter((item): item is string => typeof item === 'string')
@@ -125,7 +134,8 @@ function getValidationDetails(details: unknown): string | null {
       return errors.map((message) => `${labels[field] ?? field}: ${message}`);
     });
 
-  return messages.length ? messages.join('\n') : null;
+  const all = [...messages, ...general];
+  return all.length ? all.join('\n') : null;
 }
 
 export function getErrorMessage(error: unknown): string {

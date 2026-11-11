@@ -1,4 +1,4 @@
-import { ApiError } from './api';
+import { ApiError, request } from './api';
 import { authService } from './authService';
 import { clienteService } from './clienteService';
 import { diaristaService } from './diaristaService';
@@ -19,7 +19,7 @@ async function criarUsuarioEAutenticar(
     return restoredUser;
   }
 
-  let usuarioJaExistia = false;
+  let conflitoExistente: ApiError | null = null;
   try {
     await usuarioService.criar(usuario);
   } catch (error) {
@@ -28,7 +28,12 @@ async function criarUsuarioEAutenticar(
     if (!(error instanceof ApiError) || error.status !== 409) {
       throw error;
     }
-    usuarioJaExistia = true;
+    const details = error.details as { fieldErrors?: { email?: unknown } } | undefined;
+    const conflitoEmail = Boolean(details?.fieldErrors?.email)
+      || /e-?mail.*cadastrad/i.test(error.message);
+    // CPF duplicado não é uma falha de login e não pode virar "e-mail já cadastrado".
+    if (!conflitoEmail) throw error;
+    conflitoExistente = error;
   }
 
   try {
@@ -36,13 +41,13 @@ async function criarUsuarioEAutenticar(
     return session.user;
   } catch (error) {
     if (
-      usuarioJaExistia &&
+      conflitoExistente &&
       error instanceof ApiError &&
       error.status === 401
     ) {
       throw new ApiError(
         'Este e-mail já está cadastrado. Use a senha da conta existente ou entre pela tela de login.',
-        { status: 409 },
+        { status: 409, details: conflitoExistente.details },
       );
     }
     throw error;
@@ -50,6 +55,10 @@ async function criarUsuarioEAutenticar(
 }
 
 export const cadastroService = {
+  verificarCadastro(fields: { cpf?: string; email?: string }): Promise<{ disponivel: boolean }> {
+    return request({ method: 'POST', url: '/api/usuario/validar-cadastro', data: fields });
+  },
+
   async adicionarPerfilCliente(
     perfil: Omit<ClienteCreate, 'id_usuario'>,
   ): Promise<Usuario> {

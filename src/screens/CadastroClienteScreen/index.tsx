@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { ActionModal } from '../../components/action-modal';
+import { useRegistrationCheck } from '../../hooks/useRegistrationCheck';
 import { cadastroService } from '../../services/cadastroService';
 import { getErrorMessage } from '../../services/api';
 import type { HouseSize } from '../../services/types';
@@ -31,7 +32,8 @@ import {
   enderecoFormParaApi,
   validarEnderecoForm,
 } from '../../components/endereco-cadastro-form';
-import { formatCpf, formatPhone, isValidCpf, onlyDigits } from '../../utils/inputMasks';
+import { formatDate, formatCpf, formatPhone, isValidCpf, onlyDigits } from '../../utils/inputMasks';
+import { getBirthDateError } from '../../utils/birthDate';
 
 function normalizarData(value: string): string | null {
   const texto = value.trim();
@@ -82,6 +84,13 @@ export default function CadastroClienteScreen({ navigation }: any) {
   const [endereco, setEndereco] = useState(enderecoFormInicial);
   const [erroEndereco, setErroEndereco] = useState('');
 
+  const [aviso, setAviso] = useState<{ title: string; message: string } | null>(null);
+  function mostrarAviso(title: string, message: string) { setAviso({ title, message }); }
+  const { checking: verificando, checkRegistration, cancelCheck } = useRegistrationCheck(
+    JSON.stringify([etapa, adicionandoPerfil, primeiroNome, ultimoNome, cpf, telefone, email, confirmarEmail, dataNascimento, qtdComodos]),
+    (error) => mostrarAviso('Não foi possível verificar os dados', getErrorMessage(error)),
+  );
+
   const etapaVisual = adicionandoPerfil ? (etapa === 1 ? 1 : 2) : etapa;
   const totalEtapas = adicionandoPerfil ? 2 : 4;
   const progresso = `${(etapaVisual / totalEtapas) * 100}%` as `${number}%`;
@@ -114,44 +123,48 @@ export default function CadastroClienteScreen({ navigation }: any) {
   function validarEtapaAtual() {
     if (etapa === 1) {
       if (!adicionandoPerfil && `${primeiroNome} ${ultimoNome}`.trim().length < 3) {
-        Alert.alert('Dados incompletos', 'Informe seu nome completo.');
+        mostrarAviso('Dados incompletos', 'Informe seu nome completo.');
         return false;
       }
       if (!adicionandoPerfil && telefone.replace(/\D/g, '').length < 10) {
-        Alert.alert('Telefone inválido', 'Informe o telefone com DDD.');
+        mostrarAviso('Telefone inválido', 'Informe o telefone com DDD.');
         return false;
       }
       if (!adicionandoPerfil && !isValidCpf(cpf)) {
-        Alert.alert('CPF inválido', 'Informe um CPF válido. Verifique os números digitados.');
+        mostrarAviso('CPF inválido', 'Informe um CPF válido. Verifique os números digitados.');
         return false;
       }
-      if (!normalizarData(dataNascimento)) {
-        Alert.alert('Data inválida', 'Use o formato DD/MM/AAAA.');
+      const nascimento = normalizarData(dataNascimento);
+      const erroNascimento = nascimento
+        ? getBirthDateError(nascimento)
+        : 'Informe uma data de nascimento válida no formato DD/MM/AAAA.';
+      if (erroNascimento) {
+        mostrarAviso('Data de nascimento inválida', erroNascimento);
         return false;
       }
       const comodos = Number(qtdComodos);
       if (!Number.isInteger(comodos) || comodos < 1 || comodos > 100) {
-        Alert.alert('Quantidade inválida', 'Informe de 1 a 100 cômodos.');
+        mostrarAviso('Quantidade inválida', 'Informe de 1 a 100 cômodos.');
         return false;
       }
     }
     if (etapa === 2) {
       if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-        Alert.alert('E-mail inválido', 'Informe um endereço de e-mail válido.');
+        mostrarAviso('E-mail inválido', 'Informe um endereço de e-mail válido.');
         return false;
       }
       if (email.trim().toLowerCase() !== confirmarEmail.trim().toLowerCase()) {
-        Alert.alert('E-mails diferentes', 'Os dois e-mails devem ser iguais.');
+        mostrarAviso('E-mails diferentes', 'Os dois e-mails devem ser iguais.');
         return false;
       }
     }
     if (etapa === 3) {
       if (senha.length < 8) {
-        Alert.alert('Senha inválida', 'A senha deve ter pelo menos 8 caracteres.');
+        mostrarAviso('Senha inválida', 'A senha deve ter pelo menos 8 caracteres.');
         return false;
       }
       if (senha !== confirmarSenha) {
-        Alert.alert('Senhas diferentes', 'As duas senhas devem ser iguais.');
+        mostrarAviso('Senhas diferentes', 'As duas senhas devem ser iguais.');
         return false;
       }
     }
@@ -164,17 +177,23 @@ export default function CadastroClienteScreen({ navigation }: any) {
   }
 
   function handleProximo() {
-    if (!validarEtapaAtual()) return;
-    if (adicionandoPerfil && etapa === 1) {
-      setEtapa(4);
+    if (verificando || enviando || !validarEtapaAtual()) return;
+    const avancar = () => {
+      if (adicionandoPerfil && etapa === 1) { setEtapa(4); return; }
+      if (etapa < 4) setEtapa((atual) => atual + 1);
+    };
+    if (!adicionandoPerfil && (etapa === 1 || etapa === 2)) {
+      void checkRegistration(
+        etapa === 1 ? { cpf: onlyDigits(cpf) } : { email: email.trim().toLowerCase() },
+        avancar,
+      );
       return;
     }
-    if (etapa < 4) {
-      setEtapa((etapaAtual) => etapaAtual + 1);
-    }
+    avancar();
   }
 
   function handleVoltar() {
+    cancelCheck();
     if (adicionandoPerfil && etapa === 4) {
       setEtapa(1);
       return;
@@ -190,7 +209,14 @@ export default function CadastroClienteScreen({ navigation }: any) {
   async function handleEnviar() {
     if (!validarEtapaAtual() || enviando) return;
     const nascimento = normalizarData(dataNascimento);
-    if (!nascimento) return;
+    const erroNascimento = nascimento
+      ? getBirthDateError(nascimento)
+      : 'Informe uma data de nascimento válida no formato DD/MM/AAAA.';
+    if (!nascimento || erroNascimento) {
+      setEtapa(1);
+      mostrarAviso('Data de nascimento inválida', erroNascimento ?? 'Informe uma data de nascimento válida.');
+      return;
+    }
 
     setEnviando(true);
     try {
@@ -222,7 +248,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
       removerFocoAtivoNaWeb();
       setCadastroConcluido(true);
     } catch (error) {
-      Alert.alert('Não foi possível cadastrar', getErrorMessage(error));
+      mostrarAviso('Não foi possível cadastrar', getErrorMessage(error));
     } finally {
       setEnviando(false);
     }
@@ -295,6 +321,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
               <View style={styles.form}>
                 {!adicionandoPerfil && (<>
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder="Primeiro nome"
                   placeholderTextColor="#9B9B9B"
@@ -304,6 +331,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
                 />
 
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder="Último nome"
                   placeholderTextColor="#9B9B9B"
@@ -313,6 +341,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
                 />
 
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder="CPF"
                   placeholderTextColor="#9B9B9B"
@@ -323,6 +352,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
                 />
 
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder='Telefone com DDD'
                   placeholderTextColor='#9B9B9B'
@@ -334,16 +364,18 @@ export default function CadastroClienteScreen({ navigation }: any) {
                 </>)}
 
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder='Data de nascimento (DD/MM/AAAA)'
                   placeholderTextColor='#9B9B9B'
                   value={dataNascimento}
-                  onChangeText={setDataNascimento}
+                  onChangeText={(value) => setDataNascimento(formatDate(value))}
                   keyboardType='number-pad'
                   maxLength={10}
                 />
 
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder='Quantidade de cômodos'
                   placeholderTextColor='#9B9B9B'
@@ -379,6 +411,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
             {etapa === 2 && (
               <View style={styles.form}>
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder="E-mail"
                   placeholderTextColor="#9B9B9B"
@@ -389,6 +422,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
                 />
 
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder="Confirme seu e-mail"
                   placeholderTextColor="#9B9B9B"
@@ -404,6 +438,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
               <View style={styles.form}>
                 <View style={styles.passwordContainer}>
                   <TextInput
+                  editable={!verificando && !enviando}
                     style={styles.passwordInput}
                     placeholder="Senha"
                     placeholderTextColor="#9B9B9B"
@@ -430,6 +465,7 @@ export default function CadastroClienteScreen({ navigation }: any) {
 
                 <View style={styles.passwordContainer}>
                   <TextInput
+                  editable={!verificando && !enviando}
                     style={styles.passwordInput}
                     placeholder="Confirme sua senha"
                     placeholderTextColor="#9B9B9B"
@@ -474,12 +510,12 @@ export default function CadastroClienteScreen({ navigation }: any) {
             )}
 
             <TouchableOpacity
-              style={[styles.mainButton, enviando && styles.mainButtonDisabled]}
+              style={[styles.mainButton, (enviando || verificando) && styles.mainButtonDisabled]}
               onPress={etapa < 4 ? handleProximo : handleEnviar}
-              disabled={enviando}
+              disabled={enviando || verificando}
               activeOpacity={0.85}
             >
-              {enviando ? (
+              {enviando || verificando ? (
                 <ActivityIndicator color='#FFFFFF' />
               ) : (
                 <Text style={styles.mainButtonText}>
@@ -505,6 +541,14 @@ export default function CadastroClienteScreen({ navigation }: any) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <ActionModal
+        visible={Boolean(aviso)}
+        title={aviso?.title ?? ''}
+        message={aviso?.message ?? ''}
+        variant="error"
+        accentColor="#18C7C8"
+        onClose={() => setAviso(null)}
+      />
       <CadastroConcluidoModal
         visible={cadastroConcluido}
         perfil='cliente'

@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { ActionModal } from '../../components/action-modal';
+import { useRegistrationCheck } from '../../hooks/useRegistrationCheck';
 import { cadastroService } from '../../services/cadastroService';
 import { getErrorMessage } from '../../services/api';
 import { useAuth } from '../../contexts/GlobalContext';
@@ -96,6 +97,13 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
   const [valorCombo, setValorCombo] = useState('');
 
+  const [aviso, setAviso] = useState<{ title: string; message: string } | null>(null);
+  function mostrarAviso(title: string, message: string) { setAviso({ title, message }); }
+  const { checking: verificando, checkRegistration, cancelCheck } = useRegistrationCheck(
+    JSON.stringify([etapa, adicionandoPerfil, primeiroNome, ultimoNome, cpf, telefone, email, confirmarEmail]),
+    (error) => mostrarAviso('Não foi possível verificar os dados', getErrorMessage(error)),
+  );
+
   const etapaVisual = adicionandoPerfil ? etapa - 3 : etapa;
   const totalEtapas = adicionandoPerfil ? 3 : 6;
   const progresso = `${(etapaVisual / totalEtapas) * 100}%` as `${number}%`;
@@ -155,35 +163,35 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
   function validarEtapaAtual() {
     if (etapa === 1) {
       if (`${primeiroNome} ${ultimoNome}`.trim().length < 3) {
-        Alert.alert('Dados incompletos', 'Informe seu nome completo.');
+        mostrarAviso('Dados incompletos', 'Informe seu nome completo.');
         return false;
       }
       if (telefone.replace(/\D/g, '').length < 10) {
-        Alert.alert('Telefone inválido', 'Informe o telefone com DDD.');
+        mostrarAviso('Telefone inválido', 'Informe o telefone com DDD.');
         return false;
       }
       if (!isValidCpf(cpf)) {
-        Alert.alert('CPF inválido', 'Informe um CPF válido. Verifique os números digitados.');
+        mostrarAviso('CPF inválido', 'Informe um CPF válido. Verifique os números digitados.');
         return false;
       }
     }
     if (etapa === 2) {
       if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-        Alert.alert('E-mail inválido', 'Informe um endereço de e-mail válido.');
+        mostrarAviso('E-mail inválido', 'Informe um endereço de e-mail válido.');
         return false;
       }
       if (email.trim().toLowerCase() !== confirmarEmail.trim().toLowerCase()) {
-        Alert.alert('E-mails diferentes', 'Os dois e-mails devem ser iguais.');
+        mostrarAviso('E-mails diferentes', 'Os dois e-mails devem ser iguais.');
         return false;
       }
     }
     if (etapa === 3) {
       if (senha.length < 8) {
-        Alert.alert('Senha inválida', 'A senha deve ter pelo menos 8 caracteres.');
+        mostrarAviso('Senha inválida', 'A senha deve ter pelo menos 8 caracteres.');
         return false;
       }
       if (senha !== confirmarSenha) {
-        Alert.alert('Senhas diferentes', 'As duas senhas devem ser iguais.');
+        mostrarAviso('Senhas diferentes', 'As duas senhas devem ser iguais.');
         return false;
       }
     }
@@ -204,29 +212,29 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
       }
       const selecionados = servicos.filter((servico) => servicosSelecionados.includes(servico.key));
       if (!selecionados.length) {
-        Alert.alert('Serviços obrigatórios', 'Selecione ao menos um serviço que você oferece.');
+        mostrarAviso('Serviços obrigatórios', 'Selecione ao menos um serviço que você oferece.');
         etapaValida = false;
       } else if (selecionados.some((servico) => valorMonetario(servico.preco) <= 0)) {
-        Alert.alert('Valores obrigatórios', 'Informe um valor maior que zero para cada serviço selecionado.');
+        mostrarAviso('Valores obrigatórios', 'Informe um valor maior que zero para cada serviço selecionado.');
         etapaValida = false;
       }
       if (!etapaValida) return false;
     }
     if (etapa === 5) {
       if (nomeCombo.trim().length < 2) {
-        Alert.alert('Nome obrigatório', 'Informe o nome do combo.');
+        mostrarAviso('Nome obrigatório', 'Informe o nome do combo.');
         return false;
       }
       if (valorMonetario(valorCombo) <= 0) {
-        Alert.alert('Valor inválido', 'Informe um valor maior que zero para o combo.');
+        mostrarAviso('Valor inválido', 'Informe um valor maior que zero para o combo.');
         return false;
       }
       if (!servicosComboSelecionados.length) {
-        Alert.alert('Serviços obrigatórios', 'Selecione ao menos um serviço para o combo.');
+        mostrarAviso('Serviços obrigatórios', 'Selecione ao menos um serviço para o combo.');
         return false;
       }
       if (!tamanhosSelecionados.length) {
-        Alert.alert('Tamanho obrigatório', 'Selecione ao menos um tamanho de residência atendido pelo combo.');
+        mostrarAviso('Tamanho obrigatório', 'Selecione ao menos um tamanho de residência atendido pelo combo.');
         return false;
       }
     }
@@ -239,16 +247,23 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
   }
 
   function handleProximo() {
-    if (!validarEtapaAtual()) return;
-    if (etapa === 4) {
-      setServicosComboSelecionados([...servicosSelecionados]);
+    if (verificando || enviando || !validarEtapaAtual()) return;
+    const avancar = () => {
+      if (etapa === 4) setServicosComboSelecionados([...servicosSelecionados]);
+      if (etapa < 6) setEtapa((atual) => atual + 1);
+    };
+    if (!adicionandoPerfil && (etapa === 1 || etapa === 2)) {
+      void checkRegistration(
+        etapa === 1 ? { cpf: onlyDigits(cpf) } : { email: email.trim().toLowerCase() },
+        avancar,
+      );
+      return;
     }
-    if (etapa < 6) {
-      setEtapa((etapaAtual) => etapaAtual + 1);
-    }
+    avancar();
   }
 
   function handleVoltar() {
+    cancelCheck();
     if (adicionandoPerfil && etapa === 4) {
       navigation.goBack();
       return;
@@ -312,7 +327,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
       removerFocoAtivoNaWeb();
       setCadastroConcluido(true);
     } catch (error) {
-      Alert.alert('Não foi possível cadastrar', getErrorMessage(error));
+      mostrarAviso('Não foi possível cadastrar', getErrorMessage(error));
     } finally {
       envioEmAndamento.current = false;
       setEnviando(false);
@@ -366,7 +381,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
   function handleAdicionarServico() {
     if (novoServico.trim().length < 2 || valorMonetario(novoValor) <= 0) {
-      Alert.alert('Serviço incompleto', 'Informe o nome e um valor maior que zero.');
+      mostrarAviso('Serviço incompleto', 'Informe o nome e um valor maior que zero.');
       return;
     }
 
@@ -518,6 +533,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
             {etapa === 1 && (
               <View style={styles.form}>
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder="Primeiro nome"
                   placeholderTextColor="#9B9B9B"
@@ -527,6 +543,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                 />
 
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder="Último nome"
                   placeholderTextColor="#9B9B9B"
@@ -536,6 +553,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                 />
 
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder="CPF"
                   placeholderTextColor="#9B9B9B"
@@ -546,6 +564,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                 />
 
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder='Telefone com DDD'
                   placeholderTextColor='#9B9B9B'
@@ -560,6 +579,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
             {etapa === 2 && (
               <View style={styles.form}>
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder="E-mail"
                   placeholderTextColor="#9B9B9B"
@@ -571,6 +591,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                 />
 
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.input}
                   placeholder="Confirme seu e-mail"
                   placeholderTextColor="#9B9B9B"
@@ -587,6 +608,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
               <View style={styles.form}>
                 <View style={styles.passwordContainer}>
                   <TextInput
+                  editable={!verificando && !enviando}
                     style={styles.passwordInput}
                     placeholder="Senha"
                     placeholderTextColor="#9B9B9B"
@@ -617,6 +639,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
                 <View style={styles.passwordContainer}>
                   <TextInput
+                  editable={!verificando && !enviando}
                     style={styles.passwordInput}
                     placeholder="Confirme sua senha"
                     placeholderTextColor="#9B9B9B"
@@ -655,6 +678,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                   Conte sobre você <Text style={styles.requiredMark}>*</Text>
                 </Text>
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={[
                     styles.aboutInput,
                     erroDescricao && styles.inputError,
@@ -686,6 +710,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                   Máximo de cômodos atendidos <Text style={styles.requiredMark}>*</Text>
                 </Text>
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={[
                     styles.roomInput,
                     erroComodos && styles.inputError,
@@ -784,6 +809,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                     <View key={`preco-${servico.key}`} style={styles.selectedServiceRow}>
                       <Text style={styles.selectedServiceName}>{servico.nome_servico}</Text>
                       <TextInput
+                  editable={!verificando && !enviando}
                         style={styles.selectedServicePriceInput}
                         placeholder="R$ 0,00"
                         placeholderTextColor="#FF6B2C"
@@ -812,6 +838,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                     </Text>
 
                     <TextInput
+                  editable={!verificando && !enviando}
                       style={styles.newServiceInput}
                       placeholder="Ex.: Limpeza de janelas"
                       placeholderTextColor="#A0A0A0"
@@ -826,6 +853,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                     </Text>
 
                     <TextInput
+                  editable={!verificando && !enviando}
                       style={styles.valueInput}
                       placeholder="R$ 0,00"
                       placeholderTextColor="#FF6B2C"
@@ -863,6 +891,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
                 <Text style={styles.professionalFieldLabel}>Nome do combo *</Text>
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.newServiceInput}
                   placeholder="Ex.: Limpeza completa"
                   placeholderTextColor="#A0A0A0"
@@ -873,6 +902,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
                 <Text style={styles.comboFieldLabel}>Descrição do combo</Text>
                 <TextInput
+                  editable={!verificando && !enviando}
                   style={styles.comboDescriptionInput}
                   placeholder="Explique o que está incluído neste combo"
                   placeholderTextColor="#A0A0A0"
@@ -967,6 +997,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                   </Text>
 
                   <TextInput
+                  editable={!verificando && !enviando}
                     style={styles.packagePriceInput}
                     placeholder="R$ 0,00"
                     placeholderTextColor="#FF6B2C"
@@ -991,14 +1022,14 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
             )}
 
             <TouchableOpacity
-              style={[styles.mainButton, enviando && styles.mainButtonDisabled]}
+              style={[styles.mainButton, (enviando || verificando) && styles.mainButtonDisabled]}
               onPress={
                 etapa < 6 ? handleProximo : handleEnviar
               }
-              disabled={enviando}
+              disabled={enviando || verificando}
               activeOpacity={0.85}
             >
-              {enviando ? (
+              {enviando || verificando ? (
                 <ActivityIndicator color='#FFFFFF' />
               ) : (
                 <Text style={styles.mainButtonText}>
@@ -1028,6 +1059,14 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <ActionModal
+        visible={Boolean(aviso)}
+        title={aviso?.title ?? ''}
+        message={aviso?.message ?? ''}
+        variant="error"
+        accentColor="#FF6B2C"
+        onClose={() => setAviso(null)}
+      />
       <CadastroConcluidoModal
         visible={cadastroConcluido}
         perfil='diarista'

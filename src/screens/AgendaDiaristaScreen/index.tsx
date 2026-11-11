@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { ActionModal } from '../../components/action-modal';
 import { HeaderMenu } from '../../components/header-menu';
 import { useAuth } from '../../contexts/GlobalContext';
 import { disponibilidadeService } from '../../services/disponibilidadeService';
@@ -64,7 +65,10 @@ export default function AgendaDiaristaScreen({ navigation }: any) {
   const [newTime, setNewTime] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saveFeedback, setSaveFeedback] = useState('');
+  const [feedback, setFeedback] = useState<{ title: string; message: string; variant: 'error' | 'success' | 'info' } | null>(null);
+  const showFeedback = useCallback((title: string, message: string, variant: 'error' | 'success' | 'info' = 'error') => {
+    setFeedback({ title, message, variant });
+  }, []);
 
   const load = useCallback(async () => {
     if (!diaristaId) return setLoading(false);
@@ -73,11 +77,11 @@ export default function AgendaDiaristaScreen({ navigation }: any) {
       const response = await disponibilidadeService.listar({ limit: 100 });
       setItems(response.filter((item) => item.id_diarista === diaristaId));
     } catch (error) {
-      Alert.alert('Não foi possível carregar a agenda', getErrorMessage(error));
+      showFeedback('Não foi possível carregar a agenda', getErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [diaristaId]);
+  }, [diaristaId, showFeedback]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -121,32 +125,29 @@ export default function AgendaDiaristaScreen({ navigation }: any) {
     setSelectedDates((current) => allSelected
       ? current.filter((key) => !dates.includes(key))
       : [...new Set([...current, ...dates])].sort());
-    setSaveFeedback('');
   }
 
   function toggleDate(key: string) {
     setSelectedDates((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key].sort());
-    setSaveFeedback('');
   }
 
   function addTime() {
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(newTime)) return Alert.alert('Horário inválido', 'Informe o horário no formato HH:MM.');
-    if (newTime >= '23:00') return Alert.alert('Horário inválido', 'O último horário de início permitido é 22:59.');
-    if (startTimes.includes(newTime)) return Alert.alert('Horário repetido', 'Esse horário de início já foi adicionado.');
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(newTime)) return showFeedback('Horário inválido', 'Informe o horário no formato HH:MM.');
+    if (newTime >= '23:00') return showFeedback('Horário inválido', 'O último horário de início permitido é 22:59.');
+    if (startTimes.includes(newTime)) return showFeedback('Horário repetido', 'Esse horário de início já foi adicionado.');
     const tooClose = startTimes.some((value) => {
       const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
       return Math.abs(minutes(value) - minutes(newTime)) < 60;
     });
-    if (tooClose) return Alert.alert('Horários muito próximos', 'Mantenha pelo menos 1 hora entre os horários de início.');
+    if (tooClose) return showFeedback('Horários muito próximos', 'Mantenha pelo menos 1 hora entre os horários de início.');
     setStartTimes((current) => [...current, newTime].sort());
     setNewTime('');
-    setSaveFeedback('');
   }
 
   async function applyMonth() {
-    if (!selectedDates.length) return Alert.alert('Dias obrigatórios', 'Selecione ao menos um dia disponível.');
-    if (!startTimes.length) return Alert.alert('Horários obrigatórios', 'Adicione ao menos um horário de início.');
-    if (!hasChanges) return Alert.alert('Agenda já cadastrada', 'A configuração exibida já está salva para este mês.');
+    if (!selectedDates.length) return showFeedback('Dias obrigatórios', 'Selecione ao menos um dia disponível.');
+    if (!startTimes.length) return showFeedback('Horários obrigatórios', 'Adicione ao menos um horário de início.');
+    if (!hasChanges) return showFeedback('Agenda já cadastrada', 'A configuração exibida já está salva para este mês.', 'info');
     if (!diaristaId || saving) return;
 
     const desired = new Set(selectedDates.flatMap((date) => startTimes.map((time) => `${date}|${time}`)));
@@ -162,11 +163,10 @@ export default function AgendaDiaristaScreen({ navigation }: any) {
         return disponibilidadeService.criar({ id_diarista: diaristaId, dia_semana: date, horario_inicio: time, horario_fim: slotEnd(time), disponivel: true });
       }));
       await load();
-      setSaveFeedback(`Agenda de ${monthTitle(displayedMonth)} cadastrada com sucesso.`);
-      Alert.alert('Agenda atualizada', `Foram configurados ${desired.size} horários para ${monthTitle(displayedMonth)}.`);
+      showFeedback('Agenda atualizada', `Agenda de ${monthTitle(displayedMonth)} salva com sucesso. Foram configurados ${desired.size} horários em ${selectedDates.length} dias.`, 'success');
     } catch (error) {
       await load();
-      Alert.alert('Não foi possível aplicar toda a agenda', getErrorMessage(error));
+      showFeedback('Não foi possível aplicar toda a agenda', getErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -217,15 +217,22 @@ export default function AgendaDiaristaScreen({ navigation }: any) {
         <View style={styles.timeInputRow}><TextInput style={styles.timeInput} value={newTime} onChangeText={(value) => setNewTime(formatTime(value))} placeholder="07:00" keyboardType="number-pad" maxLength={5} onSubmitEditing={addTime} /><TouchableOpacity style={styles.addTimeButton} onPress={addTime}><Ionicons name="add" size={22} color="#FFFFFF" /><Text style={styles.addTimeText}>Adicionar</Text></TouchableOpacity></View>
         <Text style={styles.registeredTimesTitle}>Horários cadastrados</Text>
         <View style={styles.timeChips}>
-          {startTimes.map((time) => <View key={time} style={styles.timeChip}><Ionicons name="time-outline" size={17} color="#E55318" /><Text style={styles.timeChipText}>{time}</Text><TouchableOpacity onPress={() => { setStartTimes((current) => current.filter((item) => item !== time)); setSaveFeedback(''); }} accessibilityLabel={`Remover ${time}`}><Ionicons name="close-circle" size={19} color="#E55318" /></TouchableOpacity></View>)}
+          {startTimes.map((time) => <View key={time} style={styles.timeChip}><Ionicons name="time-outline" size={17} color="#E55318" /><Text style={styles.timeChipText}>{time}</Text><TouchableOpacity onPress={() => { setStartTimes((current) => current.filter((item) => item !== time)); }} accessibilityLabel={`Remover ${time}`}><Ionicons name="close-circle" size={19} color="#E55318" /></TouchableOpacity></View>)}
           {!startTimes.length ? <Text style={styles.emptyText}>Nenhum horário de início adicionado.</Text> : null}
         </View>
 
-        <View style={[styles.summaryCard, !hasChanges && savedKeys.size > 0 && styles.summaryCardSaved]}><Ionicons name={!hasChanges && savedKeys.size > 0 ? 'checkmark-circle' : 'calendar-outline'} size={22} color={!hasChanges && savedKeys.size > 0 ? '#16803C' : '#FF6B2C'} /><View style={styles.summaryText}><Text style={styles.summaryTitle}>{selectedDates.length} dias selecionados</Text><Text style={styles.summarySubtitle}>{startTimes.length} horários por dia • {selectedDates.length * startTimes.length} disponibilidades</Text>{!hasChanges && savedKeys.size > 0 ? <Text style={styles.savedText}>Agenda salva no banco de dados</Text> : null}</View></View>
-        {saveFeedback ? <View style={styles.successBanner}><Ionicons name="checkmark-circle" size={19} color="#16803C" /><Text style={styles.successText}>{saveFeedback}</Text></View> : null}
+        <View style={[styles.summaryCard, !hasChanges && savedKeys.size > 0 && styles.summaryCardSaved]}><Ionicons name={!hasChanges && savedKeys.size > 0 ? 'checkmark-circle' : 'calendar-outline'} size={22} color={!hasChanges && savedKeys.size > 0 ? '#16803C' : '#FF6B2C'} /><View style={styles.summaryText}><Text style={styles.summaryTitle}>{selectedDates.length} dias selecionados</Text><Text style={styles.summarySubtitle}>{startTimes.length} horários por dia • {selectedDates.length * startTimes.length} disponibilidades</Text></View></View>
         <TouchableOpacity style={[styles.applyButton, (saving || loading) && styles.disabled]} onPress={applyMonth} disabled={saving || loading}>{saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.applyButtonText}>{!hasChanges && savedKeys.size > 0 ? 'Agenda do mês já está salva' : 'Aplicar agenda do mês'}</Text>}</TouchableOpacity>
         {loading ? <ActivityIndicator color="#FF6B2C" style={styles.loader} /> : null}
       </ScrollView>
+      <ActionModal
+        visible={feedback !== null}
+        title={feedback?.title ?? ''}
+        message={feedback?.message ?? ''}
+        variant={feedback?.variant ?? 'info'}
+        accentColor="#FF6B2C"
+        onClose={() => setFeedback(null)}
+      />
     </SafeAreaView>
   );
 }

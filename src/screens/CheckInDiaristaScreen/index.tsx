@@ -28,6 +28,7 @@ function Diaria({ navigation, route }: any) {
   const [notice, setNotice] = useState('');
   const [confirmCheckout, setConfirmCheckout] = useState(false);
   const [confirmStart, setConfirmStart] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const invalidSession = useRef(false);
   const [now, setNow] = useState(Date.now());
@@ -39,7 +40,7 @@ function Diaria({ navigation, route }: any) {
     if (cause instanceof ApiError && cause.status === 401) {
       invalidSession.current = true;
       setSessionExpired(true);
-      setConfirmCheckout(false);
+      setConfirmCheckout(false); setConfirmStart(false); setConfirmCancel(false);
       setError('Sua sessão expirou. Entre novamente no perfil de diarista e abra esta diária para confirmar o checkout.');
     } else setError(getErrorMessage(cause));
   }
@@ -88,6 +89,7 @@ function Diaria({ navigation, route }: any) {
     : NaN;
   const canStart = booking?.status === 'Aceito' && entryPaid && Number.isFinite(startsAt) && now >= startsAt;
   const canFinish = running && check?.status_checkin === 'Iniciado';
+  const canCancel = booking?.status === 'Aceito' && !check?.horario_checkin;
 
   async function act() {
     if (locked.current || invalidSession.current || !(canStart || canFinish)) return;
@@ -113,6 +115,27 @@ function Diaria({ navigation, route }: any) {
     }
   }
 
+  async function cancelBooking() {
+    if (locked.current || invalidSession.current || !canCancel) return;
+    locked.current = true; setSending(true); setError(''); setNotice('');
+    let updated = false;
+    try {
+      const canceled = await agendamentoService.cancelar(id, 'Cancelamento solicitado pela diarista antes do check-in.');
+      updated = true;
+      if (!alive.current) return;
+      setBooking(canceled);
+      setNotice('Diária cancelada. Se houver pagamento aprovado, será solicitado o estorno integral ao cliente. A devolução não é imediata e depende do Mercado Pago.');
+    } catch (cause) {
+      if (alive.current) showError(cause);
+    } finally {
+      locked.current = false;
+      if (alive.current) {
+        setConfirmCancel(false); setSending(false);
+        if (updated) await reload.current();
+      }
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={[styles.orangeHeader, { justifyContent: 'center', paddingHorizontal: 18 }]}>
@@ -121,7 +144,7 @@ function Diaria({ navigation, route }: any) {
         </TouchableOpacity>
       </View>
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.title}>{finished ? 'Diária finalizada' : running ? 'Diária em andamento' : 'Check-in da diária'}</Text>
+        <Text style={styles.title}>{booking?.status === 'Cancelado' ? 'Diária cancelada' : finished ? 'Diária finalizada' : running ? 'Diária em andamento' : 'Check-in da diária'}</Text>
         <View style={styles.divider} />
         {loading && <ActivityIndicator color="#FF6B2C" />}
         {booking && <>
@@ -138,7 +161,7 @@ function Diaria({ navigation, route }: any) {
           {check?.horario_checkin && <Text style={[styles.address, { marginTop: 16 }]}>Check-in: {stamp(check.horario_checkin)}</Text>}
           {check?.horario_checkout && <Text style={[styles.address, { marginTop: 10 }]}>Checkout: {stamp(check.horario_checkout)}</Text>}
           {finished && <Text style={[styles.address, { marginTop: 16 }]}>O checkout liberou os 50% restantes para o cliente pagar. Finalizar o serviço não confirma o pagamento.</Text>}
-          {!finished && <TouchableOpacity
+          {(booking.status === 'Aceito' || running) && <TouchableOpacity
             accessibilityRole="button"
             style={[styles.checkInButton, (loading || sending || sessionExpired || !(canStart || canFinish)) && { opacity: 0.45 }]}
             disabled={loading || sending || sessionExpired || !(canStart || canFinish)}
@@ -148,6 +171,14 @@ function Diaria({ navigation, route }: any) {
             </Text>}
           </TouchableOpacity>}
         </>}
+        {canCancel && <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Cancelar diária"
+          disabled={loading || sending || sessionExpired}
+          style={{ borderWidth: 1, borderColor: '#D92D20', borderRadius: 12, padding: 14, marginTop: 20, alignItems: 'center', opacity: loading || sending || sessionExpired ? 0.45 : 1 }}
+          onPress={() => setConfirmCancel(true)}>
+          <Text style={{ color: '#D92D20', fontFamily: 'Poppins_600SemiBold' }}>Cancelar diária</Text>
+        </TouchableOpacity>}
         {payment?.parcelas.map(item => <Text key={item.fase} style={[styles.address, { marginTop: 16 }]}>{item.fase}: {money(item.valor)} — {item.status.replace(/_/g, ' ')}</Text>)}
         {sessionExpired ? <TouchableOpacity style={styles.checkInButton} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })}>
           <Text style={styles.checkInButtonText}>Entrar novamente</Text>
@@ -156,7 +187,12 @@ function Diaria({ navigation, route }: any) {
       <ActionModal visible={Boolean(error)} variant="error" title={sessionExpired ? 'Sessão expirada' : 'Não foi possível concluir'} message={error}
         confirmLabel={sessionExpired ? 'Entrar novamente' : 'Entendi'} onClose={() => setError('')}
         onConfirm={() => { setError(''); if (sessionExpired) navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); }} />
-      <ActionModal visible={!error && Boolean(notice)} variant="success" title="Registro realizado" message={notice} onClose={() => setNotice('')} accentColor="#FF6B2C" />
+      <ActionModal visible={!error && Boolean(notice)} variant="success" title={booking?.status === 'Cancelado' ? 'Diária cancelada' : 'Registro realizado'} message={notice} onClose={() => setNotice('')} accentColor="#FF6B2C" />
+      <ActionModal visible={confirmCancel && !error && !notice} variant="confirm" accentColor="#D92D20"
+        title="Cancelar diária aceita?"
+        message="Confirma o cancelamento desta diária? O cliente será informado no aplicativo. Se houver pagamento aprovado, será solicitado o estorno integral; a devolução não é imediata."
+        confirmLabel="Sim, cancelar diária" cancelLabel="Manter diária" busy={sending}
+        onConfirm={cancelBooking} onClose={() => setConfirmCancel(false)} />
       <ActionModal visible={(confirmStart || confirmCheckout) && !error && !notice} variant="confirm" accentColor="#FF6B2C"
         title={confirmCheckout ? 'Finalizar diária?' : 'Iniciar diária?'}
         message={confirmCheckout ? 'Confirma que terminou o serviço? O checkout registra a finalização e libera os 50% restantes para o cliente pagar.' : 'Confirma que está iniciando o serviço? O horário do check-in será registrado agora.'}

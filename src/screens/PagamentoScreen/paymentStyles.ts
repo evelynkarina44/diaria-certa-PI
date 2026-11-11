@@ -4,7 +4,7 @@ import { fonts } from '../../global';
 export const paymentStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#18C7C8' },
   header: { padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  back: { backgroundColor: '#FF6B2C', borderRadius: 10, padding: 6 },
+  back: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', padding: 6 },
   title: { fontFamily: fonts.semibold, fontSize: 21, color: '#FFFFFF' },
   body: { flex: 1, backgroundColor: '#FFFFFF', borderTopLeftRadius: 25, borderTopRightRadius: 25 },
   content: { padding: 20, gap: 18, maxWidth: 720, width: '100%', alignSelf: 'center', paddingBottom: 40 },

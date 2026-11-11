@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -13,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { ActionModal } from '../../components/action-modal';
 import { agendamentoService } from '../../services/agendamentoService';
 import { getErrorMessage } from '../../services/api';
 import type { Agendamento } from '../../services/types';
@@ -20,7 +20,7 @@ import type { Agendamento } from '../../services/types';
 type RegistroHistorico = {
   id: number;
   nome: string;
-  avaliacao: string;
+  avaliacao: NonNullable<Agendamento['avaliacao']>[number] | null;
   endereco: string;
   status: string;
 };
@@ -36,6 +36,8 @@ export default function HistoricoDiaristaScreen({
   const [historicoReal, setHistoricoReal] = useState<GrupoHistorico[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     function carregarHistorico() {
@@ -55,7 +57,7 @@ export default function HistoricoDiaristaScreen({
           registros.push({
             id: item.id_agendamento,
             nome: item.cliente?.usuario?.nome ?? 'Cliente',
-            avaliacao: '-',
+            avaliacao: item.avaliacao?.find((review) => review.autor_tipo === 'Cliente') ?? null,
             endereco: endereco
               ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}`
               : 'Endereço não informado',
@@ -73,14 +75,14 @@ export default function HistoricoDiaristaScreen({
       .catch((cause) => {
         const message = getErrorMessage(cause);
         setError(message);
-        Alert.alert('Não foi possível carregar o histórico', message);
+        setErrorModalVisible(true);
       })
       .finally(() => setLoading(false));
     }
     carregarHistorico();
     const unsubscribe = navigation.addListener('focus', carregarHistorico);
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, refreshKey]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -111,7 +113,9 @@ export default function HistoricoDiaristaScreen({
           showsVerticalScrollIndicator={false}
         >
           {loading && <ActivityIndicator color={'#FF6B2C'} />}
-          {Boolean(error) && <Text style={styles.smallLabel}>{error}</Text>}
+          <TouchableOpacity disabled={loading} onPress={() => setRefreshKey((current) => current + 1)} style={styles.refreshButton}>
+            <Text style={styles.refreshText}>Atualizar histórico</Text>
+          </TouchableOpacity>
           {!loading && !error && historicoReal.length === 0 && (
             <Text style={styles.smallLabel}>Nenhum registro encontrado.</Text>
           )}
@@ -146,20 +150,19 @@ export default function HistoricoDiaristaScreen({
                         {registro.nome}
                       </Text>
 
-                      <View style={styles.ratingRow}>
-                        <Text style={styles.smallLabel}>
-                          Avaliação
-                        </Text>
-
-                        <Text style={styles.rating}>
-                          {registro.avaliacao}
-                        </Text>
-
-                        <Ionicons
-                          name="star"
-                          size={11}
-                          color="#FFB800"
-                        />
+                      <View style={styles.reviewCard}>
+                        <Text style={styles.reviewTitle}>Avaliação recebida do cliente</Text>
+                        {registro.avaliacao ? (
+                          <>
+                            <View style={styles.ratingRow} accessible accessibilityLabel={`Nota ${registro.avaliacao.nota} de 5 estrelas`}>
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Ionicons key={star} name={registro.avaliacao!.nota >= star ? 'star' : registro.avaliacao!.nota >= star - 0.5 ? 'star-half' : 'star-outline'} size={17} color="#FFB800" />
+                              ))}
+                              <Text style={styles.rating}>{Number(registro.avaliacao.nota).toFixed(1).replace('.', ',')} / 5</Text>
+                            </View>
+                            <Text style={styles.reviewComment}>{registro.avaliacao.comentario?.trim() || 'O cliente não deixou um comentário.'}</Text>
+                          </>
+                        ) : <Text style={styles.reviewEmpty}>Esta diária ainda não foi avaliada pelo cliente.</Text>}
                       </View>
 
                       <View style={styles.addressRow}>
@@ -214,6 +217,14 @@ export default function HistoricoDiaristaScreen({
           ))}
         </ScrollView>
       </View>
+      <ActionModal
+        visible={errorModalVisible}
+        variant="error"
+        title="Não foi possível carregar o histórico"
+        message={error}
+        accentColor="#FF6B2C"
+        onClose={() => setErrorModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }

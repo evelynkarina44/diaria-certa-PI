@@ -75,7 +75,8 @@ export const styles = StyleSheet.create({
     width: '100%',
     minHeight: 90,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginBottom: 12,
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
     padding: 12,
@@ -111,6 +112,12 @@ export const styles = StyleSheet.create({
     fontSize: fontSizes.sm ?? 13,
   },
 
+  reviewCard: { backgroundColor: '#FFF8F3', borderRadius: 10, padding: 12, marginTop: 8, marginBottom: 6 },
+  reviewTitle: { color: colors.text, fontFamily: fonts.medium, fontSize: 12, marginBottom: 5 },
+  reviewComment: { color: '#475467', fontFamily: fonts.regular, fontSize: 12, lineHeight: 19, marginTop: 6 },
+  reviewEmpty: { color: '#667085', fontFamily: fonts.regular, fontSize: 12, lineHeight: 18 },
+  refreshButton: { alignSelf: 'flex-end', paddingVertical: 8, marginBottom: 12 },
+  refreshText: { color: '#E55318', fontFamily: fonts.semibold, fontSize: 12 },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',

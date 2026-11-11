@@ -213,6 +213,7 @@ export type Agendamento = {
   agendamento_servico?: AgendamentoServico[];
   checkin_checkout?: CheckinCheckout[];
   ocorrencia_agendamento?: Ocorrencia[];
+  avaliacao?: Array<Pick<Avaliacao, 'id_avaliacao' | 'autor_tipo' | 'nota' | 'comentario' | 'data_avaliacao' | 'anonima'>>;
 };
 
 export type Favorito = {

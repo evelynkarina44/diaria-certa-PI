@@ -4,9 +4,9 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const root = path.resolve(__dirname, '..');
 const ts = require(path.join(root, 'node_modules/typescript'));
 
-function harness(status = 'Aceito', fail = false) {
+function harness(status = 'Aceito', fail = false, expired = false) {
   const slots = [], effects = [], calls = [];
-  let cursor = 0, booking = { id_agendamento: 44, status, data_agendamento: '2099-01-12', horario_inicio: '09:00', checkin_checkout: [] };
+  let cursor = 0, booking = { id_agendamento: 44, checkin_expirado: expired, status, data_agendamento: '2099-01-12', horario_inicio: '09:00', checkin_checkout: [] };
   const react = {
     createElement: (type, props, ...children) => typeof type === 'function' ? type(props) : ({ type, props: { ...props, children } }),
     useState(initial) {
@@ -109,4 +109,13 @@ test('falha de cancelamento mostra modal de erro e mantém a diária aceita', as
   tree = h.render();
   assert.ok(cancelButton(tree));
   assert.ok(nodes(tree).some(node => node.type === 'ActionModal' && node.props.variant === 'error' && node.props.visible && node.props.message === 'Falha ao cancelar'));
+});
+
+test('check-in expirado mostra encerramento sem oferecer iniciar ou cancelar diária', async () => {
+  const tree = await harness('Expirado', false, true).ready();
+  assert.equal(cancelButton(tree), undefined);
+  const labels = nodes(tree).filter(node => node.type === 'Text').map(node => node.props.children.flat(Infinity).join(''));
+  assert.ok(labels.includes('Check-in expirado'));
+  assert.equal(labels.includes('Realizar check-in'), false);
+  assert.ok(labels.some(label => label.includes('estorno integral')));
 });

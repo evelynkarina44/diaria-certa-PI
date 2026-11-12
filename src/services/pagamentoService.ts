@@ -9,6 +9,8 @@ export type ParcelaPagamento = {
 };
 
 export type ResumoPagamento = {
+  checkin_expirado?: boolean;
+  checkin_limite_em?: string | null;
   id_agendamento: number;
   status_agendamento: string;
   valor_total: number;

@@ -3,6 +3,8 @@ import type { AppointmentStatus, Profile, PaginatedResponse } from './types';
 import type { ResumoPagamento } from './pagamentoService';
 
 export type TrackingAppointment = {
+  checkin_expirado?: boolean;
+  checkin_limite_em?: string | null;
   id_agendamento: number;
   status: AppointmentStatus;
   data_agendamento: string;

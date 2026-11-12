@@ -35,6 +35,7 @@ type Diarista = {
   data?: string;
   status?: Agendamento['status'];
   checkinSolicitado?: boolean;
+  checkinExpirado?: boolean;
 };
 
 const statusLabels: Record<Agendamento['status'], string> = {
@@ -118,7 +119,8 @@ export default function HistoricoClienteScreen({
         'pt-BR',
         { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' },
       ),
-      status: appointment.status,
+      status: appointment.checkin_expirado ? 'Expirado' : appointment.status,
+      checkinExpirado: appointment.checkin_expirado,
       checkinSolicitado: appointment.checkin_checkout?.some((item) => ['Checkin_solicitado', 'Aguardando_pagamento'].includes(item.status_checkin)),
     };
   }
@@ -233,7 +235,7 @@ export default function HistoricoClienteScreen({
               />
 
               <Text style={[styles.quickText, styles.statusText]}>
-                {statusLabels[diarista.status]}
+                {diarista.checkinExpirado ? 'Check-in expirado' : statusLabels[diarista.status]}
               </Text>
             </View> : diarista.respostaRapida ? <View style={styles.quickBadge}>
               <Ionicons name="checkmark-circle-outline" size={12} color="#18C7C8" />

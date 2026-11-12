@@ -96,3 +96,21 @@ test('home panels, shared menu and post-booking flows link to tracking, not hist
  assert.ok(tracker.includes('clearInterval(timer)'));
  assert.equal(tracker.includes('pagamentoService.sincronizar'), false);
 });
+
+test('limite de 30min encerra pendência para ambos os perfis; não encerra diária iniciada', () => {
+  for (const profile of ['CLIENTE', 'DIARISTA']) {
+    const data = item();
+    data.pagamento.parcelas[0].status = 'Pago';
+    const before = trackingState(data, profile, now + 30 * 60000 - 1);
+    assert.notEqual(before.title, 'Check-in expirado');
+    const expired = trackingState(data, profile, now + 30 * 60000);
+    assert.equal(expired.title, 'Check-in expirado');
+    assert.equal(expired.finished, true);
+    assert.equal(expired.requiresAction, false);
+    data.status = 'Em_andamento';
+    assert.equal(trackingState(data, profile, now + 5 * 3600000).title, 'Diária em andamento');
+    data.status = 'Expirado';
+    data.checkin_expirado = true;
+    assert.equal(trackingState(data, profile, now).title, 'Check-in expirado');
+  }
+});

@@ -61,7 +61,7 @@ export default function HistoricoDiaristaScreen({
             endereco: endereco
               ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}`
               : 'Endereço não informado',
-            status: item.status === 'Concluido' ? 'Concluído' : item.status,
+            status: item.checkin_expirado ? 'Check-in expirado' : item.status === 'Concluido' ? 'Concluído' : item.status,
           });
           groups.set(data, registros);
         });
@@ -199,7 +199,7 @@ export default function HistoricoDiaristaScreen({
                           {registro.status}
                         </Text>
                       </View>
-                      {['Aceito', 'Em_andamento', 'Concluído'].includes(registro.status) && (
+                      {['Aceito', 'Em_andamento', 'Concluído', 'Check-in expirado'].includes(registro.status) && (
                         <TouchableOpacity
                           style={{ backgroundColor: '#FF6B2C', borderRadius: 10, padding: 10, marginTop: 10 }}
                           onPress={() => navigation.navigate('CheckInDiarista', { agendamentoId: registro.id })}

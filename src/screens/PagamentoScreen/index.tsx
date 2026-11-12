@@ -149,7 +149,7 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
         <Text style={styles.heading}>Pagamento em duas etapas</Text>
         <Text style={styles.text}>50% após o aceite da diarista e o restante após o checkout. Não há cobrança ao enviar a solicitação.</Text>
         {summary && summary.id_agendamento === id && isClient && <>
-          <Text style={styles.text}>Agendamento #{summary.id_agendamento} • {summary.status_agendamento.replace(/_/g, ' ')}</Text>
+          <Text style={styles.text}>Agendamento #{summary.id_agendamento} • {summary.checkin_expirado ? 'Check-in expirado' : summary.status_agendamento.replace(/_/g, ' ')}</Text>
           {route.params?.dataAgendamento && <Text style={styles.text}>Data da diária: {route.params.dataAgendamento}</Text>}
           <Text style={styles.amount}>Total: {money(summary.valor_total)}</Text>
           {summary.parcelas.map((installment) => (
@@ -162,15 +162,16 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
                 <TouchableOpacity style={[styles.button, busy && styles.disabled]} disabled={busy} onPress={() => void pay(installment)}>
                   <Text style={styles.buttonText}>{installment.fase === 'Entrada' ? 'Pagar entrada' : 'Pagar saldo'} no Mercado Pago</Text>
                 </TouchableOpacity>
-              ) : installment.status === 'Pendente' && (
+              ) : installment.status === 'Pendente' && !summary.checkin_expirado && (
                 <Text style={styles.text}>{installment.fase === 'Entrada'
                   ? 'Disponível depois que a diarista aceitar a solicitação.'
                   : 'Disponível após a diarista finalizar a diária e registrar o checkout.'}</Text>
               )}
             </View>
           ))}
+          {summary.checkin_expirado && <Text style={styles.error}>Check-in expirado: a diária não foi iniciada no prazo de 30 minutos. A entrada paga será estornada integralmente; a devolução depende da confirmação do Mercado Pago.</Text>}
           {summary.quitado && <Text style={styles.success}>As duas parcelas foram aprovadas. Diária quitada.</Text>}
-          {['Pendente', 'Aceito'].includes(summary.status_agendamento) && (
+          {!summary.checkin_expirado && ['Pendente', 'Aceito'].includes(summary.status_agendamento) && (
             <View style={styles.card}>
               <TouchableOpacity disabled={busy} onPress={() => setConfirmCancel(true)}>
                 <Text style={styles.error}>Cancelar agendamento</Text>

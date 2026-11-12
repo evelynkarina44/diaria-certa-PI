@@ -13,6 +13,10 @@ export function trackingState(item: TrackingAppointment, profile: TrackingProfil
   const state = (title: string, description: string, step: number, priority: number, extra: Partial<TrackingState> = {}): TrackingState => ({
     title, description, step, priority, requiresAction: false, actionLabel: 'Ver detalhes', route: details, ...extra,
   });
+  const late = item.status === 'Aceito' && !item.checkin?.horario_checkin && item.inicio_em && now >= new Date(item.inicio_em).getTime() + 30 * 60000;
+  if (item.checkin_expirado || late) {
+    return state('Check-in expirado', 'A diária não foi iniciada nos 30 minutos após o horário marcado. Se a entrada foi paga, será solicitado o estorno integral. Acompanhe os detalhes e o histórico.', -1, 8, { finished: true, actionLabel: 'Ver detalhes e estorno' });
+  }
   if (payment?.parcelas.some(p => p.estorno_pendente || p.status === 'Estorno_pendente')) {
     return state('Estorno em processamento', 'A devolução está sendo processada. O prazo depende do Mercado Pago.', -1, 2);
   }

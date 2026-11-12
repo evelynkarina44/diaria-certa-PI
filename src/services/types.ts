@@ -191,6 +191,8 @@ export type Ocorrencia = {
 };
 
 export type Agendamento = {
+  checkin_expirado?: boolean;
+  checkin_limite_em?: string | null;
   id_agendamento: number;
   id_cliente: number;
   id_diarista: number;

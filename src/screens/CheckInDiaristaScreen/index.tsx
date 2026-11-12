@@ -87,9 +87,11 @@ function Diaria({ navigation, route }: any) {
   const startsAt = booking?.horario_inicio
     ? new Date(booking.data_agendamento.slice(0, 10) + 'T' + time(booking.horario_inicio) + ':00-03:00').getTime()
     : NaN;
-  const canStart = booking?.status === 'Aceito' && entryPaid && Number.isFinite(startsAt) && now >= startsAt;
+  const deadline = booking?.checkin_limite_em ? new Date(booking.checkin_limite_em).getTime() : startsAt + 30 * 60000;
+  const expired = booking?.checkin_expirado || (booking?.status === 'Aceito' && !check?.horario_checkin && Number.isFinite(deadline) && now >= deadline);
+  const canStart = !expired && booking?.status === 'Aceito' && entryPaid && Number.isFinite(startsAt) && now >= startsAt;
   const canFinish = running && check?.status_checkin === 'Iniciado';
-  const canCancel = booking?.status === 'Aceito' && !check?.horario_checkin;
+  const canCancel = !expired && booking?.status === 'Aceito' && !check?.horario_checkin;
 
   async function act() {
     if (locked.current || invalidSession.current || !(canStart || canFinish)) return;
@@ -144,7 +146,7 @@ function Diaria({ navigation, route }: any) {
         </TouchableOpacity>
       </View>
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.title}>{booking?.status === 'Cancelado' ? 'Diária cancelada' : finished ? 'Diária finalizada' : running ? 'Diária em andamento' : 'Check-in da diária'}</Text>
+        <Text style={styles.title}>{expired ? 'Check-in expirado' : booking?.status === 'Cancelado' ? 'Diária cancelada' : finished ? 'Diária finalizada' : running ? 'Diária em andamento' : 'Check-in da diária'}</Text>
         <View style={styles.divider} />
         {loading && <ActivityIndicator color="#FF6B2C" />}
         {booking && <>
@@ -154,14 +156,16 @@ function Diaria({ navigation, route }: any) {
           <Text style={styles.address}>{booking.endereco ? booking.endereco.logradouro + ', ' + booking.endereco.numero + ' — ' + booking.endereco.bairro : 'Endereço não informado'}</Text>
           <Text style={styles.sectionTitle}>Serviços solicitados</Text>
           {booking.agendamento_servico?.map(item => <Text key={item.id} style={styles.address}>• {item.diarista_servico?.servico?.nome_servico ?? 'Serviço'}</Text>)}
-          {booking.status === 'Aceito' && <Text style={[styles.address, { marginTop: 24 }]}>
+          {!expired && booking.status === 'Aceito' && <Text style={[styles.address, { marginTop: 24 }]}>
             {!entryPaid ? 'Aguardando o cliente pagar a entrada de 50% para iniciar a diária.' : !canStart ? 'O check-in será liberado a partir do horário agendado. Horário de Brasília.' : 'O horário chegou. Registre o check-in para iniciar a diária.'}
           </Text>}
+          {expired && <Text style={[styles.address, { marginTop: 24, color: '#D92D20' }]}>O check-in não foi registrado nos 30 minutos após o horário agendado. Esta diária foi encerrada. Se a entrada foi paga, será solicitado o estorno integral ao cliente. Consulte o histórico para acompanhar.</Text>}
+          {!expired && booking.status === 'Aceito' && Number.isFinite(deadline) && <Text style={[styles.address, { marginTop: 12 }]}>Prazo para check-in: {stamp(new Date(deadline).toISOString())}. Tolerância de 30 minutos.</Text>}
           {running && <Text style={[styles.address, { marginTop: 24 }]}>Ao terminar o serviço, realize o checkout para liberar o pagamento do saldo pelo cliente.</Text>}
           {check?.horario_checkin && <Text style={[styles.address, { marginTop: 16 }]}>Check-in: {stamp(check.horario_checkin)}</Text>}
           {check?.horario_checkout && <Text style={[styles.address, { marginTop: 10 }]}>Checkout: {stamp(check.horario_checkout)}</Text>}
           {finished && <Text style={[styles.address, { marginTop: 16 }]}>O checkout liberou os 50% restantes para o cliente pagar. Finalizar o serviço não confirma o pagamento.</Text>}
-          {(booking.status === 'Aceito' || running) && <TouchableOpacity
+          {!expired && (booking.status === 'Aceito' || running) && <TouchableOpacity
             accessibilityRole="button"
             style={[styles.checkInButton, (loading || sending || sessionExpired || !(canStart || canFinish)) && { opacity: 0.45 }]}
             disabled={loading || sending || sessionExpired || !(canStart || canFinish)}

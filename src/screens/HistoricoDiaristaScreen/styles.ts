@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
   header: {
     height: 60,
     backgroundColor: diaristaColor,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     paddingHorizontal: 18,
   },

@@ -49,10 +49,9 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
         { route: 'HistoricoDiarista', label: 'Histórico', icon: 'clipboard-outline' as const },
       ]
     : [
+        { route: 'PerfilCliente', label: 'Meu perfil', icon: 'person-outline' as const },
         { route: 'EncontrarDiarista', label: 'Página inicial', icon: 'home-outline' as const },
         { route: 'AcompanharDiarias', label: 'Minhas diárias', icon: 'list-circle-outline' as const },
-        { route: 'PerfilCliente', label: 'Meu perfil', icon: 'person-outline' as const },
-        { route: 'Chatbot', label: 'Assistente', icon: 'chatbubble-ellipses-outline' as const },
         { route: 'HistoricoCliente', label: 'Histórico', icon: 'clipboard-outline' as const },
         { route: 'FavoritosCliente', label: 'Favoritos', icon: 'heart-outline' as const },
       ];

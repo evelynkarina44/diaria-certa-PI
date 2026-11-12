@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
@@ -66,6 +66,7 @@ const opcoesPreco = [
 export default function EncontrarDiaristaScreen({
   navigation,
 }: any) {
+  const insets = useSafeAreaInsets();
   const [busca, setBusca] = useState('');
   const [atualizacaoBusca, setAtualizacaoBusca] = useState(0);
 
@@ -870,6 +871,15 @@ export default function EncontrarDiaristaScreen({
           </View>
         </View>
       </ScrollView>
+      <TouchableOpacity
+        style={[styles.chatbotFloatingButton, { bottom: insets.bottom + 20, right: insets.right + 20 }]}
+        accessibilityRole="button"
+        accessibilityLabel="Abrir assistente Diária Certa"
+        accessibilityHint="Converse com o chatbot para encontrar uma diarista"
+        onPress={() => navigation.navigate('Chatbot')}
+        activeOpacity={0.8}>
+        <Ionicons name="chatbubble-ellipses-outline" size={29} color="#FFFFFF" />
+      </TouchableOpacity>
       <ActionModal visible={Boolean(erroServico)} variant="error" title="Confira os serviços" message={erroServico} onClose={() => setErroServico('')} />
     </SafeAreaView>
   );

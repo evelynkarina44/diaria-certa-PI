@@ -32,7 +32,9 @@ import {
   enderecoFormParaApi,
   validarEnderecoForm,
 } from '../../components/endereco-cadastro-form';
-import { formatCpf, formatPhone, isValidCpf, onlyDigits } from '../../utils/inputMasks';
+import { getBirthDateError } from '../../utils/birthDate';
+import { clienteService } from '../../services/clienteService';
+import { formatDate, formatCpf, formatPhone, isValidCpf, onlyDigits } from '../../utils/inputMasks';
 
 type ServicoIndividual = {
   key: string;
@@ -48,6 +50,28 @@ const tamanhosResidencia = [
   { id: 'grande', label: 'Grande' },
 ];
 
+function normalizarData(value: string): string | null {
+  const texto = value.trim();
+  const brasileira = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const partes = brasileira
+    ? [brasileira[3], brasileira[2], brasileira[1]]
+    : iso
+      ? [iso[1], iso[2], iso[3]]
+      : null;
+
+  if (!partes) return null;
+  const [ano, mes, dia] = partes.map(Number);
+  const data = new Date(Date.UTC(ano, mes - 1, dia));
+  if (
+    data.getUTCFullYear() !== ano ||
+    data.getUTCMonth() !== mes - 1 ||
+    data.getUTCDate() !== dia
+  ) return null;
+  return `${partes[0]}-${partes[1]}-${partes[2]}`;
+}
+
+
 export default function CadastroDiaristaScreen({ navigation }: any) {
   const { user, logout, refreshSession } = useAuth();
   const adicionandoPerfil = Boolean(user && !user.diarista?.length);
@@ -57,6 +81,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
   const [ultimoNome, setUltimoNome] = useState('');
   const [cpf, setCpf] = useState('');
   const [telefone, setTelefone] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
 
   const [email, setEmail] = useState('');
   const [confirmarEmail, setConfirmarEmail] = useState('');
@@ -100,7 +125,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
   const [aviso, setAviso] = useState<{ title: string; message: string } | null>(null);
   function mostrarAviso(title: string, message: string) { setAviso({ title, message }); }
   const { checking: verificando, checkRegistration, cancelCheck } = useRegistrationCheck(
-    JSON.stringify([etapa, adicionandoPerfil, primeiroNome, ultimoNome, cpf, telefone, email, confirmarEmail]),
+    JSON.stringify([etapa, adicionandoPerfil, primeiroNome, ultimoNome, cpf, telefone, email, confirmarEmail, dataNascimento]),
     (error) => mostrarAviso('Não foi possível verificar os dados', getErrorMessage(error)),
   );
 
@@ -134,6 +159,18 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
   }, [adicionandoPerfil, user]);
 
   useEffect(() => {
+    const clienteId = user?.cliente?.[0]?.id_cliente;
+    if (!adicionandoPerfil || !clienteId) return;
+    let active = true;
+    clienteService.buscarPorId(clienteId).then((cliente) => {
+      if (!active || !cliente.data_nascimento) return;
+      const [year, month, day] = cliente.data_nascimento.slice(0, 10).split('-');
+      if (year && month && day) setDataNascimento(current => current || `${day}/${month}/${year}`);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [adicionandoPerfil, user?.cliente]);
+
+  useEffect(() => {
     let mounted = true;
     setCarregandoServicos(true);
     servicoService.listar({ limit: 100 }).then((catalogo) => {
@@ -160,7 +197,37 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
     return Number(value.replace(/\D/g, '')) / 100;
   }
 
+  function validarNascimento() {
+    const nascimento = normalizarData(dataNascimento);
+    const erroNascimento = nascimento ? getBirthDateError(nascimento) : 'Informe uma data de nascimento válida no formato DD/MM/AAAA.';
+    if (!nascimento || erroNascimento) {
+      mostrarAviso('Data de nascimento inválida', erroNascimento ?? 'Informe uma data de nascimento válida.');
+      return null;
+    }
+    return nascimento;
+  }
+
+  function renderDataNascimento() {
+    return (
+      <View>
+        <Text style={styles.professionalFieldLabel}>Data de nascimento *</Text>
+        <TextInput
+          editable={!verificando && !enviando}
+          style={styles.input}
+          accessibilityLabel="Data de nascimento"
+          placeholder="DD/MM/AAAA"
+          placeholderTextColor="#9B9B9B"
+          value={dataNascimento}
+          onChangeText={(value) => setDataNascimento(formatDate(value))}
+          keyboardType="number-pad"
+          maxLength={10}
+        />
+      </View>
+    );
+  }
+
   function validarEtapaAtual() {
+    if ((etapa === 1 || (adicionandoPerfil && etapa === 4)) && !validarNascimento()) return false;
     if (etapa === 1) {
       if (`${primeiroNome} ${ultimoNome}`.trim().length < 3) {
         mostrarAviso('Dados incompletos', 'Informe seu nome completo.');
@@ -278,10 +345,13 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
   async function handleEnviar() {
     if (envioEmAndamento.current || enviando || !validarEtapaAtual()) return;
+    const nascimento = validarNascimento();
+    if (!nascimento) { setEtapa(adicionandoPerfil ? 4 : 1); return; }
     envioEmAndamento.current = true;
     setEnviando(true);
     try {
       const perfil = {
+        data_nascimento: nascimento,
         descricao: sobreVoce.trim(),
         frequencia_resposta: null,
         qtd_max_comodos: Number(qtdMaxComodos),
@@ -573,6 +643,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
                   keyboardType='phone-pad'
                   maxLength={15}
                 />
+                {renderDataNascimento()}
               </View>
             )}
 
@@ -674,6 +745,7 @@ export default function CadastroDiaristaScreen({ navigation }: any) {
 
             {etapa === 4 && (
               <View style={styles.professionalContent}>
+                {adicionandoPerfil && renderDataNascimento()}
                 <Text style={styles.professionalFieldLabel}>
                   Conte sobre você <Text style={styles.requiredMark}>*</Text>
                 </Text>

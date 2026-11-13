@@ -20,6 +20,7 @@ import type { Diarista, Endereco } from '../../services/types';
 import { LogoutButton } from '../../components/logout-button';
 import { ProfileAccessActions } from '../../components/profile-access-actions';
 import { ProfileEditModal } from '../../components/profile-edit-modal';
+import { ProfilePhotoModal } from '../../components/profile-photo-modal';
 import { usuarioService } from '../../services/usuarioService';
 
 type EditSection =
@@ -65,12 +66,6 @@ export default function PerfilDiaristaEdicaoScreen({
   const rating = Number(profile?.avaliacao_media ?? 0);
   function voltar() {
     navigation.goBack();
-  }
-
-  async function savePhoto(values: Record<string, string>) {
-    if (!user?.id_usuario) return;
-    await usuarioService.atualizar(user.id_usuario, { foto_perfil: values.foto_perfil.trim() });
-    await Promise.all([refreshSession(), loadProfile()]);
   }
 
   async function saveAbout(values: Record<string, string>) {
@@ -155,6 +150,7 @@ export default function PerfilDiaristaEdicaoScreen({
 
               <TouchableOpacity
                 style={styles.editPhotoButton}
+                accessibilityLabel="Editar foto do perfil"
                 onPress={() => setEditSection('photo')}
                 activeOpacity={0.8}
               >
@@ -262,14 +258,12 @@ export default function PerfilDiaristaEdicaoScreen({
         </View>
       </ScrollView>
 
-      <ProfileEditModal
+      <ProfilePhotoModal
         visible={editSection === 'photo'}
-        title="Editar foto"
         accentColor="#FF6B2C"
-        fields={[{ name: 'foto_perfil', label: 'URL da foto', placeholder: 'https://...', keyboardType: 'url' }]}
-        initialValues={{ foto_perfil: user?.foto_perfil ?? '' }}
+        imageUrl={user?.foto_perfil}
         onClose={() => setEditSection(null)}
-        onSave={savePhoto}
+        onSaved={async () => { await Promise.all([refreshSession(), loadProfile()]); }}
       />
       <ProfileEditModal
         visible={editSection === 'professional'}

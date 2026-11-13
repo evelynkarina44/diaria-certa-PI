@@ -4,9 +4,9 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const root = path.resolve(__dirname, '..');
 const ts = require(path.join(root, 'node_modules/typescript'));
 
-function harness(reviews) {
+function harness(reviews, appointments) {
   let cursor = 0, response = reviews, focus;
-  const slots = [], effects = [];
+  const slots = [], effects = [], requests = [], navigations = [];
   const react = {
     createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
     useState(initial) {
@@ -14,22 +14,37 @@ function harness(reviews) {
       if (!(index in slots)) slots[index] = initial;
       return [slots[index], value => { slots[index] = typeof value === 'function' ? value(slots[index]) : value; }];
     },
+    useRef(initial) { const index = cursor++; return slots[index] ??= { current: initial }; },
     useEffect(fn, deps) {
       const index = cursor++, previous = slots[index];
       if (!previous || deps.some((value, i) => value !== previous[i])) { slots[index] = deps; effects.push(fn); }
     },
   };
-  const navigation = { addListener: (event, callback) => { focus = callback; return () => {}; }, goBack: () => {}, navigate: () => {} };
-  const native = Object.fromEntries(['ActivityIndicator', 'ScrollView', 'Text', 'TouchableOpacity', 'View'].map(name => [name, name]));
+  const navigation = { addListener: (event, callback) => { focus = callback; return () => {}; }, goBack: () => {}, navigate: (...args) => navigations.push(args) };
+  const native = Object.fromEntries(['ActivityIndicator', 'Image', 'TextInput', 'ScrollView', 'Text', 'TouchableOpacity', 'View'].map(name => [name, name]));
+  function utility(file) {
+    const exports = {};
+    vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+    }).outputText, { exports });
+    return exports;
+  }
   const imports = {
+    '../../utils/historyFilters': utility('src/utils/historyFilters.ts'),
+    '../../utils/inputMasks': utility('src/utils/inputMasks.ts'),
     react, 'react-native': native,
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@expo/vector-icons': { Ionicons: 'Icon' },
     '../../components/action-modal': { ActionModal: 'ActionModal' },
-    '../../services/agendamentoService': { agendamentoService: { listar: async () => ({ data: [
+    '../../services/agendamentoService': { agendamentoService: { listar: async (query) => {
+      requests.push(query);
+      const data = appointments ?? [
       { id_agendamento: 1, data_agendamento: '2099-01-12', status: 'Concluido', cliente: { usuario: { nome: 'Cliente de teste' } }, avaliacao: response },
       { id_agendamento: 2, data_agendamento: '2099-01-13', status: 'Concluido', avaliacao: [{ autor_tipo: 'Diarista', nota: 5, comentario: 'Não exibir como avaliação recebida' }] },
-    ] }) } },
+    ];
+      const page = query.page ?? 1;
+      return { data: data.slice((page - 1) * 100, page * 100), pagination: { pages: Math.ceil(data.length / 100) } };
+    } } },
     '../../services/api': { getErrorMessage: error => error.message },
     './styles': { styles: {} },
   };
@@ -45,7 +60,7 @@ function harness(reviews) {
     return tree;
   };
   return {
-    render,
+    render, requests, navigations,
     async ready() { render(); await new Promise(resolve => setImmediate(resolve)); return render(); },
     async refresh(reviews) { response = reviews; focus(); await new Promise(resolve => setImmediate(resolve)); return render(); },
   };
@@ -88,4 +103,73 @@ test('voltar ao histórico carrega a avaliação recém-enviada sem misturar as 
   assert.ok(texts(tree).includes('5,0 / 5'));
   assert.ok(texts(tree).includes('Novo comentário'));
   assert.equal(texts(tree).filter(text => text === 'Esta diária ainda não foi avaliada pelo cliente.').length, 1);
+});
+
+const appointments = () => Array.from({ length: 23 }, (_, index) => ({
+  id_agendamento: index + 1, data_agendamento: '2026-11-01', horario_inicio: '08:00',
+  status: index === 22 ? 'Expirado' : 'Aceito', checkin_expirado: index === 22,
+  cliente: { usuario: { nome: index < 20 ? 'Rafael' : 'Nicole' } },
+  agendamento_servico: [{ diarista_servico: { servico: { nome_servico: 'Limpeza de janelas' } } }],
+  valor_estimado: 120,
+}));
+test('diarista pagina dez por vez, muda de página e volta à primeira ao pesquisar cliente', async () => {
+  const h = harness([], appointments());
+  let tree = await h.ready();
+  const button = label => nodes(tree).find(node => node.props.accessibilityLabel === label);
+  const countCards = () => texts(tree).filter(text => text.startsWith('DIÁRIA #')).length;
+  assert.equal(countCards(), 10);
+  assert.ok(texts(tree).includes('Página 1 de 3'));
+  button('Próxima página').props.onPress();
+  tree = h.render();
+  assert.ok(texts(tree).includes('Página 2 de 3'));
+  button('Próxima página').props.onPress();
+  tree = h.render();
+  assert.equal(countCards(), 3);
+  assert.equal(button('Próxima página').props.disabled, true);
+  button('Buscar no histórico').props.onChangeText('Nicole');
+  tree = h.render();
+  assert.equal(countCards(), 3);
+  assert.equal(button('Próxima página'), undefined);
+  button('Buscar no histórico').props.onChangeText('');
+  tree = h.render();
+  assert.ok(texts(tree).includes('Página 1 de 3'));
+});
+test('diarista combina status e data, separa check-in expirado e permite limpar os filtros', async () => {
+  const h = harness([], appointments());
+  let tree = await h.ready();
+  const status = nodes(tree).find(node => node.type === 'TouchableOpacity' && node.props.children.some(child => child?.type === 'Text' && child.props.children.includes('Check-in expirado')));
+  status.props.onPress();
+  tree = h.render();
+  assert.equal(texts(tree).filter(text => text.startsWith('DIÁRIA #')).length, 1);
+  nodes(tree).find(node => node.props.accessibilityLabel === 'Filtrar por data da diária').props.onChangeText('02112026');
+  tree = h.render();
+  assert.ok(texts(tree).includes('Nenhuma diária com esses filtros'));
+  nodes(tree).find(node => node.type === 'TouchableOpacity' && node.props.children.some(child => child?.type === 'Text' && child.props.children.includes('Limpar filtros'))).props.onPress();
+  tree = h.render();
+  assert.equal(texts(tree).filter(text => text.startsWith('DIÁRIA #')).length, 10);
+});
+test('carrega todas as páginas da API para pesquisar registros além do centésimo', async () => {
+  const records = Array.from({ length: 101 }, (_, index) => ({
+    id_agendamento: index + 1, data_agendamento: '2026-11-01', status: 'Concluido',
+    cliente: { usuario: { nome: index === 100 ? 'Último cliente' : 'Cliente comum' } },
+  }));
+  const h = harness([], records);
+  let tree = await h.ready();
+  assert.deepEqual(h.requests.map(query => query.page ?? 1), [1, 2]);
+  nodes(tree).find(node => node.props.accessibilityLabel === 'Buscar no histórico').props.onChangeText('ultimo cliente');
+  tree = h.render();
+  assert.ok(texts(tree).includes('DIÁRIA #101'));
+  assert.equal(texts(tree).filter(text => text.startsWith('DIÁRIA #')).length, 1);
+});
+
+test('ações da diarista abrem a diária correta; finalização mantém fluxo de checkout', async () => {
+  const records = appointments().slice(0, 1);
+  records[0].status = 'Em_andamento';
+  const h = harness([], records);
+  const tree = await h.ready();
+  const action = nodes(tree).find(node => node.type === 'TouchableOpacity' && node.props.children.some(child => child?.type === 'Text' && child.props.children.includes('Finalizar diária')));
+  assert.ok(action);
+  action.props.onPress();
+  assert.equal(h.navigations[0][0], 'CheckInDiarista');
+  assert.equal(h.navigations[0][1].agendamentoId, 1);
 });

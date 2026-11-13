@@ -1,177 +1,71 @@
 import { StyleSheet } from 'react-native';
-
-import { colors, fonts, fontSizes } from '../../global';
-
-const diaristaColor = '#FF6B2C';
-const azul = '#1C9AAF';
+import { fonts } from '../../global';
 
 export const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: diaristaColor,
-  },
+  historyHeaderTitle: { fontSize: 26, lineHeight: 34 },
+  paginationActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8, marginBottom: 12 },
+  pageButton: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 12, paddingHorizontal: 8, borderRadius: 12, backgroundColor: '#FFF1E8' },
+  pageButtonDisabled: { opacity: 0.4 },
+  pageButtonText: { color: '#C2410C', fontSize: 13, fontFamily: fonts.medium },
+  pageNumber: { color: '#344054', fontSize: 12, fontFamily: fonts.regular },
+  historyContainer: { maxWidth: 900, width: '100%', alignSelf: 'center' },
+  historyToolbar: { gap: 12, marginBottom: 20 },
+  historySearch: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E4E7EC', borderRadius: 14, paddingHorizontal: 12, minHeight: 50 },
+  historyInput: { flex: 1, minWidth: 0, paddingVertical: 12, fontFamily: fonts.regular, fontSize: 13, color: '#182230' },
+  filterLabel: { fontFamily: fonts.medium, fontSize: 12, color: '#344054', marginTop: 3 },
+  statusFilterList: { gap: 8, paddingBottom: 2 },
+  statusChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#E4E7EC', borderRadius: 20, paddingHorizontal: 13, paddingVertical: 10 },
+  statusChipSelected: { backgroundColor: '#C2410C', borderColor: '#C2410C' },
+  statusChipText: { fontFamily: fonts.medium, fontSize: 12, color: '#667085' },
+  statusChipTextSelected: { color: '#FFFFFF' },
+  dateHint: { fontFamily: fonts.regular, fontSize: 11, color: '#667085', marginTop: -5 },
+  resultsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 5 },
+  refreshButton: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, borderRadius: 12, paddingHorizontal: 12, backgroundColor: '#FFF1E8' },
+  refreshButtonDisabled: { opacity: 0.6 },
+  refreshText: { fontFamily: fonts.medium, fontSize: 12, color: '#C2410C' },
+  sortRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+  resultCount: { fontFamily: fonts.medium, fontSize: 12, color: '#667085' },
+  sortButton: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 40 },
+  sortText: { fontFamily: fonts.medium, fontSize: 12, color: '#C2410C' },
+  resetFilters: { flexDirection: 'row', gap: 4, alignItems: 'center', alignSelf: 'flex-start', paddingVertical: 8 },
+  historyCard: { borderWidth: 1, borderColor: '#E4E7EC', borderRadius: 20, backgroundColor: '#FFFFFF', padding: 16, marginBottom: 16 },
+  historyCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 16 },
+  bookingNumber: { fontFamily: fonts.semibold, fontSize: 10, color: '#667085', letterSpacing: 1 },
+  historyStatus: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, paddingHorizontal: 9, paddingVertical: 6 },
+  historyStatusText: { fontFamily: fonts.semibold, fontSize: 11 },
+  historyProfileRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  historyProfile: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  historyAvatar: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#FFF1E8', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  historyPhoto: { width: '100%', height: '100%', resizeMode: 'cover' },
+  historyName: { fontFamily: fonts.semibold, fontSize: 15, color: '#182230' },
+  profileLink: { fontFamily: fonts.regular, fontSize: 10, color: '#C2410C', marginTop: 3 },
+  historyDetails: { backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, gap: 10 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  detailText: { flex: 1, fontFamily: fonts.regular, fontSize: 12, color: '#475467' },
+  historyFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginTop: 16 },
+  totalLabel: { fontFamily: fonts.regular, fontSize: 10, color: '#667085' },
+  totalValue: { fontFamily: fonts.semibold, fontSize: 17, color: '#182230', marginTop: 2 },
+  paymentButton: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#C2410C', borderRadius: 12, paddingHorizontal: 12, minHeight: 44 },
+  paymentText: { fontFamily: fonts.semibold, fontSize: 12, color: '#FFFFFF' },
+  checkinButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, marginTop: 12, borderRadius: 12, backgroundColor: '#FFF1E8' },
+  checkinText: { fontFamily: fonts.semibold, fontSize: 12, color: '#C2410C' },
 
-  header: {
-    height: 60,
-    backgroundColor: diaristaColor,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-  },
 
-  backButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
-    backgroundColor: azul,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  body: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 10,
-  },
-
-  title: {
-    color: azul,
-    fontFamily: fonts.semibold,
-    fontSize: fontSizes.lg ?? 17,
-    textAlign: 'center',
-  },
-
-  titleLine: {
-    height: 2,
-    backgroundColor: azul,
-    marginHorizontal: 20,
-    marginTop: 9,
-  },
-
-  scroll: {
-    flex: 1,
-  },
-
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 30,
-  },
-
-  historyGroup: {
-    marginBottom: 28,
-  },
-
-  dateTitle: {
-    color: colors.text,
-    fontFamily: fonts.semibold,
-    fontSize: fontSizes.lg ?? 17,
-    marginBottom: 13,
-  },
-
-  historyCard: {
-    width: '100%',
-    minHeight: 90,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-
-    shadowColor: '#000000',
-    shadowOpacity: 0.13,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-
-    elevation: 5,
-  },
-
-  avatar: {
-    width: 65,
-    height: 65,
-    borderRadius: 7,
-    backgroundColor: '#D5D5D5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  info: {
-    flex: 1,
-    marginLeft: 14,
-  },
-
-  name: {
-    color: colors.text,
-    fontFamily: fonts.semibold,
-    fontSize: fontSizes.sm ?? 13,
-  },
-
-  reviewCard: { backgroundColor: '#FFF8F3', borderRadius: 10, padding: 12, marginTop: 8, marginBottom: 6 },
-  reviewTitle: { color: colors.text, fontFamily: fonts.medium, fontSize: 12, marginBottom: 5 },
+  safeArea: { flex: 1, backgroundColor: '#FF6B2C' },
+  header: { height: 68, backgroundColor: '#FF6B2C', alignItems: 'flex-start', justifyContent: 'center', paddingHorizontal: 18 },
+  headerTitle: { position: 'absolute', left: 60, right: 60, textAlign: 'center', color: '#FFFFFF', fontFamily: fonts.semibold },
+  backButton: { width: 34, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  body: { flex: 1, backgroundColor: '#FFFFFF', borderTopLeftRadius: 25, borderTopRightRadius: 25, overflow: 'hidden' },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 18, paddingTop: 15, paddingBottom: 35 },
+  info: { flex: 1, marginLeft: 13 },
+  reviewCard: { backgroundColor: '#FFF8F3', borderRadius: 12, padding: 12, marginTop: 14 },
+  reviewTitle: { color: '#344054', fontFamily: fonts.medium, fontSize: 12, marginBottom: 5 },
   reviewComment: { color: '#475467', fontFamily: fonts.regular, fontSize: 12, lineHeight: 19, marginTop: 6 },
   reviewEmpty: { color: '#667085', fontFamily: fonts.regular, fontSize: 12, lineHeight: 18 },
-  refreshButton: { alignSelf: 'flex-end', paddingVertical: 8, marginBottom: 12 },
-  refreshText: { color: '#E55318', fontFamily: fonts.semibold, fontSize: 12 },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 2,
-  },
-
-  smallLabel: {
-    color: '#999999',
-    fontFamily: fonts.regular,
-    fontSize: 9,
-  },
-
-  rating: {
-    color: '#FF9D00',
-    fontFamily: fonts.semibold,
-    fontSize: 10,
-  },
-
-  addressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-
-  address: {
-    color: '#999999',
-    fontFamily: fonts.regular,
-    fontSize: 8,
-  },
-
-  statusBadge: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginTop: 6,
-  },
-
-  completedBadge: {
-    backgroundColor: '#00B817',
-  },
-
-  refundedBadge: {
-    backgroundColor: '#F4B400',
-  },
-
-  statusText: {
-    color: '#FFFFFF',
-    fontFamily: fonts.medium,
-    fontSize: 8,
-  },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 3, flexWrap: 'wrap', marginTop: 2 },
+  rating: { color: '#B54708', fontFamily: fonts.semibold, fontSize: 12 },
+  emptyState: { alignItems: 'center', paddingTop: 45, paddingHorizontal: 12 },
+  emptyTitle: { color: '#182230', fontFamily: fonts.semibold, fontSize: 15, marginTop: 12, textAlign: 'center' },
+  emptyText: { color: '#667085', fontFamily: fonts.regular, fontSize: 12, lineHeight: 19, textAlign: 'center', marginTop: 5 },
 });

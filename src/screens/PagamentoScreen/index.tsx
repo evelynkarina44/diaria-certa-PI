@@ -11,9 +11,28 @@ import { paymentStyles as styles } from './paymentStyles';
 
 const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const labels: Record<ParcelaPagamento['status'], string> = {
-  Pendente: 'Aguardando pagamento', Pago: 'Pagamento aprovado', Falhou: 'Pagamento não aprovado',
-  Estornado: 'Pagamento estornado', Estorno_pendente: 'Estorno em processamento', Em_disputa: 'Pagamento em análise',
+  Pendente: 'Pendente', Pago: 'Pago', Falhou: 'Não aprovado',
+  Estornado: 'Estornado', Estorno_pendente: 'Estorno em processamento', Em_disputa: 'Em análise',
 };
+
+function installmentLabel(installment: ParcelaPagamento, summary: ResumoPagamento) {
+  if (installment.estorno_pendente) return 'Estorno em processamento';
+  if (installment.status !== 'Pendente') return labels[installment.status];
+  if (summary.checkin_expirado || ['Cancelado', 'Recusado', 'Expirado'].includes(summary.status_agendamento)) return 'Sem cobrança';
+  if (installment.pode_pagar) return 'Aguardando pagamento';
+  return installment.fase === 'Entrada' ? 'Libera após o aceite' : 'Libera após o checkout';
+}
+
+function paymentNotice(summary: ResumoPagamento) {
+  const entry = summary.parcelas.find(item => item.fase === 'Entrada');
+  const pendingRefund = summary.parcelas.some(item => item.estorno_pendente || item.status === 'Estorno_pendente');
+  const parts: string[] = [];
+  if (summary.checkin_expirado) parts.push('Sem check-in em 30 min. Diária encerrada.');
+  if (pendingRefund) parts.push('Estorno integral em processamento pelo Mercado Pago.');
+  else if (summary.checkin_expirado && entry?.status === 'Estornado') parts.push('Entrada devolvida integralmente.');
+  else if (summary.checkin_expirado && entry?.status === 'Pago') parts.push('Entrada paga: estorno integral sujeito à confirmação do Mercado Pago.');
+  return parts.join(' ');
+}
 
 // O navegador nunca decide se foi pago. Todos os estados vêm da API autenticada.
 export default function PagamentoScreen({ navigation, route }: any) {
@@ -146,46 +165,66 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
         <Text style={styles.title}>Pagamento da diária</Text>
       </View>
       <ScrollView style={styles.body} contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>Pagamento em duas etapas</Text>
-        <Text style={styles.text}>50% após o aceite da diarista e o restante após o checkout. Não há cobrança ao enviar a solicitação.</Text>
         {summary && summary.id_agendamento === id && isClient && <>
-          <Text style={styles.text}>Agendamento #{summary.id_agendamento} • {summary.checkin_expirado ? 'Check-in expirado' : summary.status_agendamento.replace(/_/g, ' ')}</Text>
-          {route.params?.dataAgendamento && <Text style={styles.text}>Data da diária: {route.params.dataAgendamento}</Text>}
-          <Text style={styles.amount}>Total: {money(summary.valor_total)}</Text>
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryTop}>
+              <Text style={styles.booking}>DIÁRIA #{summary.id_agendamento}</Text>
+              <Text style={styles.bookingStatus}>{summary.checkin_expirado ? 'Check-in expirado' : summary.status_agendamento === 'Concluido' ? 'Concluído' : summary.status_agendamento.replace(/_/g, ' ')}</Text>
+            </View>
+            {route.params?.dataAgendamento && <View style={styles.iconRow}>
+              <Ionicons name="calendar-outline" size={16} color="#657383" /><Text style={styles.caption}>{route.params.dataAgendamento}</Text>
+            </View>}
+            <Text style={styles.totalLabel}>Total da diária</Text>
+            <Text style={styles.totalAmount}>{money(summary.valor_total)}</Text>
+            <Text style={styles.caption}>50% após o aceite · 50% após o checkout</Text>
+          </View>
           {summary.parcelas.map((installment) => (
             <View key={installment.fase} style={styles.card}>
-              <Text style={styles.heading}>{installment.fase === 'Entrada' ? '1. Entrada — 50%' : '2. Saldo — 50%'}</Text>
-              <Text style={styles.amount}>{money(installment.valor)}</Text>
-              <Text style={installment.status === 'Pago' ? styles.success : styles.text}>{labels[installment.status]}</Text>
-              {installment.estorno_pendente && <Text style={styles.text}>Há uma devolução em processamento. A devolução efetiva depende do Mercado Pago.</Text>}
-              {installment.pode_pagar ? (
-                <TouchableOpacity style={[styles.button, busy && styles.disabled]} disabled={busy} onPress={() => void pay(installment)}>
-                  <Text style={styles.buttonText}>{installment.fase === 'Entrada' ? 'Pagar entrada' : 'Pagar saldo'} no Mercado Pago</Text>
+              <View style={styles.installmentTop}>
+                <View style={styles.installmentName}>
+                  <Ionicons name={installment.fase === 'Entrada' ? 'wallet-outline' : 'checkmark-done-outline'} size={19} color="#008A99" />
+                  <Text style={styles.installmentTitle}>{installment.fase === 'Entrada' ? 'Entrada' : 'Saldo'} · 50%</Text>
+                </View>
+                <Text style={styles.installmentAmount}>{money(installment.valor)}</Text>
+              </View>
+              <View style={styles.iconRow}>
+                <Ionicons name={installment.estorno_pendente || installment.status === 'Estorno_pendente' ? 'return-down-back-outline'
+                  : installment.status === 'Pago' ? 'checkmark-circle-outline' : installment.status === 'Falhou' ? 'alert-circle-outline' : 'time-outline'}
+                  size={16} color={installment.status === 'Pago' && !installment.estorno_pendente ? '#087F5B' : '#657383'} />
+                <Text style={installment.status === 'Pago' && !installment.estorno_pendente ? styles.success : styles.caption}>{installmentLabel(installment, summary)}</Text>
+              </View>
+              {installment.pode_pagar && (
+                <TouchableOpacity accessibilityRole="button" style={[styles.button, busy && styles.disabled]} disabled={busy} onPress={() => void pay(installment)}>
+                  <Text style={styles.buttonText}>{installment.fase === 'Entrada' ? 'Pagar entrada' : 'Pagar saldo'}</Text>
+                  <Ionicons name="open-outline" size={17} color="#FFFFFF" />
                 </TouchableOpacity>
-              ) : installment.status === 'Pendente' && !summary.checkin_expirado && (
-                <Text style={styles.text}>{installment.fase === 'Entrada'
-                  ? 'Disponível depois que a diarista aceitar a solicitação.'
-                  : 'Disponível após a diarista finalizar a diária e registrar o checkout.'}</Text>
               )}
             </View>
           ))}
-          {summary.checkin_expirado && <Text style={styles.error}>Check-in expirado: a diária não foi iniciada no prazo de 30 minutos. A entrada paga será estornada integralmente; a devolução depende da confirmação do Mercado Pago.</Text>}
-          {summary.quitado && <Text style={styles.success}>As duas parcelas foram aprovadas. Diária quitada.</Text>}
+          {Boolean(paymentNotice(summary)) && <View style={styles.noticeBox}>
+            <Ionicons name={summary.checkin_expirado ? 'alarm-outline' : 'return-down-back-outline'} size={20} color="#B54708" />
+            <Text style={styles.noticeText}>{paymentNotice(summary)}</Text>
+          </View>}
+          {summary.quitado && <View style={styles.iconRow}><Ionicons name="checkmark-circle" size={20} color="#087F5B" /><Text style={styles.success}>Diária quitada</Text></View>}
           {!summary.checkin_expirado && ['Pendente', 'Aceito'].includes(summary.status_agendamento) && (
-            <View style={styles.card}>
-              <TouchableOpacity disabled={busy} onPress={() => setConfirmCancel(true)}>
-                <Text style={styles.error}>Cancelar agendamento</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={() => setConfirmCancel(true)} style={styles.cancelButton}>
+              <Ionicons name="close-circle-outline" size={18} color="#C62828" /><Text style={styles.error}>Cancelar agendamento</Text>
+            </TouchableOpacity>
           )}
         </>}
         {busy && <ActivityIndicator color="#18C7C8" />}
         {Boolean(id) && isClient && (
           <TouchableOpacity style={[styles.outline, busy && styles.disabled]} disabled={busy} onPress={() => void load(true)}>
-            <Text style={styles.outlineText}>Atualizar pagamento</Text>
+            <Ionicons name="refresh-outline" size={18} color="#008A99" /><Text style={styles.outlineText}>Atualizar pagamento</Text>
           </TouchableOpacity>
         )}
-        <Text style={styles.text}>Pix e cartões são escolhidos no ambiente seguro do Mercado Pago, conforme disponibilidade. Não informe dados de cartão nesta aplicação.</Text>
+        <View style={styles.securityRow}>
+          <Ionicons name="shield-checkmark-outline" size={16} color="#657383" />
+          <Text style={styles.securityText}>Pagamento seguro pelo Mercado Pago</Text>
+        </View>
+        <TouchableOpacity accessibilityRole="button" style={styles.infoButton} onPress={() => setNotice('Não há cobrança ao solicitar a diária. A entrada (50%) é liberada após o aceite; o saldo (50%), após o checkout. Pix e cartões ficam disponíveis no Mercado Pago, conforme disponibilidade. Não informe dados de cartão neste aplicativo. A aprovação e os estornos dependem da confirmação do Mercado Pago.')}>
+          <Ionicons name="information-circle-outline" size={18} color="#008A99" /><Text style={styles.outlineText}>Como funciona</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.outline} onPress={() => navigation.navigate('AcompanharDiarias')}>
           <Text style={styles.outlineText}>Acompanhar minhas diárias</Text>
         </TouchableOpacity>

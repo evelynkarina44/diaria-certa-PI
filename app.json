@@ -30,6 +30,14 @@
           "backgroundColor": "#ffffff",
           "imageWidth": 200
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita que o Diária Certa acesse suas fotos para atualizar a imagem do perfil.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
       ]
     ]
   }

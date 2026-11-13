@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 import { colors, fonts, fontSizes } from '../../global';
 
@@ -112,7 +112,11 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
+  passwordContainerFocused: { borderColor: '#14ab3c' },
+
   passwordInput: {
+    ...(Platform.OS === 'web' ? { outlineWidth: 0 } : {}),
+    borderWidth: 0,
     flex: 1,
     height: '100%',
     paddingHorizontal: 12,

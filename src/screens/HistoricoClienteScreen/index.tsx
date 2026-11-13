@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import {
   ActivityIndicator,
   Alert,
+  Image,
+  TextInput,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -13,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { filterHistory, paginateHistory } from '../../utils/historyFilters';
+import { formatDate } from '../../utils/inputMasks';
 import { agendamentoService } from '../../services/agendamentoService';
 import { favoritoService } from '../../services/favoritoService';
 import { getErrorMessage } from '../../services/api';
@@ -33,6 +37,11 @@ type Diarista = {
   diaristaId?: number;
   favoritoId?: number;
   data?: string;
+  dataISO?: string;
+  horario?: string;
+  servicos?: string;
+  valor?: number | null;
+  foto?: string | null;
   status?: Agendamento['status'];
   checkinSolicitado?: boolean;
   checkinExpirado?: boolean;
@@ -49,14 +58,27 @@ const statusLabels: Record<Agendamento['status'], string> = {
 };
 
 const statusColors: Record<Agendamento['status'], string> = {
-  Pendente: '#F4B400',
-  Aceito: '#18C7C8',
+  Pendente: '#B54708',
+  Aceito: '#008A99',
   Recusado: '#D92D20',
   Cancelado: '#D92D20',
   Expirado: '#777777',
   Em_andamento: '#1570EF',
   Concluido: '#00A817',
 };
+
+const statusIcons: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  Todos: 'layers-outline', Pendente: 'hourglass-outline', Aceito: 'checkmark-circle-outline',
+  Em_andamento: 'sparkles-outline', Concluido: 'checkmark-done-circle-outline',
+  Recusado: 'close-circle-outline', Cancelado: 'ban-outline', Expirado: 'timer-outline',
+  Checkin_expirado: 'alarm-outline',
+};
+const statusFilters = [
+  ['Todos', 'Todos'], ['Pendente', 'Pendentes'], ['Aceito', 'Aceitos'],
+  ['Em_andamento', 'Em andamento'], ['Concluido', 'Concluídos'],
+  ['Recusado', 'Recusados'], ['Cancelado', 'Cancelados'], ['Expirado', 'Expirados'],
+  ['Checkin_expirado', 'Check-in expirado'],
+];
 
 export default function HistoricoClienteScreen({
   navigation,
@@ -69,6 +91,28 @@ export default function HistoricoClienteScreen({
   const [loading, setLoading] = useState(true);
   const [erroHistorico, setErroHistorico] = useState('');
   const [erroFavoritos, setErroFavoritos] = useState('');
+  const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState('Todos');
+  const [dataFiltro, setDataFiltro] = useState('');
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  const [paginaBusca, setPaginaBusca] = useState({ chave: '', pagina: 1 });
+  const [ordem, setOrdem] = useState<'recentes' | 'antigos'>('recentes');
+  const [fotosComErro, setFotosComErro] = useState<number[]>([]);
+  const historicoFiltrado = filterHistory(historico, busca, statusFiltro, dataFiltro, ordem);
+  // Filtrar e ordenar antes de paginar evita esconder resultados de outras páginas.
+  const chavePagina = JSON.stringify([busca, statusFiltro, dataFiltro, ordem]);
+  useEffect(() => {
+    setPaginaBusca(current => current.chave === chavePagina ? current : { chave: chavePagina, pagina: 1 });
+  }, [chavePagina]);
+  const paginaSolicitada = paginaBusca.chave === chavePagina ? paginaBusca.pagina : 1;
+  const paginaHistorico = paginateHistory(historicoFiltrado, paginaSolicitada);
+  function mudarPagina(pagina: number) {
+    if (loading || pagina < 1 || pagina > paginaHistorico.pages) return;
+    setPaginaBusca({ chave: chavePagina, pagina });
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }
+  const temFiltros = Boolean(busca || dataFiltro || statusFiltro !== 'Todos');
+  function limparFiltros() { setBusca(''); setDataFiltro(''); setStatusFiltro('Todos'); }
 
   useEffect(() => {
     carregarDados();
@@ -115,6 +159,13 @@ export default function HistoricoClienteScreen({
         : 'Localização não informada',
       favorito: Boolean(favorite),
       favoritoId: favorite?.id_favorito,
+      dataISO: appointment.data_agendamento,
+      horario: appointment.horario_inicio?.includes('T')
+        ? appointment.horario_inicio.slice(11, 16)
+        : appointment.horario_inicio?.slice(0, 5),
+      servicos: appointment.agendamento_servico?.map(item => item.diarista_servico?.servico?.nome_servico).filter(Boolean).join(' • '),
+      valor: appointment.valor_estimado,
+      foto: profile?.usuario?.foto_perfil,
       data: new Date(appointment.data_agendamento).toLocaleDateString(
         'pt-BR',
         { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' },
@@ -128,7 +179,16 @@ export default function HistoricoClienteScreen({
   async function carregarDados() {
     setLoading(true);
     const [appointmentsResult, favoritesResult] = await Promise.allSettled([
-      agendamentoService.listar({ visao: 'todos', limit: 100 }),
+      (async () => {
+        // Os filtros consideram todo o histórico, não só os primeiros 100 registros.
+        const first = await agendamentoService.listar({ visao: 'todos', limit: 100 });
+        const data = [...first.data];
+        for (let page = 2; page <= first.pagination.pages; page++) {
+          const response = await agendamentoService.listar({ visao: 'todos', limit: 100, page });
+          data.push(...response.data);
+        }
+        return { ...first, data };
+      })(),
       favoritoService.listar({ limit: 100 }),
     ]);
 
@@ -267,10 +327,53 @@ export default function HistoricoClienteScreen({
     );
   }
 
+  function renderHistoryCard(item: Diarista) {
+    const status = item.status ?? 'Pendente';
+    const color = statusColors[status];
+    return (
+      <View key={item.id} style={styles.historyCard}>
+        <View style={styles.historyCardTop}>
+          <Text style={styles.bookingNumber}>DIÁRIA #{item.id}</Text>
+          <View style={[styles.historyStatus, { backgroundColor: color + '14' }]}>
+            <Ionicons name={statusIcons[item.checkinExpirado ? 'Checkin_expirado' : status]} size={15} color={color} />
+            <Text style={[styles.historyStatusText, { color }]}>{item.checkinExpirado ? 'Check-in expirado' : statusLabels[status]}</Text>
+          </View>
+        </View>
+        <View style={styles.historyProfileRow}>
+          <TouchableOpacity style={styles.historyProfile} onPress={() => abrirPerfil(item)} accessibilityRole="button" accessibilityLabel={`Ver perfil de ${item.nome}`}>
+            <View style={styles.historyAvatar}>
+              {item.foto && !fotosComErro.includes(item.id) ? <Image source={{ uri: item.foto }} style={styles.historyPhoto} onError={() => setFotosComErro(current => [...current, item.id])} />
+                : <Ionicons name="person-outline" size={27} color="#008A99" />}
+            </View>
+            <View style={styles.info}>
+              <Text style={styles.historyName}>{item.nome}</Text>
+              <Text style={styles.profileLink}>Ver perfil da profissional <Ionicons name="chevron-forward" size={11} /></Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.historyDetails}>
+          <View style={styles.detailRow}><Ionicons name="calendar-outline" size={17} color="#008A99" /><Text style={styles.detailText}>{item.data}</Text></View>
+          <View style={styles.detailRow}><Ionicons name="time-outline" size={17} color="#008A99" /><Text style={styles.detailText}>{item.horario ? `Início às ${item.horario}` : 'Horário não informado'}</Text></View>
+          <View style={styles.detailRow}><Ionicons name="location-outline" size={17} color="#008A99" /><Text style={styles.detailText}>{item.distancia}</Text></View>
+          {Boolean(item.servicos) && <View style={styles.detailRow}><Ionicons name="sparkles-outline" size={17} color="#008A99" /><Text style={styles.detailText}>{item.servicos}</Text></View>}
+        </View>
+        <View style={styles.historyFooter}>
+          <View><Text style={styles.totalLabel}>Valor da diária</Text><Text style={styles.totalValue}>{item.valor == null ? 'Não informado' : Number(item.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text></View>
+          <TouchableOpacity style={styles.paymentButton} accessibilityRole="button" onPress={() => navigation.push('Pagamento', { agendamentoId: item.id, dataAgendamento: item.data })}>
+            <Ionicons name="wallet-outline" size={18} color="#FFFFFF" /><Text style={styles.paymentText}>Pagamento</Text><Ionicons name="chevron-forward" size={15} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        {status === 'Aceito' && item.checkinSolicitado && <TouchableOpacity style={styles.checkinButton} onPress={() => navigation.navigate('CheckIn', { agendamentoId: item.id })}>
+          <Ionicons name="log-in-outline" size={19} color="#008A99" /><Text style={styles.checkinText}>Confirmar check-in</Text>
+        </TouchableOpacity>}
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
+        <Text style={[styles.headerTitle, !exibirFavoritos && styles.historyHeaderTitle]}>
           {exibirFavoritos ? 'Favoritos' : 'Histórico'}
         </Text>
         <TouchableOpacity
@@ -288,44 +391,81 @@ export default function HistoricoClienteScreen({
 
       <View style={styles.body}>
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, !exibirFavoritos && styles.historyContainer]}
           showsVerticalScrollIndicator={false}
         >
           {loading && <ActivityIndicator color={'#18C7C8'} />}
-          {!exibirFavoritos && <TouchableOpacity onPress={carregarDados} disabled={loading} style={{ alignSelf: 'flex-end', marginBottom: 16 }}>
-            <Text style={{ color: '#008A99', fontFamily: 'Poppins_600SemiBold' }}>Atualizar agendamentos</Text>
-          </TouchableOpacity>}
+          {!exibirFavoritos && (
+            <View style={styles.historyToolbar}>
+              <View style={styles.historySearch}>
+                <Ionicons name="search-outline" size={20} color="#667085" />
+                <TextInput style={styles.historyInput} placeholder="Buscar nome, serviço ou nº da diária" placeholderTextColor="#98A2B3" accessibilityLabel="Buscar no histórico" value={busca} onChangeText={setBusca} />
+                {Boolean(busca) && <TouchableOpacity accessibilityLabel="Limpar busca" onPress={() => setBusca('')}><Ionicons name="close-circle" size={20} color="#98A2B3" /></TouchableOpacity>}
+              </View>
+              <Text style={styles.filterLabel}>Status do agendamento</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusFilterList}>
+                {statusFilters.map(([value, label]) => (
+                  <TouchableOpacity key={value} accessibilityRole="button" accessibilityState={{ selected: statusFiltro === value }} onPress={() => setStatusFiltro(value)} style={[styles.statusChip, statusFiltro === value && styles.statusChipSelected]}>
+                    <Ionicons name={statusIcons[value]} size={16} color={statusFiltro === value ? '#FFFFFF' : '#667085'} />
+                    <Text style={[styles.statusChipText, statusFiltro === value && styles.statusChipTextSelected]}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <Text style={styles.filterLabel}>Data da diária</Text>
+              <View style={styles.historySearch}>
+                <Ionicons name="calendar-outline" size={20} color="#667085" />
+                <TextInput style={styles.historyInput} placeholder="dd/mm/aaaa" placeholderTextColor="#98A2B3" accessibilityLabel="Filtrar por data da diária" keyboardType="number-pad" maxLength={10} value={dataFiltro} onChangeText={value => setDataFiltro(formatDate(value))} />
+                {Boolean(dataFiltro) && <TouchableOpacity accessibilityLabel="Limpar data" onPress={() => setDataFiltro('')}><Ionicons name="close-circle" size={20} color="#98A2B3" /></TouchableOpacity>}
+              </View>
+              <Text style={styles.dateHint}>Você também pode digitar só o dia ou dia/mês.</Text>
+              <View style={styles.resultsRow}>
+                <Text style={styles.resultCount}>{loading ? 'Atualizando...' : `${historicoFiltrado.length} ${historicoFiltrado.length === 1 ? 'diária encontrada' : 'diárias encontradas'}`}</Text>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar agendamentos"
+                  accessibilityState={{ disabled: loading, busy: loading }}
+                  disabled={loading} onPress={carregarDados}
+                  style={[styles.refreshButton, loading && styles.refreshButtonDisabled]}>
+                  {loading ? <ActivityIndicator size="small" color="#008A99" /> : <Ionicons name="refresh-outline" size={18} color="#008A99" />}
+                  <Text style={styles.refreshText}>{loading ? 'Atualizando' : 'Atualizar'}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.sortRow}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Alterar ordenação" style={styles.sortButton} onPress={() => setOrdem(current => current === 'recentes' ? 'antigos' : 'recentes')}>
+                  <Ionicons name="swap-vertical-outline" size={16} color="#008A99" /><Text style={styles.sortText}>{ordem === 'recentes' ? 'Mais recentes' : 'Mais antigas'}</Text>
+                </TouchableOpacity>
+              </View>
+              {temFiltros && <TouchableOpacity style={styles.resetFilters} onPress={limparFiltros}><Ionicons name="close-outline" size={17} color="#008A99" /><Text style={styles.sortText}>Limpar filtros</Text></TouchableOpacity>}
+            </View>
+          )}
           {!exibirFavoritos ? (
             <>
               {Boolean(erroHistorico) && <Text style={styles.emptyText}>{erroHistorico}</Text>}
-              {historico.map((item) => (
-                <React.Fragment key={item.id}>
-                  <Text style={styles.dateTitle}>
-                    {item.data}
-                  </Text>
-                  {renderCard(item)}
-                  <View style={{ flexDirection: 'row', gap: 10, marginTop: -12, marginBottom: 22, flexWrap: 'wrap' }}>
-                    <TouchableOpacity
-                      style={{ backgroundColor: '#18C7C8', padding: 12, borderRadius: 10 }}
-                      onPress={() => navigation.push('Pagamento', { agendamentoId: item.id, dataAgendamento: item.data })}
-                    >
-                      <Text style={{ color: '#FFFFFF', fontFamily: 'Poppins_600SemiBold' }}>Ver pagamento</Text>
-                    </TouchableOpacity>
-                    {item.status === 'Aceito' && item.checkinSolicitado && <TouchableOpacity
-                      style={{ backgroundColor: '#FF6B2C', padding: 12, borderRadius: 10 }}
-                      onPress={() => navigation.navigate('CheckIn', { agendamentoId: item.id })}
-                    >
-                      <Text style={{ color: '#FFFFFF', fontFamily: 'Poppins_600SemiBold' }}>Confirmar check-in</Text>
-                    </TouchableOpacity>}
-                  </View>
-                </React.Fragment>
-              ))}
-              {!loading && !erroHistorico && historico.length === 0 && (
+              {!loading && !erroHistorico && paginaHistorico.data.map(renderHistoryCard)}
+              {!loading && !erroHistorico && paginaHistorico.pages > 1 && (
+                <View style={styles.paginationActions}>
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel="Página anterior"
+                    accessibilityState={{ disabled: paginaHistorico.page <= 1 }}
+                    disabled={paginaHistorico.page <= 1}
+                    style={[styles.pageButton, paginaHistorico.page <= 1 && styles.pageButtonDisabled]}
+                    onPress={() => mudarPagina(paginaHistorico.page - 1)}>
+                    <Ionicons name="chevron-back" size={18} color="#008A99" /><Text style={styles.pageButtonText}>Anterior</Text>
+                  </TouchableOpacity>
+                  <Text accessibilityLiveRegion="polite" style={styles.pageNumber}>Página {paginaHistorico.page} de {paginaHistorico.pages}</Text>
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel="Próxima página"
+                    accessibilityState={{ disabled: paginaHistorico.page >= paginaHistorico.pages }}
+                    disabled={paginaHistorico.page >= paginaHistorico.pages}
+                    style={[styles.pageButton, paginaHistorico.page >= paginaHistorico.pages && styles.pageButtonDisabled]}
+                    onPress={() => mudarPagina(paginaHistorico.page + 1)}>
+                    <Text style={styles.pageButtonText}>Próxima</Text><Ionicons name="chevron-forward" size={18} color="#008A99" />
+                  </TouchableOpacity>
+                </View>
+              )}
+              {!loading && !erroHistorico && historicoFiltrado.length === 0 && (
                 <View style={styles.emptyState}>
                   <Ionicons name="calendar-outline" size={48} color="#CCCCCC" />
-                  <Text style={styles.emptyTitle}>Nenhum agendamento encontrado</Text>
-                  <Text style={styles.emptyText}>Seus agendamentos aparecerão aqui.</Text>
+                  <Text style={styles.emptyTitle}>{temFiltros ? 'Nenhuma diária com esses filtros' : 'Nenhum agendamento encontrado'}</Text>
+                  <Text style={styles.emptyText}>{temFiltros ? 'Tente outro nome, status ou data.' : 'Seus agendamentos aparecerão aqui.'}</Text>
                 </View>
               )}
             </>

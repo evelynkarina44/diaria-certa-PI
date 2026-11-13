@@ -269,6 +269,7 @@ export type ClienteCreate = {
 
 export type DiaristaCreate = {
   id_usuario: number;
+  data_nascimento: string;
   descricao: string;
   frequencia_resposta?: string | null;
   qtd_max_comodos: number;

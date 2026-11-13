@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -67,6 +67,10 @@ export default function EncontrarDiaristaScreen({
   navigation,
 }: any) {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  const buscaId = useRef(0);
+  const [paginacaoBusca, setPaginacaoBusca] = useState({ chave: '', pagina: 1 });
+  const [totalPaginas, setTotalPaginas] = useState(0);
   const [busca, setBusca] = useState('');
   const [atualizacaoBusca, setAtualizacaoBusca] = useState(0);
 
@@ -102,6 +106,11 @@ export default function EncontrarDiaristaScreen({
   const [somenteRespostaRapida, setSomenteRespostaRapida] =
     useState(false);
   const [respostaRapidaAplicada, setRespostaRapidaAplicada] = useState(false);
+
+  // Uma busca ou filtro novo começa na primeira página; atualizar mantém a página atual.
+  const chaveBusca = JSON.stringify([busca, avaliacaoAplicada, precoAplicado,
+    servicoAplicado, respostaRapidaAplicada, distanciaAplicada, cepCliente, user?.id_usuario]);
+  const paginaAtual = paginacaoBusca.chave === chaveBusca ? paginacaoBusca.pagina : 1;
 
   useEffect(() => {
     async function sincronizarFavoritos() {
@@ -146,10 +155,13 @@ export default function EncontrarDiaristaScreen({
 
   useEffect(() => {
     if (loadingEndereco) return;
+    const id = ++buscaId.current;
+    setLoading(true);
+    setDiaristas([]);
     const timer = setTimeout(() => {
-      carregarDiaristas();
+      carregarDiaristas(id);
     }, 300);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); buscaId.current++; };
   }, [
     busca,
     atualizacaoBusca,
@@ -161,6 +173,7 @@ export default function EncontrarDiaristaScreen({
     cepCliente,
     loadingEndereco,
     user?.id_usuario,
+    paginaAtual,
   ]);
 
   function avaliacaoMinima() {
@@ -218,12 +231,13 @@ export default function EncontrarDiaristaScreen({
     };
   }
 
-  async function carregarDiaristas() {
+  async function carregarDiaristas(id: number) {
     try {
       setLoading(true);
       setErro('');
       if (!cepCliente) {
         setDiaristas([]);
+        setTotalPaginas(0);
         setErro('Cadastre um endereço com CEP para encontrar as diaristas mais próximas.');
         return;
       }
@@ -236,22 +250,24 @@ export default function EncontrarDiaristaScreen({
         cep_origem: cepCliente,
         distancia_max: distanciaMaxima(),
         ordenar: 'distancia' as const,
-        limit: 100,
+        limit: 10,
+        page: paginaAtual,
       };
-      const firstPage = await diaristaService.listar({ ...query, page: 1 });
-      const remainingPages = firstPage.pagination.pages > 1
-        ? await Promise.all(
-            Array.from({ length: firstPage.pagination.pages - 1 }, (_, index) =>
-              diaristaService.listar({ ...query, page: index + 2 }),
-            ),
-          )
-        : [];
-      const profiles = [firstPage, ...remainingPages].flatMap((response) => response.data);
+      const response = await diaristaService.listar(query);
+      if (id !== buscaId.current) return;
+      const pages = response.pagination.pages;
+      if (paginaAtual > Math.max(1, pages)) {
+        setPaginacaoBusca({ chave: chaveBusca, pagina: Math.max(1, pages) });
+        return;
+      }
       const favoritosResponse = user?.activeProfile === 'CLIENTE'
         ? await favoritoService.listar({ limit: 100 }).catch(() => ({ data: [] as Favorito[] }))
         : { data: [] as Favorito[] };
+      if (id !== buscaId.current) return;
+      setTotalPaginas(pages);
       setDiaristas(
-        profiles
+        response.data
+          .filter((profile) => profile.id_usuario !== user?.id_usuario)
           .map((item) =>
             apresentarDiarista(item, favoritosResponse.data),
           )
@@ -260,11 +276,22 @@ export default function EncontrarDiaristaScreen({
           ),
       );
     } catch (error) {
+      if (id !== buscaId.current) return;
       setErro(getErrorMessage(error));
       setDiaristas([]);
+      setTotalPaginas(0);
     } finally {
-      setLoading(false);
+      if (id === buscaId.current) setLoading(false);
     }
+  }
+
+  function mudarPagina(pagina: number) {
+    if (loading || pagina < 1 || pagina > totalPaginas) return;
+    buscaId.current++;
+    setLoading(true);
+    setDiaristas([]);
+    setPaginacaoBusca({ chave: chaveBusca, pagina });
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
   }
 
   function abrirPerfilDiarista(diarista: Diarista) {
@@ -647,6 +674,7 @@ export default function EncontrarDiaristaScreen({
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -869,6 +897,29 @@ export default function EncontrarDiaristaScreen({
               </View>
             ))}
           </View>
+          {!erro && totalPaginas > 1 && (
+            <View style={styles.pagination}>
+              <View style={styles.paginationActions}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Página anterior"
+                  accessibilityState={{ disabled: loading || paginaAtual <= 1 }}
+                  disabled={loading || paginaAtual <= 1}
+                  style={[styles.pageButton, (loading || paginaAtual <= 1) && styles.pageButtonDisabled]}
+                  onPress={() => mudarPagina(paginaAtual - 1)}>
+                  <Ionicons name="chevron-back" size={18} color="#008A99" />
+                  <Text style={styles.pageButtonText}>Anterior</Text>
+                </TouchableOpacity>
+                <Text accessibilityLiveRegion="polite" style={styles.pageNumber}>Página {paginaAtual} de {totalPaginas}</Text>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Próxima página"
+                  accessibilityState={{ disabled: loading || paginaAtual >= totalPaginas }}
+                  disabled={loading || paginaAtual >= totalPaginas}
+                  style={[styles.pageButton, (loading || paginaAtual >= totalPaginas) && styles.pageButtonDisabled]}
+                  onPress={() => mudarPagina(paginaAtual + 1)}>
+                  <Text style={styles.pageButtonText}>Próxima</Text>
+                  <Ionicons name="chevron-forward" size={18} color="#008A99" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
       <TouchableOpacity

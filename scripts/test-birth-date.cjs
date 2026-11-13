@@ -35,3 +35,33 @@ test('maioridade considera a meia-noite de São Paulo, não a data UTC', () => {
   assert.match(getBirthDateError('2008-11-11', new Date('2026-11-11T02:59:59Z')), /18 anos/);
   assert.equal(getBirthDateError('2008-11-11', new Date('2026-11-11T03:00:00Z')), null);
 });
+
+test('diarista valida nascimento antes de avançar e de enviar, inclusive segundo perfil', () => {
+  const source = fs.readFileSync(path.join(root, 'src/screens/CadastroDiaristaScreen/index.tsx'), 'utf8');
+  const normalize = source.slice(source.indexOf('function normalizarData'), source.indexOf('export default function'));
+  const validate = source.slice(source.indexOf('  function validarNascimento'), source.indexOf('  function renderDataNascimento'));
+  const messages = [];
+  const context = { dataNascimento: '', getBirthDateError: value => getBirthDateError(value, now), mostrarAviso: (...args) => messages.push(args) };
+  vm.createContext(context);
+  vm.runInContext(ts.transpileModule(normalize + validate, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.None } }).outputText, context);
+  for (const value of ['', '12/12/2333', '29/02/2001', '10/11/2020']) {
+    context.dataNascimento = value;
+    assert.equal(context.validarNascimento(), null, value);
+  }
+  context.dataNascimento = '29/02/2000';
+  assert.equal(context.validarNascimento(), '2000-02-29');
+  assert.equal(messages.length, 4);
+  assert.ok(source.includes('(etapa === 1 || (adicionandoPerfil && etapa === 4)) && !validarNascimento()'));
+  const submit = source.slice(source.indexOf('async function handleEnviar'));
+  assert.ok(submit.indexOf('const nascimento = validarNascimento()') < submit.indexOf('setEnviando(true)'));
+  assert.ok(submit.includes('data_nascimento: nascimento'));
+});
+
+test('formulário de diarista tem máscara e mostra nascimento ao adicionar perfil na conta existente', () => {
+  const source = fs.readFileSync(path.join(root, 'src/screens/CadastroDiaristaScreen/index.tsx'), 'utf8');
+  assert.ok(source.includes('setDataNascimento(formatDate(value))'));
+  assert.ok(source.includes('accessibilityLabel="Data de nascimento"'));
+  assert.ok(source.includes('{adicionandoPerfil && renderDataNascimento()}'));
+  assert.ok(source.includes('{renderDataNascimento()}'));
+  assert.ok(source.includes('clienteService.buscarPorId(clienteId)'));
+});

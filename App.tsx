@@ -4,6 +4,7 @@ import { Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700
 import { GlobalProvider } from "./src/contexts/GlobalContext";
 import { Routes } from "./src/routes/routes";
 import { NotificationProvider } from "./src/contexts/NotificationContext";
+import { InputFocusStyle } from "./src/components/input-focus-style";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <InputFocusStyle />
       <GlobalProvider>
         <NotificationProvider>
           <NavigationContainer>

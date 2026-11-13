@@ -20,6 +20,7 @@ import type { Cliente } from '../../services/types';
 import { LogoutButton } from '../../components/logout-button';
 import { ProfileAccessActions } from '../../components/profile-access-actions';
 import { ProfileEditModal } from '../../components/profile-edit-modal';
+import { ProfilePhotoModal } from '../../components/profile-photo-modal';
 import { usuarioService } from '../../services/usuarioService';
 import { enderecoService } from '../../services/enderecoService';
 
@@ -62,12 +63,6 @@ export default function PerfilClienteScreen({ navigation }: any) {
   const nascimento = profile?.data_nascimento
     ? new Date(profile.data_nascimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
     : 'Não informado';
-
-  async function savePhoto(values: Record<string, string>) {
-    if (!profileUser?.id_usuario) return;
-    await usuarioService.atualizar(profileUser.id_usuario, { foto_perfil: values.foto_perfil.trim() });
-    await Promise.all([refreshSession(), loadProfile()]);
-  }
 
   async function savePersonal(values: Record<string, string>) {
     if (!profileUser?.id_usuario || !profile?.id_cliente) return;
@@ -255,14 +250,12 @@ export default function PerfilClienteScreen({ navigation }: any) {
         </View>
       </ScrollView>
 
-      <ProfileEditModal
+      <ProfilePhotoModal
         visible={editSection === 'photo'}
-        title="Editar foto"
         accentColor="#18C7C8"
-        fields={[{ name: 'foto_perfil', label: 'URL da foto', placeholder: 'https://...', keyboardType: 'url' }]}
-        initialValues={{ foto_perfil: profileUser?.foto_perfil ?? '' }}
+        imageUrl={profileUser?.foto_perfil}
         onClose={() => setEditSection(null)}
-        onSave={savePhoto}
+        onSaved={async () => { await Promise.all([refreshSession(), loadProfile()]); }}
       />
       <ProfileEditModal
         visible={editSection === 'personal'}

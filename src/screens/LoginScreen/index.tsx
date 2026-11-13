@@ -27,6 +27,7 @@ export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loginError, setLoginError] = useState('');
@@ -150,11 +151,14 @@ export default function LoginScreen({ navigation }: any) {
                 <View
                   style={[
                     styles.passwordContainer,
+                    passwordFocused && styles.passwordContainerFocused,
                     fieldErrors.password && styles.inputError,
                   ]}
                 >
                   <TextInput
                     style={styles.passwordInput}
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
                     placeholder="************"
                     placeholderTextColor="#9B9B9B"
                     secureTextEntry={!showPassword}

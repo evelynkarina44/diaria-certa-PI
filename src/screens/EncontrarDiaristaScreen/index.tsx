@@ -23,11 +23,13 @@ import { clienteService } from '../../services/clienteService';
 import type {
   Diarista as ApiDiarista,
   Favorito,
+  Endereco,
 } from '../../services/types';
 import { ActionModal } from '../../components/action-modal';
 import { updateServiceDraft } from '../../utils/serviceFilterDraft';
 import { HeaderMenu } from '../../components/header-menu';
 import { NotificationBell } from '../../components/notification-bell';
+import { LocationPickerModal } from '../../components/location-picker-modal';
 
 type Diarista = {
   id: number;
@@ -77,7 +79,11 @@ export default function EncontrarDiaristaScreen({
   const [diaristas, setDiaristas] = useState<Diarista[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
-  const [cepCliente, setCepCliente] = useState<string | null>(null);
+  const [enderecos, setEnderecos] = useState<Endereco[]>([]);
+  const [enderecoBuscaId, setEnderecoBuscaId] = useState<number | null>(null);
+  const [seletorLocalizacaoAberto, setSeletorLocalizacaoAberto] = useState(false);
+  const enderecoBusca = enderecos.find(address => address.id_endereco === enderecoBuscaId) ?? enderecos[0];
+  const cepCliente = enderecoBusca?.cep ?? '';
   const [loadingEndereco, setLoadingEndereco] = useState(true);
   const [favoritosEmAtualizacao, setFavoritosEmAtualizacao] = useState<number[]>([]);
   const [fotosComErro, setFotosComErro] = useState<number[]>([]);
@@ -109,8 +115,11 @@ export default function EncontrarDiaristaScreen({
 
   // Uma busca ou filtro novo começa na primeira página; atualizar mantém a página atual.
   const chaveBusca = JSON.stringify([busca, avaliacaoAplicada, precoAplicado,
-    servicoAplicado, respostaRapidaAplicada, distanciaAplicada, cepCliente, user?.id_usuario]);
+    servicoAplicado, respostaRapidaAplicada, distanciaAplicada, cepCliente, enderecoBusca?.id_endereco, user?.id_usuario]);
   const paginaAtual = paginacaoBusca.chave === chaveBusca ? paginacaoBusca.pagina : 1;
+  useEffect(() => {
+    setPaginacaoBusca(current => current.chave === chaveBusca ? current : { chave: chaveBusca, pagina: 1 });
+  }, [chaveBusca]);
 
   useEffect(() => {
     async function sincronizarFavoritos() {
@@ -138,20 +147,36 @@ export default function EncontrarDiaristaScreen({
   useEffect(() => {
     const idCliente = user?.cliente?.[0]?.id_cliente;
     if (!idCliente || user?.activeProfile !== 'CLIENTE') {
-      setCepCliente('');
+      setEnderecos([]); setEnderecoBuscaId(null); setSeletorLocalizacaoAberto(false);
       setLoadingEndereco(false);
       return;
     }
+    let active = true;
+    let request = 0;
+    setEnderecos([]); setEnderecoBuscaId(null);
+    async function carregarEnderecos() {
+      const id = ++request;
+      setLoadingEndereco(true);
+      try {
+        const cliente = await clienteService.buscarPorId(idCliente!);
+        if (active && id === request) setEnderecos(cliente.endereco ?? []);
+      } catch (error) {
+        if (active && id === request) { setEnderecos([]); setErro(getErrorMessage(error)); }
+      } finally {
+        if (active && id === request) setLoadingEndereco(false);
+      }
+    }
+    void carregarEnderecos();
+    const unsubscribe = navigation.addListener('focus', carregarEnderecos);
+    return () => { active = false; unsubscribe(); };
+  }, [user?.activeProfile, user?.cliente, navigation]);
 
-    setLoadingEndereco(true);
-    clienteService.buscarPorId(idCliente)
-      .then((cliente) => setCepCliente(cliente.endereco?.[0]?.cep ?? ''))
-      .catch((error) => {
-        setCepCliente('');
-        setErro(getErrorMessage(error));
-      })
-      .finally(() => setLoadingEndereco(false));
-  }, [user?.activeProfile, user?.cliente]);
+  function selecionarLocalizacao(address: Endereco) {
+    if (address.id_endereco === enderecoBusca?.id_endereco) return;
+    buscaId.current++;
+    setLoading(true); setDiaristas([]);
+    setEnderecoBuscaId(address.id_endereco);
+  }
 
   useEffect(() => {
     if (loadingEndereco) return;
@@ -171,6 +196,7 @@ export default function EncontrarDiaristaScreen({
     respostaRapidaAplicada,
     distanciaAplicada,
     cepCliente,
+    enderecoBusca?.id_endereco,
     loadingEndereco,
     user?.id_usuario,
     paginaAtual,
@@ -248,6 +274,7 @@ export default function EncontrarDiaristaScreen({
         ...faixaPreco(),
         servico_nome: servicoAplicado.trim() || undefined,
         cep_origem: cepCliente,
+        id_endereco_origem: enderecoBusca?.id_endereco,
         distancia_max: distanciaMaxima(),
         ordenar: 'distancia' as const,
         limit: 10,
@@ -693,13 +720,18 @@ export default function EncontrarDiaristaScreen({
           </Text>
 
           <Text style={styles.headerDescription}>
-            Onde deseja encontrar sua diarista?
+            Onde será a sua próxima diária?
           </Text>
         </View>
 
         <View style={styles.locationCard}>
           <TouchableOpacity
             style={styles.locationRow}
+            accessibilityRole="button"
+            accessibilityLabel="Escolher endereço da minha localização"
+            accessibilityState={{ disabled: loadingEndereco }}
+            disabled={loadingEndereco}
+            onPress={() => setSeletorLocalizacaoAberto(true)}
             activeOpacity={0.7}
           >
             <Ionicons
@@ -708,9 +740,15 @@ export default function EncontrarDiaristaScreen({
               color="#18C7C8"
             />
 
-            <Text style={styles.locationText}>
-              Minha localização
-            </Text>
+            <View style={styles.locationInfo}>
+              <Text style={styles.locationCaption}>Minha localização</Text>
+              <Text style={styles.locationText} numberOfLines={1}>
+                {loadingEndereco ? 'Carregando endereços...' : enderecoBusca
+                  ? `${enderecoBusca.apelido || 'Minha casa'} — ${enderecoBusca.logradouro}, ${enderecoBusca.numero}`
+                  : 'Selecionar endereço'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-down" size={18} color="#008A99" />
           </TouchableOpacity>
 
           <View style={styles.searchRow}>
@@ -722,7 +760,8 @@ export default function EncontrarDiaristaScreen({
 
             <TextInput
               style={styles.searchInput}
-              placeholder="Buscar diaristas próximas"
+              placeholder="Buscar diarista pelo nome"
+              accessibilityLabel="Buscar diarista pelo nome"
               placeholderTextColor="#A0A0A0"
               value={busca}
               onChangeText={setBusca}
@@ -789,11 +828,18 @@ export default function EncontrarDiaristaScreen({
           {renderConteudoFiltro()}
 
           <Text style={styles.listTitle}>
-            Diaristas próximas
+            {enderecoBusca ? `Diaristas perto de ${enderecoBusca.apelido || 'sua casa'}` : 'Diaristas próximas'}
           </Text>
+          {Boolean(enderecoBusca) && <View style={styles.distanceInfo}>
+            <Ionicons name="navigate-outline" size={14} color="#667085" />
+            <Text style={styles.distanceHint}>Mais próximas primeiro · distância aproximada pelo CEP</Text>
+          </View>}
 
           <View style={styles.list}>
-            {loading && <ActivityIndicator color={'#18C7C8'} />}
+            {loading && <View style={styles.searchLoading}>
+              <ActivityIndicator color="#18C7C8" />
+              <Text style={styles.distanceHint}>Buscando diaristas perto deste endereço...</Text>
+            </View>}
             {!loading && Boolean(erro) && (
               <Text style={styles.distance}>{erro}</Text>
             )}
@@ -931,6 +977,10 @@ export default function EncontrarDiaristaScreen({
         activeOpacity={0.8}>
         <Ionicons name="chatbubble-ellipses-outline" size={29} color="#FFFFFF" />
       </TouchableOpacity>
+      <LocationPickerModal visible={seletorLocalizacaoAberto} addresses={enderecos}
+        selectedId={enderecoBusca?.id_endereco} loading={loadingEndereco}
+        onSelect={selecionarLocalizacao} onClose={() => setSeletorLocalizacaoAberto(false)}
+        onManage={() => navigation.navigate('PerfilCliente')} />
       <ActionModal visible={Boolean(erroServico)} variant="error" title="Confira os serviços" message={erroServico} onClose={() => setErroServico('')} />
     </SafeAreaView>
   );

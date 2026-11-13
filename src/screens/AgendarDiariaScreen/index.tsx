@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { selectedHouse } from '../../utils/selectedHouse';
 import { useAuth } from '../../contexts/GlobalContext';
 import { agendamentoService } from '../../services/agendamentoService';
 import { clienteService } from '../../services/clienteService';
@@ -59,6 +60,9 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
   const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([]);
   const [comboSelecionado, setComboSelecionado] = useState<number | null>(null);
   const [observacao, setObservacao] = useState('');
+  const [enderecoSelecionadoId, setEnderecoSelecionadoId] = useState<number | null>(null);
+  const casaSelecionada = selectedHouse(cliente?.endereco, enderecoSelecionadoId);
+  const tamanhoCasa = casaSelecionada?.tamanho_casa ?? cliente?.tamanho_casa;
 
   useEffect(() => {
     const clienteId = user?.cliente?.[0]?.id_cliente;
@@ -67,22 +71,37 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
       setLoading(false);
       return;
     }
-    Promise.all([diaristaService.buscarPorId(diaristaId), clienteService.buscarPorId(clienteId)])
-      .then(([diarista, clienteProfile]) => {
+    let active = true;
+    let request = 0;
+    async function carregarDados(initial = false) {
+      const id = ++request;
+      try {
+        const [diarista, clienteProfile] = await Promise.all([
+          diaristaService.buscarPorId(diaristaId), clienteService.buscarPorId(clienteId!),
+        ]);
+        if (!active || id !== request) return;
         setProfile(diarista);
         setCliente(clienteProfile);
-        const firstAvailability = (diarista.disponibilidade_diarista ?? []).find((item) => item.disponivel && item.horario_fim && futureAvailability(item));
-        if (firstAvailability) {
-          const key = dateKey(firstAvailability.dia_semana);
-          const [year, month] = key.split('-').map(Number);
-          setMesExibido(new Date(year, month - 1, 1));
-          setDataSelecionada(key);
-          setHorarioSelecionado(timeValue(firstAvailability.horario_inicio));
+        if (initial) {
+          const firstAvailability = (diarista.disponibilidade_diarista ?? []).find(item => item.disponivel && item.horario_fim && futureAvailability(item));
+          if (firstAvailability) {
+            const key = dateKey(firstAvailability.dia_semana);
+            const [year, month] = key.split('-').map(Number);
+            setMesExibido(new Date(year, month - 1, 1));
+            setDataSelecionada(key);
+            setHorarioSelecionado(timeValue(firstAvailability.horario_inicio));
+          }
         }
-      })
-      .catch((cause) => setError(getErrorMessage(cause)))
-      .finally(() => setLoading(false));
-  }, [diaristaId, user?.cliente]);
+      } catch (cause) {
+        if (active && id === request) setError(getErrorMessage(cause));
+      } finally {
+        if (active && id === request) setLoading(false);
+      }
+    }
+    void carregarDados(true);
+    const unsubscribe = navigation.addListener('focus', () => void carregarDados());
+    return () => { active = false; unsubscribe(); };
+  }, [diaristaId, user?.cliente, navigation]);
 
   const disponibilidades = useMemo(
     () => (profile?.disponibilidade_diarista ?? []).filter((item) => item.disponivel && item.horario_fim && futureAvailability(item)),
@@ -93,18 +112,18 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
     [dataSelecionada, disponibilidades],
   );
   const combosCompativeis = useMemo(() => {
-    if (!cliente || !profile) return [];
+    if (!cliente || !profile || !casaSelecionada) return [];
     const offeredServiceIds = new Set((profile.diarista_servico ?? []).map((item) => item.id_servico));
     return (profile.combo_base ?? []).filter((combo) => {
-      const compatibleSize = cliente.tamanho_casa === 'pequena'
+      const compatibleSize = tamanhoCasa === 'pequena'
         ? combo.atende_casa_pequena
-        : cliente.tamanho_casa === 'media'
+        : tamanhoCasa === 'media'
           ? combo.atende_casa_media
           : combo.atende_casa_grande;
       const servicesAvailable = (combo.combo_servico ?? []).every((item) => offeredServiceIds.has(item.id_servico));
       return combo.ativo !== false && compatibleSize && servicesAvailable;
     });
-  }, [cliente, profile]);
+  }, [cliente, profile, casaSelecionada, tamanhoCasa]);
   const combo = combosCompativeis.find((item) => item.id_combo_base === comboSelecionado);
   const idsServicosCombo = new Set((combo?.combo_servico ?? []).map((item) => item.id_servico));
   const servicosIncluidos = (profile?.diarista_servico ?? []).filter((item) => idsServicosCombo.has(item.id_servico));
@@ -120,7 +139,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
   }
 
   function montarPayload(): AgendamentoCreate | null {
-    const endereco = cliente?.endereco?.[0];
+    const endereco = casaSelecionada;
     const slot = slotSelecionado();
     if (!endereco || !dataSelecionada || !slot || !servicosSelecionados.length || !cliente) return null;
     return {
@@ -130,8 +149,8 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
       data_agendamento: dataSelecionada,
       horario_inicio: timeValue(slot.horario_inicio),
       horario_fim: timeValue(slot.horario_fim),
-      qtd_comodos: cliente.qtd_comodos,
-      tamanho_residencia: cliente.tamanho_casa,
+      qtd_comodos: endereco.qtd_comodos ?? cliente.qtd_comodos,
+      tamanho_residencia: endereco.tamanho_casa ?? cliente.tamanho_casa,
       observacoes: observacao.trim() || null,
       servicos: servicosSelecionados.map((id_diarista_servico) => ({ id_diarista_servico })),
     };
@@ -142,6 +161,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
     if (!payload) {
       setValorEstimado(null);
       setEstimateError('');
+      setEstimating(false);
       return;
     }
     let active = true;
@@ -157,7 +177,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
       })
       .finally(() => { if (active) setEstimating(false); });
     return () => { active = false; };
-  }, [cliente, comboSelecionado, dataSelecionada, horarioSelecionado, servicosSelecionados]);
+  }, [cliente, enderecoSelecionadoId, comboSelecionado, dataSelecionada, horarioSelecionado, servicosSelecionados]);
 
   function selecionarData(key: string) {
     const slots = disponibilidades.filter((item) => dateKey(item.dia_semana) === key);
@@ -189,6 +209,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
     if (bookingLock.current) return;
     const payload = montarPayload();
     if (!cliente?.endereco?.length) return setError('Cadastre um endereço antes de agendar.');
+    if (!casaSelecionada) return setError('Selecione a casa onde será realizada a diária.');
     if (!dataSelecionada || !horarioSelecionado) return setError('Escolha uma data e um horário disponível.');
     if (!servicosSelecionados.length) return setError('Selecione ao menos um serviço.');
     if (!payload) return setError('Revise os dados do agendamento.');
@@ -222,6 +243,35 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
+
+          <Text style={styles.label}>Onde será a diária?</Text>
+          <View style={styles.houseOptions}>
+          {(cliente?.endereco ?? []).map((address, index) => {
+            const selected = casaSelecionada?.id_endereco === address.id_endereco;
+            return (
+              <TouchableOpacity key={address.id_endereco} accessibilityRole="radio" accessibilityState={{ checked: selected }}
+                style={[styles.comboButton, selected && styles.comboButtonSelected]}
+                onPress={() => {
+                  if (selected) return;
+                  setEnderecoSelecionadoId(address.id_endereco);
+                  setComboSelecionado(null); setServicosSelecionados([]);
+                  setValorEstimado(null); setConfirmBooking(false);
+                }}>
+                <View style={styles.comboHeaderRow}>
+                  <Ionicons name="home-outline" size={21} color="#008A99" />
+                  <Text style={styles.comboName}>{address.apelido || `Casa ${index + 1}`}</Text>
+                  <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={22} color="#18C7C8" />
+                </View>
+                <Text style={styles.comboDescription}>{address.logradouro}, {address.numero} · {address.bairro}</Text>
+                <Text style={styles.comboMeta}>CEP {address.cep} · {address.qtd_comodos ?? cliente?.qtd_comodos} cômodos · Casa {address.tamanho_casa === 'media' ? 'média' : address.tamanho_casa ?? cliente?.tamanho_casa}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          </View>
+          {!casaSelecionada && <Text style={styles.helperText}>Selecione uma casa para calcular o valor e enviar a solicitação.</Text>}
+          <TouchableOpacity accessibilityRole="button" style={styles.manageHouses} onPress={() => navigation.navigate('PerfilCliente')}>
+            <Ionicons name="add-circle-outline" size={18} color="#008A99" /><Text style={styles.manageHousesText}>Cadastrar ou editar minhas casas</Text>
+          </TouchableOpacity>
 
           <Text style={styles.label}>Data</Text>
           <View style={styles.calendar}>
@@ -339,7 +389,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
       <ActionModal visible={Boolean(error || estimateError)} variant="error" title="Não foi possível agendar" message={error || estimateError}
         onClose={() => { setError(''); setEstimateError(''); setConfirmBooking(false); }} />
       <ActionModal visible={confirmBooking && !error && !estimateError} variant="confirm" title="Enviar solicitação?"
-        message={`Deseja solicitar esta diária para ${dataSelecionada.split('-').reverse().join('/')} às ${horarioSelecionado}? Não há cobrança agora; aguarde o aceite da diarista.`}
+        message={`Deseja solicitar esta diária em ${casaSelecionada?.apelido || 'sua casa'} (${casaSelecionada?.logradouro}, ${casaSelecionada?.numero}) para ${dataSelecionada.split('-').reverse().join('/')} às ${horarioSelecionado}? Não há cobrança agora; aguarde o aceite da diarista.`}
         confirmLabel="Enviar solicitação" cancelLabel="Revisar" busy={saving}
         onConfirm={() => confirmarAgendamento(true)} onClose={() => setConfirmBooking(false)} />
       <ActionModal visible={Boolean(bookingNotice) && !error} variant="success" title="Solicitação enviada" message={bookingNotice}

@@ -6,6 +6,13 @@ const clienteColor = '#18C7C8';
 const clienteLightColor = '#EAFBFB';
 
 export const styles = StyleSheet.create({
+  distanceInfo: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: -6, marginBottom: 16 },
+  distanceHint: { flex: 1, fontFamily: fonts.regular, fontSize: 11, lineHeight: 17, color: '#667085' },
+  searchLoading: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 14 },
+
+  locationInfo: { flex: 1, minWidth: 0, paddingVertical: 7 },
+  locationCaption: { fontFamily: fonts.regular, fontSize: 10, color: '#667085', marginBottom: 2 },
+
   pagination: { marginTop: 24, gap: 12 },
   paginationActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   pageButton: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 12, paddingHorizontal: 8, borderRadius: 12, backgroundColor: '#E8FAFA' },

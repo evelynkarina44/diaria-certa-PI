@@ -5,6 +5,10 @@ import { colors, fonts, fontSizes } from '../../global';
 const clienteColor = '#18C7C8';
 
 export const styles = StyleSheet.create({
+  houseOptions: { gap: 10, marginBottom: 10 },
+  manageHouses: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 44, marginBottom: 20 },
+  manageHousesText: { fontFamily: fonts.medium, color: '#008A99', fontSize: 12 },
+
   safeArea: {
     flex: 1,
     backgroundColor: clienteColor,

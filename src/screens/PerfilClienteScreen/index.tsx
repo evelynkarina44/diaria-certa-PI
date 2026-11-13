@@ -22,9 +22,9 @@ import { ProfileAccessActions } from '../../components/profile-access-actions';
 import { ProfileEditModal } from '../../components/profile-edit-modal';
 import { ProfilePhotoModal } from '../../components/profile-photo-modal';
 import { usuarioService } from '../../services/usuarioService';
-import { enderecoService } from '../../services/enderecoService';
+import { ClientHouses } from '../../components/client-houses';
 
-type EditSection = 'photo' | 'personal' | 'residence' | 'address' | null;
+type EditSection = 'photo' | 'personal' | null;
 
 export default function PerfilClienteScreen({ navigation }: any) {
   const { user, refreshSession } = useAuth();
@@ -54,12 +54,10 @@ export default function PerfilClienteScreen({ navigation }: any) {
   }, [loadProfile]);
 
   const profileUser = profile?.usuario ?? user;
-  const endereco = profile?.endereco?.[0];
   const avaliacoes = profile?.avaliacao ?? [];
   const rating = avaliacoes.length
     ? avaliacoes.reduce((total, avaliacao) => total + Number(avaliacao.nota), 0) / avaliacoes.length
     : 0;
-  const tamanhos = { pequena: 'Pequena', media: 'Média', grande: 'Grande' };
   const nascimento = profile?.data_nascimento
     ? new Date(profile.data_nascimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
     : 'Não informado';
@@ -76,35 +74,6 @@ export default function PerfilClienteScreen({ navigation }: any) {
       clienteService.atualizar(profile.id_cliente, { data_nascimento: values.data_nascimento }),
     ]);
     await Promise.all([refreshSession(), loadProfile()]);
-  }
-
-  async function saveResidence(values: Record<string, string>) {
-    if (!profile?.id_cliente) return;
-    await clienteService.atualizar(profile.id_cliente, {
-      tamanho_casa: values.tamanho_casa as Cliente['tamanho_casa'],
-      qtd_comodos: Number(values.qtd_comodos),
-    });
-    await loadProfile();
-  }
-
-  async function saveAddress(values: Record<string, string>) {
-    if (!profile?.id_cliente) return;
-    const data = {
-      bairro: values.bairro.trim(),
-      cep: values.cep.trim(),
-      logradouro: values.logradouro.trim(),
-      numero: Number(values.numero),
-      complemento: values.complemento.trim() || null,
-      cidade: values.cidade.trim(),
-      estado: values.estado.trim().toUpperCase(),
-      referencia: values.referencia.trim() || null,
-    };
-    if (endereco?.id_endereco) {
-      await enderecoService.atualizar(endereco.id_endereco, data);
-    } else {
-      await enderecoService.criar({ ...data, id_cliente: profile.id_cliente });
-    }
-    await loadProfile();
   }
 
   if (loading) {
@@ -206,38 +175,7 @@ export default function PerfilClienteScreen({ navigation }: any) {
           <Text style={styles.detailText}>Data de nascimento: {nascimento}</Text>
         </View>
 
-        <View style={styles.detailsCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.cardTitle}>Residência</Text>
-            <TouchableOpacity style={styles.editButton} onPress={() => setEditSection('residence')} activeOpacity={0.7} accessibilityLabel="Editar residência">
-              <Ionicons name="pencil" size={14} color="#111111" />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.detailText}>Tamanho: {profile ? tamanhos[profile.tamanho_casa] : 'Não informado'}</Text>
-          <Text style={styles.detailText}>Quantidade de cômodos: {profile?.qtd_comodos ?? 'Não informado'}</Text>
-        </View>
-
-        <View style={styles.detailsCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.cardTitle}>Endereço</Text>
-            <TouchableOpacity style={styles.editButton} onPress={() => setEditSection('address')} activeOpacity={0.7} accessibilityLabel="Editar endereço">
-              <Ionicons name="pencil" size={14} color="#111111" />
-            </TouchableOpacity>
-          </View>
-          {endereco ? (
-            <>
-              <Text style={styles.detailText}>
-                {endereco.logradouro}, {endereco.numero}{endereco.complemento ? ` - ${endereco.complemento}` : ''}
-              </Text>
-              <Text style={styles.detailText}>
-                {endereco.bairro} - {endereco.cidade}/{endereco.estado} - CEP {endereco.cep}
-              </Text>
-              {endereco.referencia ? <Text style={styles.detailText}>Referência: {endereco.referencia}</Text> : null}
-            </>
-          ) : (
-            <Text style={styles.detailText}>Endereço não informado</Text>
-          )}
-        </View>
+        <ClientHouses cliente={profile} onUpdated={loadProfile} />
 
         <ProfileAccessActions
           navigation={navigation}
@@ -277,54 +215,6 @@ export default function PerfilClienteScreen({ navigation }: any) {
         }}
         onClose={() => setEditSection(null)}
         onSave={savePersonal}
-      />
-      <ProfileEditModal
-        visible={editSection === 'residence'}
-        title="Editar residência"
-        accentColor="#18C7C8"
-        fields={[
-          {
-            name: 'tamanho_casa',
-            label: 'Tamanho da casa',
-            options: [
-              { label: 'Pequena', value: 'pequena' },
-              { label: 'Média', value: 'media' },
-              { label: 'Grande', value: 'grande' },
-            ],
-          },
-          { name: 'qtd_comodos', label: 'Quantidade de cômodos', keyboardType: 'number-pad' },
-        ]}
-        initialValues={{ tamanho_casa: profile?.tamanho_casa ?? 'pequena', qtd_comodos: String(profile?.qtd_comodos ?? '') }}
-        onClose={() => setEditSection(null)}
-        onSave={saveResidence}
-      />
-      <ProfileEditModal
-        visible={editSection === 'address'}
-        title="Editar endereço"
-        accentColor="#18C7C8"
-        addressAutoFill
-        fields={[
-          { name: 'cep', label: 'CEP', placeholder: '00000-000', keyboardType: 'number-pad', maxLength: 9 },
-          { name: 'logradouro', label: 'Logradouro', placeholder: 'Rua, avenida...' },
-          { name: 'numero', label: 'Número', keyboardType: 'number-pad' },
-          { name: 'complemento', label: 'Complemento', placeholder: 'Apartamento, bloco...' },
-          { name: 'bairro', label: 'Bairro' },
-          { name: 'cidade', label: 'Cidade' },
-          { name: 'estado', label: 'Estado', placeholder: 'SP', maxLength: 2 },
-          { name: 'referencia', label: 'Referência', placeholder: 'Próximo a...' },
-        ]}
-        initialValues={{
-          cep: endereco?.cep ?? '',
-          logradouro: endereco?.logradouro ?? '',
-          numero: String(endereco?.numero ?? ''),
-          complemento: endereco?.complemento ?? '',
-          bairro: endereco?.bairro ?? '',
-          cidade: endereco?.cidade ?? '',
-          estado: endereco?.estado ?? '',
-          referencia: endereco?.referencia ?? '',
-        }}
-        onClose={() => setEditSection(null)}
-        onSave={saveAddress}
       />
     </SafeAreaView>
   );

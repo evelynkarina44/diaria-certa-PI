@@ -61,6 +61,9 @@ export type Cliente = {
 
 export type Endereco = {
   id_endereco: number;
+  apelido?: string | null;
+  qtd_comodos?: number | null;
+  tamanho_casa?: HouseSize | null;
   id_cliente?: number | null;
   id_diarista?: number | null;
   bairro: string;

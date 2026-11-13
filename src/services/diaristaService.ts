@@ -21,6 +21,7 @@ export type DiaristaSearchQuery = {
   id_servico?: number;
   servico_nome?: string;
   cep_origem?: string;
+  id_endereco_origem?: number;
   distancia_max?: number;
   ordenar?: 'avaliacao' | 'preco_asc' | 'preco_desc' | 'nome' | 'distancia';
 };

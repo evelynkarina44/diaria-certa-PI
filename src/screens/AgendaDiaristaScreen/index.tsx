@@ -1,3 +1,4 @@
+import { PageHeader } from '../../components/page-header';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -176,13 +177,10 @@ export default function AgendaDiaristaScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />
-        <View style={styles.headerText}><Text style={styles.headerTitle}>Minha agenda</Text><Text style={styles.headerSubtitle}>Defina seus dias de trabalho e horários de início.</Text></View>
-      </View>
+      <PageHeader title="Minha agenda" subtitle="Escolha seus dias e horários." accentColor="#FF6B2C" left={<HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />} />
       <ScrollView pointerEvents={saving || loading ? 'none' : 'auto'} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.sectionTitle}>1. Selecione os dias de trabalho</Text>
-        <Text style={styles.helper}>Marque os dias da semana e depois toque no calendário para incluir ou retirar datas específicas.</Text>
+        <Text style={styles.sectionTitle}>Dias disponíveis</Text>
+        <Text style={styles.helper}>Selecione pela semana ou pelo calendário.</Text>
         <View style={styles.weekDayOptions}>
           {weekDays.map((day) => {
             const dates = selectableDates.filter((item) => item.weekDay === day.value);
@@ -214,18 +212,17 @@ export default function AgendaDiaristaScreen({ navigation }: any) {
           <View style={styles.legend}><View style={styles.legendDot} /><Text style={styles.legendText}>Dia disponível</Text><View style={styles.legendEmpty} /><Text style={styles.legendText}>Dia de folga</Text></View>
         </View>
 
-        <Text style={styles.sectionTitle}>2. Defina os horários de início</Text>
-        <Text style={styles.helper}>Toque no lápis para editar um horário. Marque ou desmarque dias no calendário e salve as alterações. Os horários se aplicam a todos os dias selecionados.</Text>
+        <Text style={styles.sectionTitle}>Horários de início</Text>
+        <Text style={styles.helper}>Valem para todos os dias selecionados. Edite pelo lápis.</Text>
         <View style={styles.timeInputRow}><TextInput style={styles.timeInput} value={newTime} onChangeText={(value) => setNewTime(formatTime(value))} placeholder="07:00" keyboardType="number-pad" maxLength={5} onSubmitEditing={addTime} /><TouchableOpacity style={styles.addTimeButton} onPress={addTime}><Ionicons name={editingTime ? 'checkmark' : 'add'} size={22} color="#FFFFFF" /><Text style={styles.addTimeText}>{editingTime ? 'Alterar' : 'Adicionar'}</Text></TouchableOpacity></View>
         {editingTime ? <TouchableOpacity onPress={() => { setEditingTime(null); setNewTime(''); }}><Text style={styles.helper}>Cancelar edição de {editingTime}</Text></TouchableOpacity> : null}
-        <Text style={styles.registeredTimesTitle}>Horários cadastrados</Text>
         <View style={styles.timeChips}>
           {startTimes.map((time) => <View key={time} style={styles.timeChip}><Ionicons name="time-outline" size={17} color="#E55318" /><Text style={styles.timeChipText}>{time}</Text><TouchableOpacity onPress={() => { setEditingTime(time); setNewTime(time); }} accessibilityLabel={`Editar ${time}`} style={{ padding: 6 }}><Ionicons name="create-outline" size={19} color="#E55318" /></TouchableOpacity><TouchableOpacity onPress={() => { setStartTimes((current) => current.filter((item) => item !== time)); if (editingTime === time) { setEditingTime(null); setNewTime(''); } }} accessibilityLabel={`Remover ${time}`}><Ionicons name="close-circle" size={19} color="#E55318" /></TouchableOpacity></View>)}
-          {!startTimes.length ? <Text style={styles.emptyText}>Nenhum horário de início adicionado.</Text> : null}
+          {!startTimes.length ? <Text style={styles.emptyText}>Adicione um horário.</Text> : null}
         </View>
 
         <View style={[styles.summaryCard, !hasChanges && savedKeys.size > 0 && styles.summaryCardSaved]}><Ionicons name={!hasChanges && savedKeys.size > 0 ? 'checkmark-circle' : 'calendar-outline'} size={22} color={!hasChanges && savedKeys.size > 0 ? '#16803C' : '#FF6B2C'} /><View style={styles.summaryText}><Text style={styles.summaryTitle}>{selectedDates.length} dias selecionados</Text><Text style={styles.summarySubtitle}>{startTimes.length} horários por dia • {selectedDates.length * startTimes.length} disponibilidades</Text></View></View>
-        <TouchableOpacity style={[styles.applyButton, (saving || loading) && styles.disabled]} onPress={applyMonth} disabled={saving || loading}>{saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.applyButtonText}>{!hasChanges && savedKeys.size > 0 ? 'Agenda do mês já está salva' : savedKeys.size > 0 ? 'Salvar alterações da agenda' : 'Salvar agenda do mês'}</Text>}</TouchableOpacity>
+        <TouchableOpacity style={[styles.applyButton, (saving || loading) && styles.disabled]} onPress={applyMonth} disabled={saving || loading}>{saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.applyButtonText}>{!hasChanges && savedKeys.size > 0 ? 'Agenda salva' : savedKeys.size > 0 ? 'Salvar alterações' : 'Salvar agenda'}</Text>}</TouchableOpacity>
         {loading ? <ActivityIndicator color="#FF6B2C" style={styles.loader} /> : null}
       </ScrollView>
       <ActionModal

@@ -42,7 +42,8 @@ async function bookingHarness(addresses) {
   const navigation = { addListener: () => () => {}, navigate() {}, goBack() {} };
   const Screen = load('src/screens/AgendarDiariaScreen/index.tsx', {
     react: h.react, 'react-native': native, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' }, '@expo/vector-icons': { Ionicons: 'Icon' }, './styles': { styles: {} },
-    '../../utils/selectedHouse': houseModule, '../../components/action-modal': { ActionModal: 'ActionModal' },
+    '../../utils/selectedHouse': houseModule, '../../components/page-header': require('./page-header-fixture.cjs'),
+    '../../components/action-modal': { ActionModal: 'ActionModal' },
     '../../contexts/GlobalContext': { useAuth: () => ({ user }) },
     '../../services/api': { getErrorMessage: error => error.message },
     '../../services/clienteService': { clienteService: { buscarPorId: async () => ({ id_cliente: 2, qtd_comodos: 99, tamanho_casa: 'media', endereco: addresses }) } },

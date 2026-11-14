@@ -95,11 +95,24 @@ headerIconButton: {
 
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
 
   calendar: {
-    marginTop: 12,
+    padding: 12,
+    paddingBottom: 20,
+    borderRadius: 18,
+    backgroundColor: '#FFFAF7',
+    borderWidth: 1,
+    borderColor: '#FFE5D8',
+  },
+
+  trackingSection: {
+    marginTop: 28,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#EAECF0',
   },
 
   calendarHeader: {
@@ -111,7 +124,7 @@ headerIconButton: {
   calendarMonth: {
     fontFamily: fonts.semibold,
     color: colors.text,
-    fontSize: fontSizes.sm ?? 13,
+    fontSize: 15,
   },
 
   calendarArrow: {
@@ -178,7 +191,7 @@ headerIconButton: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 28,
-    marginTop: 12,
+    marginTop: 20,
   },
 
   legendItem: {

@@ -40,9 +40,9 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
 
   const items = profile === 'diarista'
     ? [
+        { route: 'PerfilDiaristaEdicao', label: 'Meu perfil', icon: 'person-outline' as const },
         { route: 'HomeDiarista', label: 'Página inicial', icon: 'home-outline' as const },
         { route: 'AcompanharDiarias', label: 'Minhas diárias', icon: 'list-circle-outline' as const },
-        { route: 'PerfilDiaristaEdicao', label: 'Meu perfil', icon: 'person-outline' as const },
         { route: 'ServicosDiarista', label: 'Meus serviços', icon: 'sparkles-outline' as const },
         { route: 'CombosDiarista', label: 'Meus combos', icon: 'layers-outline' as const },
         { route: 'AgendaDiarista', label: 'Minha agenda', icon: 'calendar-outline' as const },

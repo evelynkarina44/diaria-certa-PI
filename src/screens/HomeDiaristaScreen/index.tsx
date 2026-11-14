@@ -1,13 +1,7 @@
+import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -109,21 +103,7 @@ export default function HomeDiaristaScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-
-        <View style={styles.headerIcons}>
-          <HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />
-          <View style={{ marginLeft: 'auto' }}><NotificationBell navigation={navigation} accentColor="#FF6B2C" /></View>
-        </View>
-
-        <Text style={styles.welcome}>
-          Olá, {user?.nome?.split(' ')[0] ?? 'diarista'}!
-        </Text>
-
-        <Text style={styles.subtitle}>
-          Veja suas oportunidades e agendamentos
-        </Text>
-      </View>
+      <PageHeader title={`Olá, ${user?.nome?.split(' ')[0] ?? 'diarista'}!`} subtitle="Veja suas oportunidades e agendamentos" accentColor="#FF6B2C" left={<HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />} right={<NotificationBell navigation={navigation} accentColor="#FF6B2C" />} />
 
       <View style={styles.body}>
         <View style={styles.tabs}>
@@ -172,7 +152,6 @@ export default function HomeDiaristaScreen({ navigation }: any) {
         >
           {aba === 'agenda' ? (
             <>
-              <AppointmentTracker navigation={navigation} profile="DIARISTA" compact />
               <View style={styles.calendar}>
                 <View style={styles.calendarHeader}>
                   <TouchableOpacity
@@ -283,6 +262,9 @@ export default function HomeDiaristaScreen({ navigation }: any) {
                     </Text>
                   </View>
                 </View>
+              </View>
+              <View style={styles.trackingSection}>
+                <AppointmentTracker navigation={navigation} profile="DIARISTA" compact />
               </View>
 
 

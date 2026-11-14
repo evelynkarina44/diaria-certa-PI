@@ -1,15 +1,7 @@
+import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -707,22 +699,9 @@ export default function EncontrarDiaristaScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <View style={[styles.headerTop, { justifyContent: 'space-between' }]}>
-            <View style={styles.headerActions}>
-              <HeaderMenu navigation={navigation} profile="cliente" accentColor="#18C7C8" />
-            </View>
-            <NotificationBell navigation={navigation} accentColor="#18C7C8" />
-          </View>
-
-          <Text style={styles.welcome}>
-            Olá, {user?.nome?.split(' ')[0] ?? 'cliente'}!
-          </Text>
-
-          <Text style={styles.headerDescription}>
-            Onde será a sua próxima diária?
-          </Text>
-        </View>
+        <PageHeader title={`Olá, ${user?.nome?.split(' ')[0] ?? 'cliente'}!`} subtitle="Onde será a sua próxima diária?" bottomSpace={36}
+          left={<HeaderMenu navigation={navigation} profile="cliente" accentColor="#18C7C8" />}
+          right={<NotificationBell navigation={navigation} accentColor="#18C7C8" />} />
 
         <View style={styles.locationCard}>
           <TouchableOpacity

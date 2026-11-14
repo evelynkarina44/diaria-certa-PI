@@ -1,13 +1,8 @@
+import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActionModal } from '../../components/action-modal';
 
-import {
-  ActivityIndicator,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -157,19 +152,7 @@ export default function SolicitacoesDiaristaScreen({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <View style={styles.headerIcons}>
-          <HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />
-        </View>
-
-        <Text style={styles.welcome}>
-          Olá, {user?.nome?.split(' ')[0] ?? 'diarista'}!
-        </Text>
-
-        <Text style={styles.subtitle}>
-          Veja suas oportunidades e agendamentos
-        </Text>
-      </View>
+      <PageHeader title={`Olá, ${user?.nome?.split(' ')[0] ?? 'diarista'}!`} subtitle="Veja suas oportunidades e agendamentos" accentColor="#FF6B2C" left={<HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />}  />
 
       <View style={styles.body}>
         <View style={styles.tabs}>

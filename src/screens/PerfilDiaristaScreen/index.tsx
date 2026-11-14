@@ -1,14 +1,7 @@
+import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useState } from 'react';
 
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,19 +50,8 @@ export default function PerfilDiaristaScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <PageHeader onBack={() => navigation.goBack()} />
         <View style={styles.imageArea}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            accessibilityLabel="Voltar"
-          >
-            <Ionicons
-              name="chevron-back"
-              size={29}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
 
           <View style={styles.imagePlaceholder}>
             {profile?.usuario?.foto_perfil ? (

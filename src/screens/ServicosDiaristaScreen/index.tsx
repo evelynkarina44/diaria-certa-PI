@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { PageHeader } from '../../components/page-header';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -13,6 +14,9 @@ import { getErrorMessage } from '../../services/api';
 import type { Diarista, DiaristaServico } from '../../services/types';
 import { styles } from './styles';
 import { formatCurrencyValue, parseCurrencyInput } from '../../utils/currency';
+
+const SERVICES_PER_PAGE = 10;
+const normalizeSearch = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
 
 const serviceNamePattern = /^[\p{L}\p{N}\s.,:;&()'´’/\-]+$/u;
 const invalidDescriptionCharacters = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
@@ -42,6 +46,10 @@ function validatePrice(value: string) {
 
 export default function ServicosDiaristaScreen({ navigation }: any) {
   const { user } = useAuth();
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  function changeSearch(value: string) { setSearch(value); setPage(1); }
   const [profile, setProfile] = useState<Diarista | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -64,6 +72,20 @@ export default function ServicosDiaristaScreen({ navigation }: any) {
   useEffect(() => { loadData(); }, [loadData]);
 
   const atuais = profile?.diarista_servico ?? [];
+  const terms = normalizeSearch(search).trim().split(/\s+/).filter(Boolean);
+  const filteredServices = atuais.filter(item => {
+    const text = normalizeSearch([item.servico?.nome_servico ?? '', item.servico?.descricao ?? ''].join(' '));
+    return terms.every(term => text.includes(term));
+  });
+  const pages = Math.max(1, Math.ceil(filteredServices.length / SERVICES_PER_PAGE));
+  const currentPage = Math.min(page, pages);
+  const visibleServices = filteredServices.slice((currentPage - 1) * SERVICES_PER_PAGE, currentPage * SERVICES_PER_PAGE);
+  useEffect(() => { setPage(1); }, [user?.diarista?.[0]?.id_diarista]);
+  useEffect(() => { setPage(current => Math.min(current, pages)); }, [pages]);
+  function changePage(nextPage: number) {
+    setPage(Math.max(1, Math.min(nextPage, pages)));
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }
   const parseMoney = parseCurrencyInput;
   const currency = (value: number | string) => Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   async function saveEdit(values: Record<string, string>) {
@@ -108,15 +130,9 @@ export default function ServicosDiaristaScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Meus serviços</Text>
-          <Text style={styles.subtitle}>Gerencie os serviços oferecidos e seus preços.</Text>
-        </View>
-      </View>
+      <PageHeader title="Meus serviços" subtitle="Gerencie os serviços oferecidos e seus preços." accentColor="#FF6B2C" left={<HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />} />
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Serviços cadastrados</Text>
           <View style={styles.actions}>
@@ -126,10 +142,19 @@ export default function ServicosDiaristaScreen({ navigation }: any) {
           </View>
         </View>
 
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={20} color="#667085" />
+          <TextInput style={styles.searchInput} value={search} onChangeText={changeSearch}
+            placeholder="Buscar serviço por nome ou descrição" placeholderTextColor="#98A2B3"
+            accessibilityLabel="Buscar serviços" autoCorrect={false} returnKeyType="search" />
+          {Boolean(search) && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Limpar busca de serviços"
+            onPress={() => changeSearch('')} style={styles.clearSearch}><Ionicons name="close-circle" size={20} color="#98A2B3" /></TouchableOpacity>}
+        </View>
+
         {loading ? <ActivityIndicator color="#FF6B2C" style={styles.loader} /> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        {!loading && !atuais.length ? <View style={styles.emptyCard}><Text style={styles.emptyText}>Nenhum serviço cadastrado.</Text></View> : null}
-        {atuais.map((item) => (
+        {!loading && !filteredServices.length ? <View style={styles.emptyCard}><Text style={styles.emptyText}>{atuais.length ? 'Nenhum serviço encontrado.' : 'Nenhum serviço cadastrado.'}</Text></View> : null}
+        {visibleServices.map((item) => (
           <View key={item.id_diarista_servico} style={styles.card}>
             <View style={styles.cardIcon}><Ionicons name="sparkles-outline" size={21} color="#FF6B2C" /></View>
             <View style={styles.cardContent}>
@@ -144,6 +169,19 @@ export default function ServicosDiaristaScreen({ navigation }: any) {
             </View>
           </View>
         ))}
+        {pages > 1 && <View style={styles.pagination}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Página anterior de serviços"
+            disabled={currentPage === 1} onPress={() => changePage(currentPage - 1)}
+            style={[styles.pageButton, currentPage === 1 && styles.disabled]}>
+            <Ionicons name="chevron-back" size={18} color="#E55318" /><Text style={styles.pageButtonText}>Anterior</Text>
+          </TouchableOpacity>
+          <Text accessibilityLiveRegion="polite" style={styles.pageIndicator}>Página {currentPage} de {pages}</Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Próxima página de serviços"
+            disabled={currentPage === pages} onPress={() => changePage(currentPage + 1)}
+            style={[styles.pageButton, currentPage === pages && styles.disabled]}>
+            <Text style={styles.pageButtonText}>Próxima</Text><Ionicons name="chevron-forward" size={18} color="#E55318" />
+          </TouchableOpacity>
+        </View>}
       </ScrollView>
 
       <ProfileEditModal

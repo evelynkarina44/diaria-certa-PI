@@ -46,6 +46,7 @@ function harness(fail = false) {
     react, 'react-native': native,
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@expo/vector-icons': { Ionicons: 'Icon' },
+    '../../components/page-header': require('./page-header-fixture.cjs'),
     '../../components/action-modal': { ActionModal: 'ActionModal' },
     '../../components/header-menu': { HeaderMenu: 'HeaderMenu' },
     '../../contexts/GlobalContext': { useAuth: () => ({ user: { diarista: [{ id_diarista: 8 }] } }) },
@@ -89,7 +90,7 @@ test('editar um horário substitui somente ele e salva o mês em uma única cham
   assert.ok(accessible(tree, 'Editar 09:30'));
   assert.ok(accessible(tree, 'Editar 11:00'));
   assert.equal(accessible(tree, 'Editar 09:00'), undefined);
-  await button(tree, 'Salvar alterações da agenda').props.onPress();
+  await button(tree, 'Salvar alterações').props.onPress();
   assert.deepEqual(h.calls, [{ mes: '2026-11', dias: ['2026-11-20'], horarios: ['09:30', '11:00'] }]);
   tree = h.render();
   assert.equal(modal(tree).props.variant, 'success');
@@ -103,7 +104,7 @@ test('dias podem ser trocados no calendário sem retirar horários cadastrados',
   tree = h.render();
   nodes(tree).find(node => node.props?.key === '2026-11-21').props.onPress();
   tree = h.render();
-  await button(tree, 'Salvar alterações da agenda').props.onPress();
+  await button(tree, 'Salvar alterações').props.onPress();
   assert.deepEqual(h.calls[0], { mes: '2026-11', dias: ['2026-11-21'], horarios: ['09:00', '11:00'] });
 });
 
@@ -116,7 +117,7 @@ test('erro mantém o rascunho e informa a falha na modal padrão', async () => {
   tree = h.render();
   input(tree).props.onSubmitEditing();
   tree = h.render();
-  await button(tree, 'Salvar alterações da agenda').props.onPress();
+  await button(tree, 'Salvar alterações').props.onPress();
   tree = h.render();
   assert.equal(modal(tree).props.variant, 'error');
   assert.equal(modal(tree).props.message, 'Falha simulada');

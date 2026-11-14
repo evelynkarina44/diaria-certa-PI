@@ -28,6 +28,7 @@ function harness(status = 'Aceito', fail = false, expired = false) {
     react, 'react-native': native,
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@expo/vector-icons': { Ionicons: 'Icon' },
+    '../../components/page-header': require('./page-header-fixture.cjs'),
     '../../components/action-modal': { ActionModal: 'ActionModal' },
     '../../services/agendamentoService': { agendamentoService: {
       buscarPorId: async () => booking,

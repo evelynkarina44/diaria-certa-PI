@@ -1,3 +1,5 @@
+import { HeaderMenu } from '../../components/header-menu';
+import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +19,7 @@ type RegistroHistorico = {
   endereco: string;
   status: Agendamento['status'];
   checkinExpirado?: boolean;
+  confirmacaoExpirada?: boolean;
   data: string;
   dataISO: string;
   horario?: string;
@@ -96,6 +99,7 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
       endereco: endereco ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}` : 'Endereço não informado',
       status: item.checkin_expirado ? 'Expirado' : item.status,
       checkinExpirado: item.checkin_expirado,
+      confirmacaoExpirada: item.confirmacao_cliente_expirada,
       dataISO: item.data_agendamento,
       data: new Date(item.data_agendamento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' }),
       horario: item.horario_inicio?.includes('T') ? item.horario_inicio.slice(11, 16) : item.horario_inicio?.slice(0, 5),
@@ -144,7 +148,7 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
           <Text style={styles.bookingNumber}>DIÁRIA #{registro.id}</Text>
           <View style={[styles.historyStatus, { backgroundColor: color + '14' }]}>
             <Ionicons name={statusIcons[registro.checkinExpirado ? 'Checkin_expirado' : registro.status]} size={15} color={color} />
-            <Text style={[styles.historyStatusText, { color }]}>{registro.checkinExpirado ? 'Check-in expirado' : statusLabels[registro.status]}</Text>
+            <Text style={[styles.historyStatusText, { color }]}>{registro.confirmacaoExpirada ? 'Confirmação não recebida' : registro.checkinExpirado ? 'Check-in expirado' : statusLabels[registro.status]}</Text>
           </View>
         </View>
         <View style={styles.historyProfileRow}>
@@ -177,7 +181,7 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
         </View>
         <View style={styles.historyFooter}>
           <View><Text style={styles.totalLabel}>Valor da diária</Text><Text style={styles.totalValue}>{registro.valor == null ? 'Não informado' : Number(registro.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text></View>
-          {['Aceito', 'Em_andamento', 'Concluido'].includes(registro.status) || registro.checkinExpirado ? (
+          {['Aceito', 'Em_andamento', 'Concluido'].includes(registro.status) || registro.checkinExpirado || registro.confirmacaoExpirada ? (
             <TouchableOpacity accessibilityRole="button" style={styles.paymentButton}
               onPress={() => navigation.navigate('CheckInDiarista', { agendamentoId: registro.id })}>
               <Ionicons name={registro.status === 'Em_andamento' ? 'log-out-outline' : 'receipt-outline'} size={18} color="#FFFFFF" />
@@ -192,12 +196,8 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, styles.historyHeaderTitle]}>Histórico</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Voltar">
-          <Ionicons name="chevron-back" size={27} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      <PageHeader title="Histórico" subtitle="Consulte suas diárias, pagamentos e avaliações." accentColor="#FF6B2C"
+        left={<HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />} />
       <View style={styles.body}>
         <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={[styles.scrollContent, styles.historyContainer]}
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -230,8 +230,7 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
                   accessibilityState={{ disabled: loading, busy: loading }}
                   disabled={loading} onPress={() => setRefreshKey(current => current + 1)}
                   style={[styles.refreshButton, loading && styles.refreshButtonDisabled]}>
-                  {loading ? <ActivityIndicator size="small" color="#C2410C" /> : <Ionicons name="refresh-outline" size={18} color="#C2410C" />}
-                  <Text style={styles.refreshText}>{loading ? 'Atualizando' : 'Atualizar'}</Text>
+                  {loading ? <ActivityIndicator size="small" color="#C2410C" /> : <Ionicons name="refresh-outline" size={22} color="#C2410C" />}
                 </TouchableOpacity>
               </View>
               <View style={styles.sortRow}>
@@ -269,7 +268,7 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
               <Text style={styles.emptyText}>{temFiltros ? 'Tente outro cliente, status ou data.' : 'Suas diárias aparecerão aqui.'}</Text>
             </View>
           )}
-          {!loading && Boolean(error) && <Text style={styles.emptyText}>Não foi possível carregar o histórico. Toque em Atualizar para tentar novamente.</Text>}
+          {!loading && Boolean(error) && <Text style={styles.emptyText}>Não foi possível carregar o histórico. Toque no ícone de atualização para tentar novamente.</Text>}
         </ScrollView>
       </View>
       <ActionModal visible={errorModalVisible} variant="error" title="Não foi possível carregar o histórico"

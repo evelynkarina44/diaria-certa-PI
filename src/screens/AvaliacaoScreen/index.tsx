@@ -1,14 +1,8 @@
+import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActionModal } from '../../components/action-modal';
 
-import {
-  ActivityIndicator,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -165,25 +159,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={voltar}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={31}
-            color="#FFFFFF"
-          />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          Avaliar serviço
-        </Text>
-
-        <View style={styles.headerSpacer} />
-      </View>
+      <PageHeader title="Avaliar serviço" accentColor="#18C7C8" onBack={voltar} />
 
       <ScrollView
         style={styles.scroll}

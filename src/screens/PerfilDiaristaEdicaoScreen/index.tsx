@@ -1,13 +1,7 @@
+import { PageHeader } from '../../components/page-header';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -122,20 +116,7 @@ export default function PerfilDiaristaEdicaoScreen({
         showsVerticalScrollIndicator={false}
       >
         {/* TOPO LARANJA */}
-        <View style={styles.topBackground}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={voltar}
-            activeOpacity={0.8}
-            accessibilityLabel="Voltar"
-          >
-            <Ionicons
-              name="chevron-back"
-              size={25}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
-        </View>
+        <PageHeader accentColor="#FF6B2C" onBack={voltar} bottomSpace={20} />
 
         {/* CONTEÚDO */}
         <View style={styles.content}>

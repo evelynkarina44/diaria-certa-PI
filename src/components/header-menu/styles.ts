@@ -3,9 +3,9 @@ import { colors, fonts, fontSizes } from '../../global';
 
 export const styles = StyleSheet.create({
   trigger: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',

@@ -1,15 +1,8 @@
+import { HeaderMenu } from '../../components/header-menu';
+import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  TextInput,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Image, TextInput, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,6 +38,7 @@ type Diarista = {
   status?: Agendamento['status'];
   checkinSolicitado?: boolean;
   checkinExpirado?: boolean;
+  confirmacaoExpirada?: boolean;
 };
 
 const statusLabels: Record<Agendamento['status'], string> = {
@@ -92,6 +86,13 @@ export default function HistoricoClienteScreen({
   const [erroHistorico, setErroHistorico] = useState('');
   const [erroFavoritos, setErroFavoritos] = useState('');
   const [busca, setBusca] = useState('');
+  const [buscaFavoritos, setBuscaFavoritos] = useState('');
+  const normalizarFavorito = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+  const termosFavoritos = normalizarFavorito(buscaFavoritos).trim().split(/\s+/).filter(Boolean);
+  const favoritosFiltrados = favoritos.filter(item => {
+    const texto = normalizarFavorito(item.nome + ' ' + item.distancia);
+    return termosFavoritos.every(termo => texto.includes(termo));
+  });
   const [statusFiltro, setStatusFiltro] = useState('Todos');
   const [dataFiltro, setDataFiltro] = useState('');
   const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
@@ -137,6 +138,7 @@ export default function HistoricoClienteScreen({
       favorito: Boolean(favorito),
       respostaRapida: profile.responde_rapido === true,
       favoritoId: favorito?.id_favorito,
+      foto: profile.usuario?.foto_perfil,
     };
   }
 
@@ -172,6 +174,7 @@ export default function HistoricoClienteScreen({
       ),
       status: appointment.checkin_expirado ? 'Expirado' : appointment.status,
       checkinExpirado: appointment.checkin_expirado,
+      confirmacaoExpirada: appointment.confirmacao_cliente_expirada,
       checkinSolicitado: appointment.checkin_checkout?.some((item) => ['Checkin_solicitado', 'Aguardando_pagamento'].includes(item.status_checkin)),
     };
   }
@@ -245,83 +248,42 @@ export default function HistoricoClienteScreen({
 
   function renderCard(diarista: Diarista) {
     return (
-      <View
-        key={diarista.id}
-        style={styles.card}
-      >
-        <TouchableOpacity
-          style={styles.cardContent}
-          onPress={() => abrirPerfil(diarista)}
-          activeOpacity={0.85}
-        >
-          <View style={styles.avatar}>
-            <Ionicons
-              name="person"
-              size={36}
-              color="#FFFFFF"
-            />
-          </View>
-
-          <View style={styles.info}>
-            <Text style={styles.name}>
-              {diarista.nome}
-            </Text>
-
-            <View style={styles.ratingRow}>
-              <Text style={styles.rating}>
-                {diarista.avaliacao}
-              </Text>
-
-              <Ionicons
-                name="star"
-                size={12}
-                color="#FFB800"
-              />
-
-              <Text style={styles.reviewCount}>
-                ({diarista.quantidadeAvaliacoes})
-              </Text>
+      <View key={diarista.id} style={styles.favoriteCard}>
+        <View style={styles.favoriteCardTop}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Ver perfil de ${diarista.nome}`}
+            style={styles.favoriteProfile} onPress={() => abrirPerfil(diarista)} activeOpacity={0.8}>
+            <View style={styles.favoriteAvatar}>
+              {diarista.foto && !fotosComErro.includes(diarista.id)
+                ? <Image source={{ uri: diarista.foto }} style={styles.historyPhoto}
+                    onError={() => setFotosComErro(current => [...current, diarista.id])} />
+                : <Ionicons name="person-outline" size={30} color="#008A99" />}
             </View>
-
-            <Text style={styles.distance}>
-              {diarista.distancia}
-            </Text>
-
-            {diarista.status ? <View style={[styles.quickBadge, { backgroundColor: statusColors[diarista.status] }]}>
-              <Ionicons
-                name={diarista.status === 'Concluido' ? 'checkmark-circle-outline' : 'time-outline'}
-                size={12}
-                color="#FFFFFF"
-              />
-
-              <Text style={[styles.quickText, styles.statusText]}>
-                {diarista.checkinExpirado ? 'Check-in expirado' : statusLabels[diarista.status]}
-              </Text>
-            </View> : diarista.respostaRapida ? <View style={styles.quickBadge}>
-              <Ionicons name="checkmark-circle-outline" size={12} color="#18C7C8" />
-              <Text style={styles.quickText}>Responde rápido</Text>
-            </View> : null}
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={() => alternarFavorito(diarista)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={
-              diarista.favorito
-                ? 'heart'
-                : 'heart-outline'
-            }
-            size={21}
-            color={
-              diarista.favorito
-                ? '#E0001B'
-                : '#AAAAAA'
-            }
-          />
+            <View style={styles.favoriteInfo}>
+              <Text style={styles.favoriteName}>{diarista.nome}</Text>
+              <View style={styles.favoriteRatingRow}>
+                <Ionicons name="star" size={15} color="#F5A623" />
+                <Text style={styles.favoriteRating}>{Number(diarista.avaliacao) > 0 ? diarista.avaliacao : 'Sem avaliações'}</Text>
+                {Number(diarista.quantidadeAvaliacoes) > 0 && <Text style={styles.favoriteReviewCount}>({diarista.quantidadeAvaliacoes})</Text>}
+              </View>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Remover ${diarista.nome} dos favoritos`}
+            style={styles.favoriteHeart} onPress={() => alternarFavorito(diarista)} activeOpacity={0.7}>
+            <Ionicons name="heart" size={22} color="#E34A68" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.favoriteLocation}>
+          <Ionicons name="location-outline" size={17} color="#008A99" />
+          <Text style={styles.favoriteLocationText}>{diarista.distancia}</Text>
+        </View>
+        {diarista.respostaRapida && <View style={styles.favoriteQuick}>
+          <Ionicons name="time-outline" size={14} color="#008A99" />
+          <Text style={styles.favoriteQuickText}>Responde rápido</Text>
+        </View>}
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Abrir perfil de ${diarista.nome}`}
+          style={styles.favoriteProfileButton} onPress={() => abrirPerfil(diarista)} activeOpacity={0.8}>
+          <Text style={styles.favoriteProfileButtonText}>Ver perfil</Text>
+          <Ionicons name="arrow-forward" size={18} color="#008A99" />
         </TouchableOpacity>
       </View>
     );
@@ -336,7 +298,7 @@ export default function HistoricoClienteScreen({
           <Text style={styles.bookingNumber}>DIÁRIA #{item.id}</Text>
           <View style={[styles.historyStatus, { backgroundColor: color + '14' }]}>
             <Ionicons name={statusIcons[item.checkinExpirado ? 'Checkin_expirado' : status]} size={15} color={color} />
-            <Text style={[styles.historyStatusText, { color }]}>{item.checkinExpirado ? 'Check-in expirado' : statusLabels[status]}</Text>
+            <Text style={[styles.historyStatusText, { color }]}>{item.confirmacaoExpirada ? 'Confirmação não recebida' : item.checkinExpirado ? 'Check-in expirado' : statusLabels[status]}</Text>
           </View>
         </View>
         <View style={styles.historyProfileRow}>
@@ -372,28 +334,16 @@ export default function HistoricoClienteScreen({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, !exibirFavoritos && styles.historyHeaderTitle]}>
-          {exibirFavoritos ? 'Favoritos' : 'Histórico'}
-        </Text>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={27}
-            color="#FFFFFF"
-          />
-        </TouchableOpacity>
-      </View>
+      <PageHeader title={exibirFavoritos ? 'Favoritos' : 'Histórico'}
+        subtitle={exibirFavoritos ? 'Encontre suas profissionais favoritas.' : 'Consulte suas diárias, pagamentos e avaliações.'}
+        accentColor="#18C7C8" left={<HeaderMenu navigation={navigation} profile="cliente" accentColor="#18C7C8" />} />
 
-      <View style={styles.body}>
+      <View style={[styles.body, exibirFavoritos && styles.favoritesBody]}>
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, !exibirFavoritos && styles.historyContainer]}
+          contentContainerStyle={[styles.scrollContent, styles.historyContainer]}
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           {loading && <ActivityIndicator color={'#18C7C8'} />}
@@ -426,8 +376,7 @@ export default function HistoricoClienteScreen({
                   accessibilityState={{ disabled: loading, busy: loading }}
                   disabled={loading} onPress={carregarDados}
                   style={[styles.refreshButton, loading && styles.refreshButtonDisabled]}>
-                  {loading ? <ActivityIndicator size="small" color="#008A99" /> : <Ionicons name="refresh-outline" size={18} color="#008A99" />}
-                  <Text style={styles.refreshText}>{loading ? 'Atualizando' : 'Atualizar'}</Text>
+                  {loading ? <ActivityIndicator size="small" color="#008A99" /> : <Ionicons name="refresh-outline" size={22} color="#008A99" />}
                 </TouchableOpacity>
               </View>
               <View style={styles.sortRow}>
@@ -471,32 +420,37 @@ export default function HistoricoClienteScreen({
             </>
           ) : (
             <>
-              <Text style={styles.favoriteTitle}>
-                Confira a sua lista de favoritos
-              </Text>
-
-              <View style={styles.favoritesList}>
-                {favoritos.map((item) => renderCard(item))}
+              <View style={styles.favoriteToolbar}>
+                <View style={styles.favoriteSummary}>
+                  <Text style={styles.favoriteSectionTitle}>Profissionais salvas</Text>
+                  <View style={styles.favoriteCount}><Ionicons name="heart" size={13} color="#E34A68" />
+                    <Text style={styles.favoriteCountText}>{favoritos.length}</Text></View>
+                </View>
+                <View style={styles.historySearch}>
+                  <Ionicons name="search-outline" size={20} color="#667085" />
+                  <TextInput style={styles.historyInput} value={buscaFavoritos} onChangeText={setBuscaFavoritos}
+                    placeholder="Buscar nome ou localização" placeholderTextColor="#98A2B3"
+                    accessibilityLabel="Buscar favoritas" autoCorrect={false} returnKeyType="search" />
+                  {Boolean(buscaFavoritos) && <TouchableOpacity accessibilityLabel="Limpar busca de favoritas"
+                    style={styles.favoriteClearSearch} onPress={() => setBuscaFavoritos('')}>
+                    <Ionicons name="close-circle" size={20} color="#98A2B3" />
+                  </TouchableOpacity>}
+                </View>
               </View>
-
+              <View style={styles.favoritesList}>
+                {favoritosFiltrados.map((item) => renderCard(item))}
+              </View>
               {Boolean(erroFavoritos) && <Text style={styles.emptyText}>{erroFavoritos}</Text>}
-
-              {!loading && !erroFavoritos && favoritos.length === 0 && (
-                <View style={styles.emptyState}>
-                  <Ionicons
-                    name="heart-outline"
-                    size={50}
-                    color="#CCCCCC"
-                  />
-
-                  <Text style={styles.emptyTitle}>
-                    Nenhuma diarista favorita
-                  </Text>
-
-                  <Text style={styles.emptyText}>
-                    Toque no coração das profissionais que você
-                    deseja salvar.
-                  </Text>
+              {!loading && !erroFavoritos && favoritosFiltrados.length === 0 && (
+                <View style={styles.favoriteEmpty}>
+                  <View style={styles.favoriteEmptyIcon}><Ionicons name={favoritos.length ? 'search-outline' : 'heart-outline'} size={32} color="#008A99" /></View>
+                  <Text style={styles.emptyTitle}>{favoritos.length ? 'Nenhuma profissional encontrada' : 'Suas favoritas ficam aqui'}</Text>
+                  <Text style={styles.emptyText}>{favoritos.length ? 'Tente outro nome ou localização.' : 'Salve as profissionais que você quer contratar.'}</Text>
+                  <TouchableOpacity style={styles.favoriteEmptyButton}
+                    onPress={() => favoritos.length ? setBuscaFavoritos('') : navigation.navigate('EncontrarDiarista')}>
+                    <Text style={styles.favoriteProfileButtonText}>{favoritos.length ? 'Limpar busca' : 'Encontrar diaristas'}</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#008A99" />
+                  </TouchableOpacity>
                 </View>
               )}
             </>

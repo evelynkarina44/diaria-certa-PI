@@ -36,7 +36,7 @@ test('selo é condicional e query só usa o filtro aplicado, não o rascunho', (
   assert.ok(find.includes('{diarista.respostaRapida && <View style={styles.quickResponse}>'));
   assert.ok(find.includes('responde_rapido: respostaRapidaAplicada ? true : undefined'));
   assert.equal(find.includes('Boolean(profile.frequencia_resposta)'), false);
-  assert.ok(source('HistoricoClienteScreen').includes(': diarista.respostaRapida ? <View style={styles.quickBadge}>'));
+  assert.ok(source('HistoricoClienteScreen').includes('diarista.respostaRapida && <View style={styles.favoriteQuick}>'));
 });
 
 test('selecionar ou limpar não aplica filtro sem confirmação; reabrir descarta rascunho', () => {

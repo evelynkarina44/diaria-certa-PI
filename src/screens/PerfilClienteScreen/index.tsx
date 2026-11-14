@@ -1,13 +1,7 @@
+import { PageHeader } from '../../components/page-header';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -86,16 +80,7 @@ export default function PerfilClienteScreen({ navigation }: any) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            accessibilityLabel="Voltar"
-          >
-            <Ionicons name="chevron-back" size={27} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+        <PageHeader onBack={() => navigation.goBack()} bottomSpace={20} />
 
         <View style={styles.content}>
           <View style={styles.profileHeader}>

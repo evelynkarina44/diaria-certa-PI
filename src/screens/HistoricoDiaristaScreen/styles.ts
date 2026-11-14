@@ -20,7 +20,7 @@ export const styles = StyleSheet.create({
   statusChipTextSelected: { color: '#FFFFFF' },
   dateHint: { fontFamily: fonts.regular, fontSize: 11, color: '#667085', marginTop: -5 },
   resultsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 5 },
-  refreshButton: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, borderRadius: 12, paddingHorizontal: 12, backgroundColor: '#FFF1E8' },
+  refreshButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: '#FFF1E8' },
   refreshButtonDisabled: { opacity: 0.6 },
   refreshText: { fontFamily: fonts.medium, fontSize: 12, color: '#C2410C' },
   sortRow: { flexDirection: 'row', justifyContent: 'flex-end' },

@@ -3,6 +3,9 @@ import type { AppointmentStatus, Profile, PaginatedResponse } from './types';
 import type { ResumoPagamento } from './pagamentoService';
 
 export type TrackingAppointment = {
+  confirmacao_cliente_expirada?: boolean;
+  confirmacao_cliente_limite_em?: string | null;
+  aguardando_confirmacao_cliente?: boolean;
   checkin_expirado?: boolean;
   checkin_limite_em?: string | null;
   id_agendamento: number;
@@ -14,7 +17,7 @@ export type TrackingAppointment = {
   pessoa: { nome: string; foto_perfil: string | null } | null;
   endereco: { logradouro: string; numero: string; bairro: string; cidade: string; estado: string } | null;
   servicos: string[];
-  checkin: { horario_checkin: string | null; horario_checkout: string | null; status_checkin: string } | null;
+  checkin: { horario_chegada?: string | null; horario_checkin: string | null; horario_checkout: string | null; status_checkin: string } | null;
   pagamento: ResumoPagamento | null;
 };
 export type TrackingResponse = PaginatedResponse<TrackingAppointment> & { atualizado_em: string };

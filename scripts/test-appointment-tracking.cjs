@@ -22,17 +22,17 @@ test('pending request: only diarista receives accept/refuse actions', () => {
  assert.equal(trackingState(data, 'CLIENTE', now).respond, undefined);
  assert.equal(trackingState(data, 'CLIENTE', now).requiresAction, false);
 });
-test('accepted unpaid entry: only client receives payment action', () => {
+test('entrada pendente: cliente paga; diarista pode registrar chegada sem iniciar', () => {
  const data = item();
  assert.equal(trackingState(data, 'CLIENTE', now).actionLabel, 'Pagar entrada de 50%');
  assert.equal(trackingState(data, 'CLIENTE', now).route, 'Pagamento');
- assert.equal(trackingState(data, 'DIARISTA', now).requiresAction, false);
+ assert.equal(trackingState(data, 'DIARISTA', now).actionLabel, 'Cheguei');
 });
-test('check-in is offered to diarista only after paid entry and scheduled start', () => {
+test('chegada só é oferecida à diarista a partir do horário', () => {
  const data = item();
  data.pagamento.parcelas[0].status = 'Pago';
  assert.equal(trackingState(data, 'DIARISTA', now - 1).requiresAction, false);
- assert.equal(trackingState(data, 'DIARISTA', now).actionLabel, 'Realizar check-in');
+ assert.equal(trackingState(data, 'DIARISTA', now).actionLabel, 'Cheguei');
  assert.equal(trackingState(data, 'DIARISTA', now).route, 'CheckInDiarista');
  assert.equal(trackingState(data, 'CLIENTE', now).requiresAction, false);
 });
@@ -113,4 +113,19 @@ test('limite de 30min encerra pendência para ambos os perfis; não encerra diá
     data.checkin_expirado = true;
     assert.equal(trackingState(data, profile, now).title, 'Check-in expirado');
   }
+});
+
+test('chegada registrada oferece confirmação ao cliente e mantém diarista aguardando, sem confundir com ausência', () => {
+ const data = item();
+ data.pagamento.parcelas[0].status = 'Pago';
+ data.checkin = { horario_chegada: '2026-11-10T11:00:00Z', horario_checkin: null, status_checkin: 'Checkin_solicitado' };
+ const later = now + 31 * 60000;
+ data.confirmacao_cliente_limite_em = '2026-11-10T11:45:00Z';
+ assert.equal(trackingState(data, 'CLIENTE', later).route, 'CheckIn');
+ assert.equal(trackingState(data, 'CLIENTE', later).actionLabel, 'Confirmar início');
+ assert.equal(trackingState(data, 'DIARISTA', later).title, 'Aguardando confirmação do cliente');
+ assert.equal(trackingState(data, 'DIARISTA', later).requiresAction, false);
+ const expired = trackingState(data, 'CLIENTE', now + 45 * 60000);
+ assert.equal(expired.title, 'Confirmação do cliente expirada');
+ assert.equal(expired.finished, true);
 });

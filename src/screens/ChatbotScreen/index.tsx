@@ -1,3 +1,4 @@
+import { PageHeader } from '../../components/page-header';
 // APRESENTACAO | PESSOA 3 | ETAPA 7 — Demonstração: preferir a aplicação no navegador.
 // Código de apoio: send() envia, proposalAction() confirma/cancela e openConversation() retoma chats.
 import React, { useEffect, useRef, useState } from 'react';
@@ -147,17 +148,11 @@ export default function ChatbotScreen({ navigation }: any) {
 
   return <SafeAreaView style={styles.safe}>
     <KeyboardAvoidingView style={styles.keyboard} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <HeaderMenu navigation={navigation} profile="cliente" accentColor="#18C7C8" />
-          <View style={styles.headerActions}>
+      <PageHeader title="Assistente Diária Certa" subtitle="Encontre uma profissional e revise sua solicitação."
+        left={<HeaderMenu navigation={navigation} profile="cliente" accentColor="#18C7C8" />} right={<View style={styles.headerActions}>
             <TouchableOpacity style={[styles.historyButton, (busy || loading || !isClient) && styles.disabled]} disabled={busy || loading || !isClient} onPress={() => { setHistoryError(''); setHistoryOpen((value) => !value); }} accessibilityLabel="Consultar conversas anteriores" accessibilityState={{ expanded: historyOpen }}><Ionicons name="time-outline" size={21} color="#087F83" /><Text style={styles.optionText}>Conversas</Text></TouchableOpacity>
             <TouchableOpacity style={styles.reset} disabled={busy || loading} onPress={() => start(true)} accessibilityLabel="Iniciar nova conversa"><Ionicons name="add" size={23} color="#18C7C8" /></TouchableOpacity>
-          </View>
-        </View>
-        <Text style={styles.title}>Assistente Diária Certa</Text>
-        <Text style={styles.subtitle}>Encontre uma profissional e revise sua solicitação.</Text>
-      </View>
+          </View>} />
       <View style={styles.body}>
         {historyOpen && isClient ? <ChatbotHistoryPanel key={user?.id_usuario} activeId={conversation?.id_conversa} openingId={openingConversation} error={historyError} onSelect={openConversation} onClose={() => setHistoryOpen(false)} /> : <>
         <ScrollView ref={scroll} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>

@@ -1,8 +1,10 @@
+import { PageHeader } from '../../components/page-header';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActionModal } from '../../components/action-modal';
-import { ActivityIndicator, AppState, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, ScrollView, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+
 import { styles } from './styles';
 import { agendamentoService } from '../../services/agendamentoService';
 import { checkinCheckoutService } from '../../services/checkinCheckoutService';
@@ -88,10 +90,15 @@ function Diaria({ navigation, route }: any) {
     ? new Date(booking.data_agendamento.slice(0, 10) + 'T' + time(booking.horario_inicio) + ':00-03:00').getTime()
     : NaN;
   const deadline = booking?.checkin_limite_em ? new Date(booking.checkin_limite_em).getTime() : startsAt + 30 * 60000;
-  const expired = booking?.checkin_expirado || (booking?.status === 'Aceito' && !check?.horario_checkin && Number.isFinite(deadline) && now >= deadline);
-  const canStart = !expired && booking?.status === 'Aceito' && entryPaid && Number.isFinite(startsAt) && now >= startsAt;
+  const arrived = Boolean(check?.horario_chegada);
+  const confirmationLimit = booking?.confirmacao_cliente_limite_em ? new Date(booking.confirmacao_cliente_limite_em).getTime()
+    : check?.horario_chegada ? new Date(check.horario_chegada).getTime() + 30 * 60000 : NaN;
+  const confirmationExpired = booking?.confirmacao_cliente_expirada || (booking?.status === 'Aceito' && arrived && !check?.horario_checkin && now >= confirmationLimit);
+  const waiting = booking?.status === 'Aceito' && arrived && !check?.horario_checkin && !confirmationExpired;
+  const expired = booking?.checkin_expirado || (booking?.status === 'Aceito' && !arrived && !check?.horario_checkin && Number.isFinite(deadline) && now >= deadline);
+  const canStart = !expired && !confirmationExpired && !arrived && booking?.status === 'Aceito' && Number.isFinite(startsAt) && now >= startsAt;
   const canFinish = running && check?.status_checkin === 'Iniciado';
-  const canCancel = !expired && booking?.status === 'Aceito' && !check?.horario_checkin;
+  const canCancel = !expired && !confirmationExpired && booking?.status === 'Aceito' && !check?.horario_checkin;
 
   async function act() {
     if (locked.current || invalidSession.current || !(canStart || canFinish)) return;
@@ -106,7 +113,7 @@ function Diaria({ navigation, route }: any) {
       if (!alive.current) return;
       setNotice(canFinish
         ? 'Checkout registrado. O cliente já pode pagar os 50% restantes. O valor ainda depende da aprovação do Mercado Pago.'
-        : 'Check-in registrado. A diária está em andamento.');
+        : 'Chegada registrada. O cliente será avisado no aplicativo e deverá confirmar o início em até 30 minutos. Aguarde a confirmação antes de começar.');
       setConfirmCheckout(false); setConfirmStart(false);
     } catch (cause) {
       setConfirmCheckout(false); setConfirmStart(false);
@@ -140,14 +147,8 @@ function Diaria({ navigation, route }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.orangeHeader, { justifyContent: 'center', paddingHorizontal: 18 }]}>
-        <TouchableOpacity accessibilityLabel="Voltar" onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      <PageHeader title={confirmationExpired ? 'Confirmação não recebida' : waiting ? 'Aguardando confirmação' : expired ? 'Check-in expirado' : booking?.status === 'Cancelado' ? 'Diária cancelada' : finished ? 'Diária finalizada' : running ? 'Diária em andamento' : 'Registrar chegada'} accentColor="#FF6B2C" onBack={() => navigation.goBack()} />
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.title}>{expired ? 'Check-in expirado' : booking?.status === 'Cancelado' ? 'Diária cancelada' : finished ? 'Diária finalizada' : running ? 'Diária em andamento' : 'Check-in da diária'}</Text>
-        <View style={styles.divider} />
         {loading && <ActivityIndicator color="#FF6B2C" />}
         {booking && <>
           <Text style={styles.name}>{booking.cliente?.usuario?.nome ?? 'Cliente'}</Text>
@@ -156,22 +157,26 @@ function Diaria({ navigation, route }: any) {
           <Text style={styles.address}>{booking.endereco ? booking.endereco.logradouro + ', ' + booking.endereco.numero + ' — ' + booking.endereco.bairro : 'Endereço não informado'}</Text>
           <Text style={styles.sectionTitle}>Serviços solicitados</Text>
           {booking.agendamento_servico?.map(item => <Text key={item.id} style={styles.address}>• {item.diarista_servico?.servico?.nome_servico ?? 'Serviço'}</Text>)}
-          {!expired && booking.status === 'Aceito' && <Text style={[styles.address, { marginTop: 24 }]}>
-            {!entryPaid ? 'Aguardando o cliente pagar a entrada de 50% para iniciar a diária.' : !canStart ? 'O check-in será liberado a partir do horário agendado. Horário de Brasília.' : 'O horário chegou. Registre o check-in para iniciar a diária.'}
+          {!expired && !confirmationExpired && !waiting && booking.status === 'Aceito' && <Text style={[styles.address, { marginTop: 24 }]}>
+            {!canStart ? 'Registre a chegada a partir do horário agendado, no horário de Brasília.' : 'Ao chegar ao local, toque em Cheguei. O cliente precisa confirmar antes do início.'}
+            {!entryPaid ? ' A entrada ainda precisa ser paga pelo cliente para que o serviço possa começar.' : ''}
           </Text>}
-          {expired && <Text style={[styles.address, { marginTop: 24, color: '#D92D20' }]}>O check-in não foi registrado nos 30 minutos após o horário agendado. Esta diária foi encerrada. Se a entrada foi paga, será solicitado o estorno integral ao cliente. Consulte o histórico para acompanhar.</Text>}
-          {!expired && booking.status === 'Aceito' && Number.isFinite(deadline) && <Text style={[styles.address, { marginTop: 12 }]}>Prazo para check-in: {stamp(new Date(deadline).toISOString())}. Tolerância de 30 minutos.</Text>}
+          {waiting && <Text style={[styles.address, { marginTop: 24 }]}>Chegada registrada. Aguarde o cliente confirmar o início no aplicativo até {stamp(new Date(confirmationLimit).toISOString())}. Não comece o serviço antes da confirmação.</Text>}
+          {confirmationExpired && <Text style={[styles.address, { marginTop: 24, color: '#D92D20' }]}>Você registrou a chegada, mas o cliente não confirmou em 30 minutos. A diária foi encerrada por falta de confirmação, sem registrar sua ausência. A entrada paga terá estorno integral.</Text>}
+          {expired && <Text style={[styles.address, { marginTop: 24, color: '#D92D20' }]}>A chegada não foi registrada nos 30 minutos após o horário agendado. Esta diária foi encerrada. Se a entrada foi paga, será solicitado o estorno integral ao cliente. Consulte o histórico para acompanhar.</Text>}
+          {!expired && !confirmationExpired && !waiting && booking.status === 'Aceito' && Number.isFinite(deadline) && <Text style={[styles.address, { marginTop: 12 }]}>Prazo para registrar chegada: {stamp(new Date(deadline).toISOString())}. Tolerância de 30 minutos.</Text>}
           {running && <Text style={[styles.address, { marginTop: 24 }]}>Ao terminar o serviço, realize o checkout para liberar o pagamento do saldo pelo cliente.</Text>}
+          {check?.horario_chegada && <Text style={[styles.address, { marginTop: 16 }]}>Chegada: {stamp(check.horario_chegada)}</Text>}
           {check?.horario_checkin && <Text style={[styles.address, { marginTop: 16 }]}>Check-in: {stamp(check.horario_checkin)}</Text>}
           {check?.horario_checkout && <Text style={[styles.address, { marginTop: 10 }]}>Checkout: {stamp(check.horario_checkout)}</Text>}
           {finished && <Text style={[styles.address, { marginTop: 16 }]}>O checkout liberou os 50% restantes para o cliente pagar. Finalizar o serviço não confirma o pagamento.</Text>}
-          {!expired && (booking.status === 'Aceito' || running) && <TouchableOpacity
+          {!expired && !confirmationExpired && !waiting && (booking.status === 'Aceito' || running) && <TouchableOpacity
             accessibilityRole="button"
             style={[styles.checkInButton, (loading || sending || sessionExpired || !(canStart || canFinish)) && { opacity: 0.45 }]}
             disabled={loading || sending || sessionExpired || !(canStart || canFinish)}
             onPress={() => void act()}>
             {sending ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.checkInButtonText}>
-              {canFinish ? 'Realizar checkout' : 'Realizar check-in'}
+              {canFinish ? 'Realizar checkout' : 'Cheguei'}
             </Text>}
           </TouchableOpacity>}
         </>}
@@ -186,7 +191,7 @@ function Diaria({ navigation, route }: any) {
         {payment?.parcelas.map(item => <Text key={item.fase} style={[styles.address, { marginTop: 16 }]}>{item.fase}: {money(item.valor)} — {item.status.replace(/_/g, ' ')}</Text>)}
         {sessionExpired ? <TouchableOpacity style={styles.checkInButton} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })}>
           <Text style={styles.checkInButtonText}>Entrar novamente</Text>
-        </TouchableOpacity> : <TouchableOpacity disabled={sending} onPress={() => void reload.current()}><Text style={[styles.address, { color: '#008A99', marginTop: 24 }]}>Atualizar diária e pagamentos</Text></TouchableOpacity>}
+        </TouchableOpacity> : <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar diária e pagamentos" accessibilityState={{ disabled: sending || loading, busy: loading }} disabled={sending || loading} style={[{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', backgroundColor: '#FFF1E8' }, { marginTop: 24 }]} onPress={() => void reload.current()}>{loading ? <ActivityIndicator size="small" color="#C2410C" /> : <Ionicons name="refresh-outline" size={22} color="#C2410C" />}</TouchableOpacity>}
       </ScrollView>
       <ActionModal visible={Boolean(error)} variant="error" title={sessionExpired ? 'Sessão expirada' : 'Não foi possível concluir'} message={error}
         confirmLabel={sessionExpired ? 'Entrar novamente' : 'Entendi'} onClose={() => setError('')}
@@ -198,9 +203,9 @@ function Diaria({ navigation, route }: any) {
         confirmLabel="Sim, cancelar diária" cancelLabel="Manter diária" busy={sending}
         onConfirm={cancelBooking} onClose={() => setConfirmCancel(false)} />
       <ActionModal visible={(confirmStart || confirmCheckout) && !error && !notice} variant="confirm" accentColor="#FF6B2C"
-        title={confirmCheckout ? 'Finalizar diária?' : 'Iniciar diária?'}
-        message={confirmCheckout ? 'Confirma que terminou o serviço? O checkout registra a finalização e libera os 50% restantes para o cliente pagar.' : 'Confirma que está iniciando o serviço? O horário do check-in será registrado agora.'}
-        confirmLabel={confirmCheckout ? 'Confirmar checkout' : 'Confirmar check-in'} cancelLabel="Cancelar" busy={sending}
+        title={confirmCheckout ? 'Finalizar diária?' : 'Registrar chegada?'}
+        message={confirmCheckout ? 'Confirma que terminou o serviço? O checkout registra a finalização e libera os 50% restantes para o cliente pagar.' : 'Confirme apenas se já chegou ao endereço. Isso não inicia o serviço: aguarde a confirmação do cliente no aplicativo.'}
+        confirmLabel={confirmCheckout ? 'Confirmar checkout' : 'Confirmar chegada'} cancelLabel="Cancelar" busy={sending}
         onConfirm={act} onClose={() => { setConfirmCheckout(false); setConfirmStart(false); }} />
     </SafeAreaView>
   );

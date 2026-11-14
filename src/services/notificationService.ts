@@ -1,7 +1,7 @@
 import { request } from './api';
 export type AppNotification = {
   id: string; id_agendamento: number; tipo: string; titulo: string; mensagem: string;
-  criado_em: string; lida: boolean; acao: 'pagamento' | 'diaria' | 'acompanhar' | 'avaliacao';
+  criado_em: string; lida: boolean; acao: 'pagamento' | 'diaria' | 'acompanhar' | 'avaliacao' | 'checkin';
 };
 export type NotificationResponse = {
   data: AppNotification[]; nao_lidas: number; atualizado_em: string;

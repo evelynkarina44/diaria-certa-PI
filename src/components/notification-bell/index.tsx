@@ -37,7 +37,7 @@ export function NotificationBell({ navigation, accentColor = '#18C7C8' }: { navi
       if (!item.lida) await notification.markRead(item.id);
       if (session !== currentSession.current || !navigation.isFocused()) return;
       setVisible(false);
-      const route = item.acao === 'avaliacao' ? 'Avaliacao' : item.acao === 'pagamento' ? 'Pagamento' : item.acao === 'diaria' ? 'CheckInDiarista' : 'AcompanharDiarias';
+      const route = item.acao === 'checkin' ? 'CheckIn' : item.acao === 'avaliacao' ? 'Avaliacao' : item.acao === 'pagamento' ? 'Pagamento' : item.acao === 'diaria' ? 'CheckInDiarista' : 'AcompanharDiarias';
       navigation.navigate(route, { agendamentoId: item.id_agendamento });
     } catch (cause) { if (session === currentSession.current) showError(cause); }
     finally { if (session === currentSession.current) { operation.current = false; setBusy(false); } }
@@ -67,11 +67,11 @@ export function NotificationBell({ navigation, accentColor = '#18C7C8' }: { navi
           <View style={styles.header}><Text style={styles.title}>Notificações</Text><Pressable accessibilityLabel="Fechar" disabled={busy} onPress={() => setVisible(false)}><Ionicons name="close" size={24} color="#344054" /></Pressable></View>
           <Text style={styles.subtitle}>Novidades sobre suas diárias nos últimos 30 dias.</Text>
           <View style={styles.tools}>
-            <Pressable disabled={notification.refreshing || busy} onPress={() => void refreshList()}><Text style={[styles.link, { color: accentColor }]}>Atualizar</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Atualizar notificações" accessibilityState={{ disabled: notification.refreshing || busy, busy: notification.refreshing }} style={{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', backgroundColor: accentColor + '14' }} disabled={notification.refreshing || busy} onPress={() => void refreshList()}>{notification.refreshing ? <ActivityIndicator size="small" color={accentColor} /> : <Ionicons name="refresh-outline" size={22} color={accentColor} />}</Pressable>
             <Pressable disabled={busy || notification.unread === 0} onPress={() => void readAll()}><Text style={[styles.link, { color: notification.unread ? accentColor : '#98A2B3' }]}>Marcar todas como lidas</Text></Pressable>
           </View>
           {(notification.loading || notification.refreshing || busy) && <ActivityIndicator color={accentColor} />}
-          {notification.stale && <Text style={styles.subtitle}>Atualização pendente. Use Atualizar para tentar novamente.</Text>}
+          {notification.stale && <Text style={styles.subtitle}>Atualização pendente. Toque no ícone de atualização para tentar novamente.</Text>}
           <ScrollView style={styles.list} contentContainerStyle={{ paddingBottom: 12 }}>
             {!notification.loading && !notification.items.length && <View style={styles.empty}><Ionicons name="notifications-off-outline" size={36} color="#98A2B3" /><Text style={styles.subtitle}>Nenhuma novidade por enquanto.</Text></View>}
             {notification.items.map(item => <Pressable key={item.id} disabled={busy} onPress={() => void read(item)}
@@ -92,7 +92,7 @@ export function NotificationBell({ navigation, accentColor = '#18C7C8' }: { navi
   </>;
 }
 const styles = StyleSheet.create({
-  trigger: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  trigger: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   counter: { position: 'absolute', top: -5, right: -6, minWidth: 20, height: 20, paddingHorizontal: 4, borderRadius: 10, backgroundColor: '#D92D20', alignItems: 'center', justifyContent: 'center' },
   counterText: { color: '#FFFFFF', fontSize: 10, fontFamily: 'Poppins_600SemiBold' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', padding: 18, justifyContent: 'center', alignItems: 'center' },

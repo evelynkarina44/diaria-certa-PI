@@ -8,7 +8,7 @@ import { trackingState } from '../../utils/appointmentTracking';
 import { agendamentoService } from '../../services/agendamentoService';
 import { ActionModal } from '../action-modal';
 
-type Props = { navigation: any; profile: TrackingProfile; compact?: boolean };
+type Props = { navigation: any; profile: TrackingProfile; compact?: boolean; showTitle?: boolean; showSubtitle?: boolean };
 const money = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const dateLabel = (value: string) => new Date(value).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 const timeLabel = (value: string | null) => value?.includes('T') ? value.slice(11, 16) : value?.slice(0, 5) ?? '';
@@ -20,13 +20,12 @@ export function AppointmentTracker(props: Props) {
   return <Tracker key={user.id_usuario + ':' + props.profile} {...props} />;
 }
 
-function Tracker({ navigation, profile, compact = false }: Props) {
+function Tracker({ navigation, profile, compact = false, showTitle = true, showSubtitle = true }: Props) {
   const [items, setItems] = useState<TrackingAppointment[]>([]);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [updatedAt, setUpdatedAt] = useState('');
   const [stale, setStale] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [filter, setFilter] = useState<'all' | 'action' | 'finished'>('all');
@@ -60,7 +59,7 @@ function Tracker({ navigation, profile, compact = false }: Props) {
         setItems(current => more ? [...current.filter(item => !incoming.some(next => next.id_agendamento === item.id_agendamento)), ...incoming] : incoming);
         const response = responses[responses.length - 1];
         setTotal(response.pagination.total); setPages(response.pagination.pages);
-        setUpdatedAt(response.atualizado_em); setStale(false);
+        setStale(false);
         loadedPages.current = more ? nextPage : Math.min(loadedPages.current, Math.max(1, response.pagination.pages));
       } catch (cause) {
         if (!active || version !== request.current) return;
@@ -118,14 +117,13 @@ function Tracker({ navigation, profile, compact = false }: Props) {
 
   return (
     <View style={styles.section}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Minhas diárias</Text>
-        <Pressable accessibilityRole="button" onPress={() => void reload.current()} disabled={refreshing || responding}>
-          {refreshing ? <ActivityIndicator color={accent} /> : <Text style={[styles.link, { color: accent }]}>Atualizar</Text>}
+      <View style={[styles.header, !showTitle && { justifyContent: 'flex-end' }]}>
+        {showTitle && <Text style={styles.title}>Minhas diárias</Text>}
+        <Pressable accessibilityRole="button" accessibilityLabel="Atualizar diárias" accessibilityState={{ disabled: refreshing || responding, busy: refreshing }} style={[{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', backgroundColor: accent + '14' }, (refreshing || responding) && styles.disabled]} onPress={() => void reload.current()} disabled={refreshing || responding}>
+          {refreshing ? <ActivityIndicator color={accent} /> : <Ionicons name="refresh-outline" size={22} color={accent} />}
         </Pressable>
       </View>
-      <Text style={styles.subtitle}>{compact ? 'Acompanhe o status e continue pela próxima etapa.' : 'Solicitação, pagamento e execução em um só lugar.'}</Text>
-      {updatedAt !== '' && <Text style={styles.updated}>{stale ? 'Atualização pendente • ' : 'Atualizado às '}{new Date(updatedAt).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })}</Text>}
+      {showSubtitle && <Text style={styles.subtitle}>{compact ? 'Acompanhe o status e continue pela próxima etapa.' : 'Solicitação, pagamento e execução em um só lugar.'}</Text>}
       {!compact && <View style={styles.filters}>
         {(['all', 'action', 'finished'] as const).map(value => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: filter === value }}
           style={[styles.filter, filter === value && { borderColor: accent, backgroundColor: accent + '12' }]} onPress={() => setFilter(value)}>
@@ -134,7 +132,7 @@ function Tracker({ navigation, profile, compact = false }: Props) {
       </View>}
       {loading && <ActivityIndicator color={accent} style={{ marginVertical: 20 }} />}
       {!loading && !shown.length && <View style={styles.empty}><Ionicons name="calendar-outline" size={27} color={accent} /><Text style={styles.description}>
-        {stale && !items.length ? 'Use Atualizar para carregar suas diárias.' : filter === 'action' ? 'Você não tem ações pendentes nas diárias carregadas.' : filter === 'finished' ? 'Nenhuma diária finalizada nas páginas carregadas.' : 'Nenhuma diária em acompanhamento. Suas novas solicitações aparecerão aqui.'}
+        {stale && !items.length ? 'Toque no ícone de atualização para carregar suas diárias.' : filter === 'action' ? 'Você não tem ações pendentes nas diárias carregadas.' : filter === 'finished' ? 'Nenhuma diária finalizada nas páginas carregadas.' : 'Nenhuma diária em acompanhamento. Suas novas solicitações aparecerão aqui.'}
       </Text></View>}
       {shown.map(({ item, state }) => <View key={item.id_agendamento} style={styles.card}>
         <View style={styles.personRow}>
@@ -190,7 +188,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontFamily: 'Poppins_600SemiBold', fontSize: 19, color: '#222222' },
   subtitle: { fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#667085', marginTop: 5 },
-  updated: { fontFamily: 'Poppins_400Regular', fontSize: 10, color: '#667085', marginTop: 5, marginBottom: 6 },
   link: { fontFamily: 'Poppins_600SemiBold', fontSize: 12 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 15 },
   filter: { borderWidth: 1, borderColor: '#EAECF0', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8 },

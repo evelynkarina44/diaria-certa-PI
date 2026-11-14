@@ -171,6 +171,7 @@ export type AgendamentoServico = {
 export type CheckinCheckout = {
   id_check: number;
   id_agendamento: number;
+  horario_chegada?: string | null;
   horario_checkin?: string | null;
   horario_checkout?: string | null;
   status_checkin:
@@ -194,6 +195,9 @@ export type Ocorrencia = {
 };
 
 export type Agendamento = {
+  confirmacao_cliente_expirada?: boolean;
+  confirmacao_cliente_limite_em?: string | null;
+  aguardando_confirmacao_cliente?: boolean;
   checkin_expirado?: boolean;
   checkin_limite_em?: string | null;
   id_agendamento: number;

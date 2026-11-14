@@ -1,3 +1,4 @@
+import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActionModal } from '../../components/action-modal';
 import { ActivityIndicator, AppState, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -18,7 +19,7 @@ const labels: Record<ParcelaPagamento['status'], string> = {
 function installmentLabel(installment: ParcelaPagamento, summary: ResumoPagamento) {
   if (installment.estorno_pendente) return 'Estorno em processamento';
   if (installment.status !== 'Pendente') return labels[installment.status];
-  if (summary.checkin_expirado || ['Cancelado', 'Recusado', 'Expirado'].includes(summary.status_agendamento)) return 'Sem cobrança';
+  if (summary.confirmacao_cliente_expirada || summary.checkin_expirado || ['Cancelado', 'Recusado', 'Expirado'].includes(summary.status_agendamento)) return 'Sem cobrança';
   if (installment.pode_pagar) return 'Aguardando pagamento';
   return installment.fase === 'Entrada' ? 'Libera após o aceite' : 'Libera após o checkout';
 }
@@ -27,10 +28,11 @@ function paymentNotice(summary: ResumoPagamento) {
   const entry = summary.parcelas.find(item => item.fase === 'Entrada');
   const pendingRefund = summary.parcelas.some(item => item.estorno_pendente || item.status === 'Estorno_pendente');
   const parts: string[] = [];
-  if (summary.checkin_expirado) parts.push('Sem check-in em 30 min. Diária encerrada.');
+  if (summary.confirmacao_cliente_expirada) parts.push('O cliente não confirmou o início em 30 min. Diária encerrada.');
+  else if (summary.checkin_expirado) parts.push('Sem check-in em 30 min. Diária encerrada.');
   if (pendingRefund) parts.push('Estorno integral em processamento pelo Mercado Pago.');
-  else if (summary.checkin_expirado && entry?.status === 'Estornado') parts.push('Entrada devolvida integralmente.');
-  else if (summary.checkin_expirado && entry?.status === 'Pago') parts.push('Entrada paga: estorno integral sujeito à confirmação do Mercado Pago.');
+  else if ((summary.checkin_expirado || summary.confirmacao_cliente_expirada) && entry?.status === 'Estornado') parts.push('Entrada devolvida integralmente.');
+  else if ((summary.checkin_expirado || summary.confirmacao_cliente_expirada) && entry?.status === 'Pago') parts.push('Entrada paga: estorno integral sujeito à confirmação do Mercado Pago.');
   return parts.join(' ');
 }
 
@@ -95,7 +97,7 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
       attempts++; void load(true, true);
       if (attempts >= 8) {
         clearInterval(timer);
-        setNotice('Se ainda estiver processando, use Atualizar pagamento para consultar novamente.');
+        setNotice('Se ainda estiver processando, toque no ícone de atualização para consultar novamente.');
       }
     }, 15000);
     const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') void load(true); });
@@ -158,18 +160,13 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity accessibilityLabel="Voltar" style={styles.back} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={25} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Pagamento da diária</Text>
-      </View>
+      <PageHeader title="Pagamento da diária" accentColor="#18C7C8" onBack={() => navigation.goBack()} />
       <ScrollView style={styles.body} contentContainerStyle={styles.content}>
         {summary && summary.id_agendamento === id && isClient && <>
           <View style={styles.summaryCard}>
             <View style={styles.summaryTop}>
               <Text style={styles.booking}>DIÁRIA #{summary.id_agendamento}</Text>
-              <Text style={styles.bookingStatus}>{summary.checkin_expirado ? 'Check-in expirado' : summary.status_agendamento === 'Concluido' ? 'Concluído' : summary.status_agendamento.replace(/_/g, ' ')}</Text>
+              <Text style={styles.bookingStatus}>{summary.confirmacao_cliente_expirada ? 'Confirmação não recebida' : summary.checkin_expirado ? 'Check-in expirado' : summary.status_agendamento === 'Concluido' ? 'Concluído' : summary.status_agendamento.replace(/_/g, ' ')}</Text>
             </View>
             {route.params?.dataAgendamento && <View style={styles.iconRow}>
               <Ionicons name="calendar-outline" size={16} color="#657383" /><Text style={styles.caption}>{route.params.dataAgendamento}</Text>
@@ -206,7 +203,7 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
             <Text style={styles.noticeText}>{paymentNotice(summary)}</Text>
           </View>}
           {summary.quitado && <View style={styles.iconRow}><Ionicons name="checkmark-circle" size={20} color="#087F5B" /><Text style={styles.success}>Diária quitada</Text></View>}
-          {!summary.checkin_expirado && ['Pendente', 'Aceito'].includes(summary.status_agendamento) && (
+          {!summary.checkin_expirado && !summary.confirmacao_cliente_expirada && ['Pendente', 'Aceito'].includes(summary.status_agendamento) && (
             <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={() => setConfirmCancel(true)} style={styles.cancelButton}>
               <Ionicons name="close-circle-outline" size={18} color="#C62828" /><Text style={styles.error}>Cancelar agendamento</Text>
             </TouchableOpacity>
@@ -214,8 +211,8 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
         </>}
         {busy && <ActivityIndicator color="#18C7C8" />}
         {Boolean(id) && isClient && (
-          <TouchableOpacity style={[styles.outline, busy && styles.disabled]} disabled={busy} onPress={() => void load(true)}>
-            <Ionicons name="refresh-outline" size={18} color="#008A99" /><Text style={styles.outlineText}>Atualizar pagamento</Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar pagamento" accessibilityState={{ disabled: busy, busy }} style={[{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', backgroundColor: '#E8FAFA' }, busy && styles.disabled]} disabled={busy} onPress={() => void load(true)}>
+            {busy ? <ActivityIndicator size="small" color="#008A99" /> : <Ionicons name="refresh-outline" size={22} color="#008A99" />}
           </TouchableOpacity>
         )}
         <View style={styles.securityRow}>

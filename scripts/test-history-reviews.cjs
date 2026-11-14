@@ -35,6 +35,8 @@ function harness(reviews, appointments) {
     react, 'react-native': native,
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@expo/vector-icons': { Ionicons: 'Icon' },
+    '../../components/header-menu': { HeaderMenu: 'HeaderMenu' },
+    '../../components/page-header': require('./page-header-fixture.cjs'),
     '../../components/action-modal': { ActionModal: 'ActionModal' },
     '../../services/agendamentoService': { agendamentoService: { listar: async (query) => {
       requests.push(query);

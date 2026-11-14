@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { PageHeader } from '../../components/page-header';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -14,6 +15,9 @@ import type { ComboBase, Diarista } from '../../services/types';
 import { styles } from './styles';
 import { formatCurrencyValue, parseCurrencyInput } from '../../utils/currency';
 
+const COMBOS_PER_PAGE = 5;
+const normalizeSearch = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+
 const sizeOptions = [
   { label: 'Pequena', value: 'pequena' },
   { label: 'Média', value: 'media' },
@@ -22,6 +26,10 @@ const sizeOptions = [
 
 export default function CombosDiaristaScreen({ navigation }: any) {
   const { user } = useAuth();
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  function changeSearch(value: string) { setSearch(value); setPage(1); }
   const [profile, setProfile] = useState<Diarista | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +52,20 @@ export default function CombosDiaristaScreen({ navigation }: any) {
   useEffect(() => { loadData(); }, [loadData]);
 
   const combos = profile?.combo_base ?? [];
+  const terms = normalizeSearch(search).trim().split(/\s+/).filter(Boolean);
+  const filteredCombos = combos.filter(combo => {
+    const text = normalizeSearch([combo.nome_combo, combo.descricao ?? ''].join(' '));
+    return terms.every(term => text.includes(term));
+  });
+  const pages = Math.max(1, Math.ceil(filteredCombos.length / COMBOS_PER_PAGE));
+  const currentPage = Math.min(page, pages);
+  const visibleCombos = filteredCombos.slice((currentPage - 1) * COMBOS_PER_PAGE, currentPage * COMBOS_PER_PAGE);
+  useEffect(() => { setPage(1); }, [user?.diarista?.[0]?.id_diarista]);
+  useEffect(() => { setPage(current => Math.min(current, pages)); }, [pages]);
+  function changePage(nextPage: number) {
+    setPage(Math.max(1, Math.min(nextPage, pages)));
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }
   const servicos = profile?.diarista_servico ?? [];
   const serviceOptions = servicos.map((item) => ({
     label: item.servico?.nome_servico ?? `Serviço #${item.id_servico}`,
@@ -102,15 +124,9 @@ export default function CombosDiaristaScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Meus combos</Text>
-          <Text style={styles.subtitle}>Crie pacotes usando os serviços que você oferece.</Text>
-        </View>
-      </View>
+      <PageHeader title="Meus combos" subtitle="Crie pacotes usando os serviços que você oferece." accentColor="#FF6B2C" left={<HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />} />
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Combos base</Text>
           <View style={styles.actions}>
@@ -119,11 +135,19 @@ export default function CombosDiaristaScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
         </View>
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={20} color="#667085" />
+          <TextInput style={styles.searchInput} value={search} onChangeText={changeSearch}
+            placeholder="Buscar combo por nome ou descrição" placeholderTextColor="#98A2B3"
+            accessibilityLabel="Buscar combos" autoCorrect={false} returnKeyType="search" />
+          {Boolean(search) && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Limpar busca de combos"
+            onPress={() => changeSearch('')} style={styles.clearSearch}><Ionicons name="close-circle" size={20} color="#98A2B3" /></TouchableOpacity>}
+        </View>
         {!servicos.length && !loading ? <Text style={styles.warning}>Cadastre ao menos um serviço antes de criar um combo.</Text> : null}
         {loading ? <ActivityIndicator color="#FF6B2C" style={styles.loader} /> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        {!loading && !combos.length ? <View style={styles.emptyCard}><Text style={styles.emptyText}>Nenhum combo cadastrado.</Text></View> : null}
-        {combos.map((combo) => (
+        {!loading && !filteredCombos.length ? <View style={styles.emptyCard}><Text style={styles.emptyText}>{combos.length ? 'Nenhum combo encontrado.' : 'Nenhum combo cadastrado.'}</Text></View> : null}
+        {visibleCombos.map((combo) => (
           <View key={combo.id_combo_base} style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.cardHeading}>
@@ -169,6 +193,19 @@ export default function CombosDiaristaScreen({ navigation }: any) {
             </View>
           </View>
         ))}
+        {pages > 1 && <View style={styles.pagination}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Página anterior de combos"
+            disabled={currentPage === 1} onPress={() => changePage(currentPage - 1)}
+            style={[styles.pageButton, currentPage === 1 && styles.disabled]}>
+            <Ionicons name="chevron-back" size={18} color="#E55318" /><Text style={styles.pageButtonText}>Anterior</Text>
+          </TouchableOpacity>
+          <Text accessibilityLiveRegion="polite" style={styles.pageIndicator}>Página {currentPage} de {pages}</Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Próxima página de combos"
+            disabled={currentPage === pages} onPress={() => changePage(currentPage + 1)}
+            style={[styles.pageButton, currentPage === pages && styles.disabled]}>
+            <Text style={styles.pageButtonText}>Próxima</Text><Ionicons name="chevron-forward" size={18} color="#E55318" />
+          </TouchableOpacity>
+        </View>}
       </ScrollView>
 
       <ProfileEditModal

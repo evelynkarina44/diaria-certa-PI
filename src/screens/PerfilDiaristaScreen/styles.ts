@@ -7,7 +7,7 @@ const clienteColor = '#18C7C8';
 export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#A9A9A9',
+    backgroundColor: clienteColor,
   },
 
   scroll: {

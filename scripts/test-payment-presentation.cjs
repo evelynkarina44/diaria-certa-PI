@@ -50,7 +50,7 @@ function screen(summary) {
   const context = {
     React: { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) },
     ...Object.fromEntries(['SafeAreaView','View','Text','ScrollView','TouchableOpacity','Ionicons','ActionModal','ActivityIndicator'].map(name => [name, name])),
-    styles: {}, useAuth: () => ({ user: { id_usuario: 1, activeProfile: 'CLIENTE' } }),
+    PageHeader: 'PageHeader', styles: {}, useAuth: () => ({ user: { id_usuario: 1, activeProfile: 'CLIENTE' } }),
     useRef: initial => ({ current: initial }), useEffect() {},
     useState(initial) { const slot = index++; return [slot === 0 ? summary : initial, value => { updates[slot] = value; }]; },
   };
@@ -78,7 +78,8 @@ test('pagamento, sincronização, cancelamento e ajuda continuam acessíveis; de
   const { nodes, texts, updates } = screen(base());
   assert.ok(texts.includes('Pagar entrada'));
   assert.equal(texts.includes('Pagar saldo'), false);
-  assert.ok(texts.includes('Atualizar pagamento'));
+  assert.equal(texts.includes('Atualizar pagamento'), false);
+  assert.ok(nodes.some(node => node.props.accessibilityLabel === 'Atualizar pagamento'));
   assert.ok(texts.includes('Cancelar agendamento'));
   assert.ok(texts.includes('Pagamento seguro pelo Mercado Pago'));
   const info = nodes.find(node => node.type === 'TouchableOpacity' && node.children.some(child => child?.type === 'Text' && child.children.includes('Como funciona')));

@@ -1,3 +1,4 @@
+import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActionModal } from '../../components/action-modal';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -233,13 +234,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7} accessibilityLabel="Voltar">
-          <Ionicons name="chevron-back" size={31} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Agendar Diária</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <PageHeader title="Agendar diária" accentColor="#18C7C8" onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>

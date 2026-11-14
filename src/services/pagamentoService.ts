@@ -9,6 +9,9 @@ export type ParcelaPagamento = {
 };
 
 export type ResumoPagamento = {
+  confirmacao_cliente_expirada?: boolean;
+  confirmacao_cliente_limite_em?: string | null;
+  aguardando_confirmacao_cliente?: boolean;
   checkin_expirado?: boolean;
   checkin_limite_em?: string | null;
   id_agendamento: number;

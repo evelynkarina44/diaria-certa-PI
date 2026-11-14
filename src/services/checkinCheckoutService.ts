@@ -17,6 +17,9 @@ export const checkinCheckoutService = {
       url: `${appointmentUrl(id)}/solicitar`,
     });
   },
+  confirmarInicio(id: number) {
+    return request<CheckinCheckout>({ method: 'POST', url: `${appointmentUrl(id)}/confirmar-inicio` });
+  },
   confirmarPagamento(id: number) {
     return request<CheckinCheckout>({
       method: 'POST',

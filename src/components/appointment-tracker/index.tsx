@@ -1,3 +1,4 @@
+import { ResponsiveGrid } from '../responsive-grid';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +29,7 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
   const [refreshing, setRefreshing] = useState(false);
   const [stale, setStale] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [filter, setFilter] = useState<'all' | 'action' | 'finished'>('all');
+  const [filter, setFilter] = useState<'all' | 'accepted' | 'action' | 'finished'>('all');
   const [brokenPhotos, setBrokenPhotos] = useState<number[]>([]);
   const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; title: string; message: string } | null>(null);
   const [confirm, setConfirm] = useState<{ item: TrackingAppointment; accept: boolean } | null>(null);
@@ -42,7 +43,11 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
   const reload = useRef<(more?: boolean) => Promise<void>>(async () => {});
   const accent = profile === 'CLIENTE' ? '#18C7C8' : '#FF6B2C';
 
+  const acceptedOnly = profile === 'DIARISTA' && filter === 'accepted';
+
   useEffect(() => {
+    setItems([]); setTotal(0); setPages(1); setLoading(true);
+    loadedPages.current = 1;
     let active = true;
     alive.current = true;
     async function load(more = false, silent = false) {
@@ -53,7 +58,7 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
       try {
         const responses = [];
         const lastPage = more ? nextPage : loadedPages.current;
-        for (let page = nextPage; page <= lastPage; page++) responses.push(await trackingService.listar(page));
+        for (let page = nextPage; page <= lastPage; page++) responses.push(await trackingService.listar(page, acceptedOnly ? 'Aceito' : undefined));
         if (!active || version !== request.current) return;
         const incoming = responses.flatMap(response => response.data);
         setItems(current => more ? [...current.filter(item => !incoming.some(next => next.id_agendamento === item.id_agendamento)), ...incoming] : incoming);
@@ -86,7 +91,7 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
       clearInterval(timer); unsubscribe(); app.remove();
       if (Platform.OS === 'web') { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); }
     };
-  }, [navigation, profile]);
+  }, [navigation, profile, acceptedOnly]);
 
   async function respond() {
     if (!confirm || writing.current) return;
@@ -108,7 +113,7 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
 
   const states = items.map(item => ({ item, state: trackingState(item, profile, now) }))
     .sort((a, b) => a.state.priority - b.state.priority || (a.item.inicio_em ?? a.item.data_agendamento).localeCompare(b.item.inicio_em ?? b.item.data_agendamento));
-  const filtered = states.filter(({ state }) => filter === 'all' || (filter === 'action' ? state.requiresAction : state.finished));
+  const filtered = states.filter(({ item, state }) => filter === 'all' || (filter === 'accepted' ? item.status === 'Aceito' : filter === 'action' ? state.requiresAction : state.finished));
   const shown = compact ? states.slice(0, 3) : filtered;
   const steps = ['Solicitação', 'Aceite', 'Entrada', 'Diária', 'Saldo', profile === 'CLIENTE' ? 'Avaliação' : 'Quitação'];
   function open(item: TrackingAppointment, route?: string) {
@@ -125,16 +130,16 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
       </View>
       {showSubtitle && <Text style={styles.subtitle}>{compact ? 'Acompanhe o status e continue pela próxima etapa.' : 'Solicitação, pagamento e execução em um só lugar.'}</Text>}
       {!compact && <View style={styles.filters}>
-        {(['all', 'action', 'finished'] as const).map(value => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: filter === value }}
+        {(profile === 'DIARISTA' ? (['all', 'accepted', 'action', 'finished'] as const) : (['all', 'action', 'finished'] as const)).map(value => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: filter === value }}
           style={[styles.filter, filter === value && { borderColor: accent, backgroundColor: accent + '12' }]} onPress={() => setFilter(value)}>
-          <Text style={styles.filterText}>{value === 'all' ? 'Todas' : value === 'action' ? 'Sua próxima ação' : 'Encerradas'}</Text>
+          <Text style={styles.filterText}>{value === 'all' ? 'Todas' : value === 'accepted' ? 'Aceitas' : value === 'action' ? 'Sua próxima ação' : 'Encerradas'}</Text>
         </Pressable>)}
       </View>}
       {loading && <ActivityIndicator color={accent} style={{ marginVertical: 20 }} />}
       {!loading && !shown.length && <View style={styles.empty}><Ionicons name="calendar-outline" size={27} color={accent} /><Text style={styles.description}>
-        {stale && !items.length ? 'Toque no ícone de atualização para carregar suas diárias.' : filter === 'action' ? 'Você não tem ações pendentes nas diárias carregadas.' : filter === 'finished' ? 'Nenhuma diária finalizada nas páginas carregadas.' : 'Nenhuma diária em acompanhamento. Suas novas solicitações aparecerão aqui.'}
+        {stale && !items.length ? 'Toque no ícone de atualização para carregar suas diárias.' : filter === 'accepted' ? 'Nenhuma diária aceita no momento.' : filter === 'action' ? 'Você não tem ações pendentes nas diárias carregadas.' : filter === 'finished' ? 'Nenhuma diária finalizada nas páginas carregadas.' : 'Nenhuma diária em acompanhamento. Suas novas solicitações aparecerão aqui.'}
       </Text></View>}
-      {shown.map(({ item, state }) => <View key={item.id_agendamento} style={styles.card}>
+      <ResponsiveGrid singleColumn={compact}>{shown.map(({ item, state }) => <View key={item.id_agendamento} style={styles.card}>
         <View style={styles.personRow}>
           <View style={[styles.avatar, { backgroundColor: accent + '14' }]}>
             {item.pessoa?.foto_perfil && !brokenPhotos.includes(item.id_agendamento)
@@ -143,7 +148,7 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{item.pessoa?.nome ?? (profile === 'CLIENTE' ? 'Diarista' : 'Cliente')}</Text>
-            <Text style={styles.meta}>#{item.id_agendamento} • {dateLabel(item.data_agendamento)} às {timeLabel(item.horario_inicio)}</Text>
+            <Text style={styles.meta}>#{profile === 'DIARISTA' ? item.numero_diarista ?? '—' : item.id_agendamento} • {dateLabel(item.data_agendamento)} às {timeLabel(item.horario_inicio)}</Text>
           </View>
         </View>
         <View style={[styles.badge, { backgroundColor: accent + '12' }]}><Text style={[styles.badgeText, { color: accent }]}>{state.title}</Text></View>
@@ -170,7 +175,7 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
           <Pressable accessibilityRole="button" style={[styles.secondary, responding && styles.disabled]} disabled={responding} onPress={() => setConfirm({ item, accept: false })}><Text style={styles.secondaryText}>Recusar</Text></Pressable>
           <Pressable accessibilityRole="button" style={[styles.primary, { backgroundColor: accent }, responding && styles.disabled]} disabled={responding} onPress={() => setConfirm({ item, accept: true })}><Text style={styles.primaryText}>Aceitar</Text></Pressable>
         </View> : state.route && <Pressable accessibilityRole="button" style={[styles.primary, { backgroundColor: accent, marginTop: 16 }]} onPress={() => open(item, state.route)}><Text style={styles.primaryText}>{state.actionLabel}</Text></Pressable>}
-      </View>)}
+      </View>)}</ResponsiveGrid>
       {compact ? <Pressable accessibilityRole="button" style={styles.all} onPress={() => navigation.navigate('AcompanharDiarias')}><Text style={[styles.link, { color: accent }]}>Ver todas as diárias{total ? ' (' + total + ')' : ''}</Text><Ionicons name="chevron-forward" size={17} color={accent} /></Pressable>
         : loadedPages.current < pages && <Pressable accessibilityRole="button" style={styles.all} disabled={refreshing} onPress={() => void reload.current(true)}><Text style={[styles.link, { color: accent }]}>Carregar mais diárias</Text></Pressable>}
       <ActionModal visible={Boolean(feedback)} variant={feedback?.kind ?? 'info'} title={feedback?.title ?? ''} message={feedback?.message ?? ''}
@@ -178,7 +183,7 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
         onConfirm={() => { setFeedback(null); if (invalidSession.current) navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); }} />
       <ActionModal visible={Boolean(confirm) && !feedback} variant="confirm" accentColor={accent}
         title={confirm?.accept ? 'Aceitar solicitação?' : 'Recusar solicitação?'}
-        message={confirm ? 'Agendamento #' + confirm.item.id_agendamento + ' para ' + dateLabel(confirm.item.data_agendamento) + ' às ' + timeLabel(confirm.item.horario_inicio) + '. Confirma sua decisão?' : ''}
+        message={confirm ? 'Diária #' + (profile === 'DIARISTA' ? confirm.item.numero_diarista ?? '—' : confirm.item.id_agendamento) + ' para ' + dateLabel(confirm.item.data_agendamento) + ' às ' + timeLabel(confirm.item.horario_inicio) + '. Confirma sua decisão?' : ''}
         confirmLabel={confirm?.accept ? 'Sim, aceitar' : 'Sim, recusar'} cancelLabel="Voltar" busy={responding} onConfirm={respond} onClose={() => setConfirm(null)} />
     </View>
   );

@@ -1,3 +1,4 @@
+import { ResponsiveGrid } from '../../components/responsive-grid';
 import { PageHeader } from '../../components/page-header';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -147,7 +148,7 @@ export default function CombosDiaristaScreen({ navigation }: any) {
         {loading ? <ActivityIndicator color="#FF6B2C" style={styles.loader} /> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {!loading && !filteredCombos.length ? <View style={styles.emptyCard}><Text style={styles.emptyText}>{combos.length ? 'Nenhum combo encontrado.' : 'Nenhum combo cadastrado.'}</Text></View> : null}
-        {visibleCombos.map((combo) => (
+        <ResponsiveGrid>{visibleCombos.map((combo) => (
           <View key={combo.id_combo_base} style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.cardHeading}>
@@ -192,7 +193,7 @@ export default function CombosDiaristaScreen({ navigation }: any) {
               {!combo.combo_servico?.length ? <Text style={styles.emptyServices}>Nenhum serviço vinculado</Text> : null}
             </View>
           </View>
-        ))}
+        ))}</ResponsiveGrid>
         {pages > 1 && <View style={styles.pagination}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Página anterior de combos"
             disabled={currentPage === 1} onPress={() => changePage(currentPage - 1)}

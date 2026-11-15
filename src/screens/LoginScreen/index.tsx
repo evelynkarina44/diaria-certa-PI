@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,7 +15,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { styles } from './styles';
+import { styles, desktopStyles } from './styles';
+import { useResponsive } from '../../contexts/ResponsiveContext';
 import { useAuth } from '../../contexts/GlobalContext';
 import { ApiError, getErrorMessage } from '../../services/api';
 
@@ -24,6 +26,7 @@ type FieldErrors = {
 };
 
 export default function LoginScreen({ navigation }: any) {
+  const { desktop } = useResponsive();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -85,14 +88,15 @@ export default function LoginScreen({ navigation }: any) {
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <View style={[styles.keyboardView, desktop && desktopStyles.layout]}>
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, desktop && desktopStyles.scrollContent]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         >
-          <View style={styles.container}>
+          <View style={[styles.container, desktop && desktopStyles.container]}>
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
@@ -106,24 +110,29 @@ export default function LoginScreen({ navigation }: any) {
               />
             </TouchableOpacity>
 
-            <View style={styles.header}>
-              <Text style={styles.title}>
+            {desktop && <View style={desktopStyles.brand}>
+              <Image source={require('../../assets/logo (2).png')} style={desktopStyles.logo} resizeMode="contain" />
+              <Text style={desktopStyles.brandName}>Diária Certa</Text>
+            </View>}
+            <View style={[styles.header, desktop && desktopStyles.header]}>
+              <Text accessibilityRole="header" style={[styles.title, desktop && desktopStyles.title]}>
                 Bem-vindo de volta!
               </Text>
 
-              <Text style={styles.subtitle}>
+              <Text style={[styles.subtitle, desktop && desktopStyles.subtitle]}>
                 Faça o login para continuar
               </Text>
             </View>
 
-            <View style={styles.form}>
+            <View style={[styles.form, desktop && desktopStyles.form]}>
               <View style={styles.fieldContainer}>
                 <Text style={styles.label}>
                   E-mail
                 </Text>
 
                 <TextInput
-                  style={[styles.input, fieldErrors.email && styles.inputError]}
+                  style={[styles.input, desktop && desktopStyles.input, fieldErrors.email && styles.inputError]}
+                  accessibilityLabel="E-mail"
                   placeholder="seu@email.com"
                   placeholderTextColor="#9B9B9B"
                   value={email}
@@ -151,11 +160,13 @@ export default function LoginScreen({ navigation }: any) {
                 <View
                   style={[
                     styles.passwordContainer,
-                    passwordFocused && styles.passwordContainerFocused,
+                    desktop && desktopStyles.passwordContainer,
+                    passwordFocused && (desktop ? desktopStyles.passwordContainerFocused : styles.passwordContainerFocused),
                     fieldErrors.password && styles.inputError,
                   ]}
                 >
                   <TextInput
+                    accessibilityLabel="Senha"
                     style={styles.passwordInput}
                     onFocus={() => setPasswordFocused(true)}
                     onBlur={() => setPasswordFocused(false)}
@@ -204,7 +215,7 @@ export default function LoginScreen({ navigation }: any) {
                 onPress={handleForgotPassword}
                 activeOpacity={0.7}
               >
-                <Text style={styles.forgotText}>
+                <Text style={[styles.forgotText, desktop && desktopStyles.link]}>
                   Esqueceu a senha?
                 </Text>
               </TouchableOpacity>
@@ -222,7 +233,9 @@ export default function LoginScreen({ navigation }: any) {
             ) : null}
 
             <TouchableOpacity
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+              accessibilityRole="button"
+              accessibilityLabel="Entrar"
+              style={[styles.loginButton, desktop && desktopStyles.loginButton, loading && styles.loginButtonDisabled]}
               onPress={handleLogin}
               disabled={loading}
               activeOpacity={0.85}
@@ -236,7 +249,7 @@ export default function LoginScreen({ navigation }: any) {
               )}
             </TouchableOpacity>
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, desktop && desktopStyles.footer]}>
               <Text style={styles.noAccount}>
                 Não tem uma conta?{' '}
               </Text>
@@ -245,13 +258,17 @@ export default function LoginScreen({ navigation }: any) {
                 onPress={() => navigation.navigate('Cadastro')}
                 activeOpacity={0.7}
               >
-                <Text style={styles.createAccount}>
+                <Text style={[styles.createAccount, desktop && desktopStyles.link]}>
                   Criar conta
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
+        {desktop && <View style={desktopStyles.visual} accessibilityLabel="Ambiente acolhedor, com luz natural e plantas">
+          <Image source={require('../../assets/welcome-home.webp')} style={desktopStyles.photo} resizeMode="cover" />
+        </View>}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

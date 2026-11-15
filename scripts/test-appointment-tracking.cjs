@@ -85,7 +85,7 @@ test('home panels, shared menu and post-booking flows link to tracking, not hist
  const worker = fs.readFileSync(path.join(root, 'src/screens/HomeDiaristaScreen/index.tsx'), 'utf8');
  assert.ok(worker.includes('<AppointmentTracker'));
  assert.ok(worker.includes('<NotificationBell'));
- const menu = fs.readFileSync(path.join(root, 'src/components/header-menu/index.tsx'), 'utf8');
+ const menu = fs.readFileSync(path.join(root, 'src/utils/navigationMenu.ts'), 'utf8');
  assert.equal(menu.split("route: 'AcompanharDiarias'").length - 1, 2);
  for (const screen of ['AgendarDiariaScreen','PagamentoScreen','AvaliacaoScreen','ChatbotScreen']) {
   const source = fs.readFileSync(path.join(root, 'src/screens', screen, 'index.tsx'), 'utf8');

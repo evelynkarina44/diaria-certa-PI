@@ -152,7 +152,7 @@ function Diaria({ navigation, route }: any) {
         {loading && <ActivityIndicator color="#FF6B2C" />}
         {booking && <>
           <Text style={styles.name}>{booking.cliente?.usuario?.nome ?? 'Cliente'}</Text>
-          <Text style={styles.address}>Agendamento #{id} • {new Date(booking.data_agendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} às {time(booking.horario_inicio)}</Text>
+          <Text style={styles.address}>Diária #{booking.numero_diarista ?? '—'} • {new Date(booking.data_agendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} às {time(booking.horario_inicio)}</Text>
           <Text style={styles.sectionTitle}>Endereço</Text>
           <Text style={styles.address}>{booking.endereco ? booking.endereco.logradouro + ', ' + booking.endereco.numero + ' — ' + booking.endereco.bairro : 'Endereço não informado'}</Text>
           <Text style={styles.sectionTitle}>Serviços solicitados</Text>

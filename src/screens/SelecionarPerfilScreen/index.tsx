@@ -6,8 +6,11 @@ import { useAuth } from '../../contexts/GlobalContext';
 import type { Profile } from '../../services/types';
 import { getErrorMessage } from '../../services/api';
 import { styles } from './styles';
+import { useResponsive } from '../../contexts/ResponsiveContext';
+import { PublicChoiceLayout, EntryBrand, desktopChoiceStyles as webStyles } from '../../components/public-choice-layout';
 
 export default function SelecionarPerfilScreen({ navigation }: any) {
+  const { desktop } = useResponsive();
   const { user, selectProfile } = useAuth();
   const [loading, setLoading] = useState<Profile | null>(null);
   const [error, setError] = useState('');
@@ -31,33 +34,35 @@ export default function SelecionarPerfilScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <PublicChoiceLayout>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, desktop && webStyles.scrollContent]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Como você quer{`\n`}continuar?</Text>
-            <Text style={styles.subtitle}>
+        <View style={[styles.container, desktop && webStyles.container]}>
+          <EntryBrand />
+          <View style={[styles.header, desktop && webStyles.header]}>
+            <Text accessibilityRole="header" style={[styles.title, desktop && webStyles.title]}>Como você quer{`\n`}continuar?</Text>
+            <Text style={[styles.subtitle, desktop && webStyles.subtitle]}>
               Olá, {user?.nome}.{`\n`}Selecione o perfil que deseja usar
             </Text>
           </View>
 
-          <View style={styles.optionsContainer}>
+          <View style={[styles.optionsContainer, desktop && webStyles.optionsContainer]}>
             {user?.profiles.includes('CLIENTE') && (
               <TouchableOpacity
-                style={[styles.optionCard, styles.clientCard]}
+                style={[styles.optionCard, styles.clientCard, desktop && webStyles.optionCard, desktop && webStyles.clientCard]}
                 onPress={() => choose('CLIENTE')}
                 disabled={Boolean(loading)}
                 activeOpacity={0.8}
               >
-                <View style={[styles.iconCircle, styles.clientIconCircle]}>
+                <View style={[styles.iconCircle, styles.clientIconCircle, desktop && webStyles.iconCircle]}>
                   <Ionicons name="person" size={44} color="#FFFFFF" />
                 </View>
-                <View style={styles.optionContent}>
-                  <Text style={styles.optionTitle}>Entrar como cliente</Text>
-                  <Text style={styles.optionDescription}>
+                <View style={[styles.optionContent, desktop && webStyles.optionContent]}>
+                  <Text style={[styles.optionTitle, desktop && webStyles.optionTitle]}>Entrar como cliente</Text>
+                  <Text style={[styles.optionDescription, desktop && webStyles.optionDescription]}>
                     Quero contratar{`\n`}serviços de limpeza
                   </Text>
                 </View>
@@ -71,17 +76,17 @@ export default function SelecionarPerfilScreen({ navigation }: any) {
 
             {user?.profiles.includes('DIARISTA') && (
               <TouchableOpacity
-                style={[styles.optionCard, styles.workerCard]}
+                style={[styles.optionCard, styles.workerCard, desktop && webStyles.optionCard, desktop && webStyles.workerCard]}
                 onPress={() => choose('DIARISTA')}
                 disabled={Boolean(loading)}
                 activeOpacity={0.8}
               >
-                <View style={[styles.iconCircle, styles.workerIconCircle]}>
+                <View style={[styles.iconCircle, styles.workerIconCircle, desktop && webStyles.iconCircle]}>
                   <Ionicons name="person" size={44} color="#FFFFFF" />
                 </View>
-                <View style={styles.optionContent}>
-                  <Text style={styles.optionTitle}>Entrar como diarista</Text>
-                  <Text style={styles.optionDescription}>
+                <View style={[styles.optionContent, desktop && webStyles.optionContent]}>
+                  <Text style={[styles.optionTitle, desktop && webStyles.optionTitle]}>Entrar como diarista</Text>
+                  <Text style={[styles.optionDescription, desktop && webStyles.optionDescription]}>
                     Quero encontrar{`\n`}oportunidades
                   </Text>
                 </View>
@@ -102,6 +107,7 @@ export default function SelecionarPerfilScreen({ navigation }: any) {
           ) : null}
         </View>
       </ScrollView>
+      </PublicChoiceLayout>
     </SafeAreaView>
   );
 }

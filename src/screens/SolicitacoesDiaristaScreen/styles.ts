@@ -27,14 +27,16 @@ export const styles = StyleSheet.create({
 
   messageButton: {
     width: 30,
-    height: 30,
+    minHeight: 46,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   profileButton: {
     width: 30,
-    height: 30,
+    minHeight: 46,
+    paddingVertical: 10,
     borderRadius: 15,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
@@ -113,11 +115,17 @@ export const styles = StyleSheet.create({
     gap: 15,
   },
 
+  distanceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
+  distanceText: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 22, color: '#475467', flexShrink: 1 },
+  distanceHint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 18, color: '#667085', marginTop: 3 },
+  detailsButton: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, borderWidth: 1, borderColor: '#FFD3C0', borderRadius: 12, padding: 12, marginTop: 16 },
+  detailsButtonText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, lineHeight: 22, color: '#C74615' },
+
   requestCard: {
     width: '100%',
     borderRadius: 15,
     backgroundColor: '#FFFFFF',
-    padding: 12,
+    padding: 16,
 
     shadowColor: '#000000',
     shadowOpacity: 0.13,
@@ -134,7 +142,10 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
   },
 
+  avatarImage: { width: '100%', height: '100%' },
+
   avatar: {
+    overflow: 'hidden',
     width: 65,
     height: 65,
     borderRadius: 7,
@@ -145,13 +156,16 @@ export const styles = StyleSheet.create({
 
   requestInfo: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 13,
   },
+
+  clientCaption: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 18, color: '#667085', marginTop: 2 },
 
   clientName: {
     color: colors.text,
     fontFamily: fonts.semibold,
-    fontSize: fontSizes.sm ?? 13,
+    fontSize: 17,
   },
 
   ratingRow: {
@@ -164,13 +178,13 @@ export const styles = StyleSheet.create({
   smallLabel: {
     color: '#999999',
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 12,
   },
 
   rating: {
     color: '#FF9D00',
     fontFamily: fonts.semibold,
-    fontSize: 10,
+    fontSize: 12,
   },
 
   infoRow: {
@@ -181,15 +195,17 @@ export const styles = StyleSheet.create({
   },
 
   infoText: {
-    color: '#999999',
+    flexShrink: 1,
+    lineHeight: 21,
+    color: '#667085',
     fontFamily: fonts.regular,
-    fontSize: 8,
+    fontSize: 14,
   },
 
   dateText: {
     color: '#777777',
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 14,
   },
 
   actions: {
@@ -216,19 +232,20 @@ export const styles = StyleSheet.create({
     flex: 1,
     color: '#666666',
     fontFamily: fonts.regular,
-    fontSize: 10,
-    lineHeight: 15,
+    fontSize: 14,
+    lineHeight: 22,
   },
 
   detailValue: {
     color: '#E55318',
     fontFamily: fonts.semibold,
-    fontSize: 11,
+    fontSize: 18,
   },
 
   rejectButton: {
     flex: 1,
-    height: 30,
+    minHeight: 46,
+    paddingVertical: 10,
     backgroundColor: '#FF3338',
     alignItems: 'center',
     justifyContent: 'center',
@@ -237,7 +254,8 @@ export const styles = StyleSheet.create({
 
   acceptButton: {
     flex: 1,
-    height: 30,
+    minHeight: 46,
+    paddingVertical: 10,
     backgroundColor: '#00B817',
     alignItems: 'center',
     justifyContent: 'center',
@@ -247,13 +265,13 @@ export const styles = StyleSheet.create({
   rejectText: {
     color: '#FFFFFF',
     fontFamily: fonts.medium,
-    fontSize: 10,
+    fontSize: 14,
   },
 
   acceptText: {
     color: '#FFFFFF',
     fontFamily: fonts.medium,
-    fontSize: 10,
+    fontSize: 14,
   },
 
   disabled: {

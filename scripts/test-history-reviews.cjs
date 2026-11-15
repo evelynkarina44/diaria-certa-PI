@@ -36,6 +36,7 @@ function harness(reviews, appointments) {
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@expo/vector-icons': { Ionicons: 'Icon' },
     '../../components/header-menu': { HeaderMenu: 'HeaderMenu' },
+    '../../components/responsive-grid': { ResponsiveGrid: 'ResponsiveGrid' },
     '../../components/page-header': require('./page-header-fixture.cjs'),
     '../../components/action-modal': { ActionModal: 'ActionModal' },
     '../../services/agendamentoService': { agendamentoService: { listar: async (query) => {
@@ -108,7 +109,7 @@ test('voltar ao histórico carrega a avaliação recém-enviada sem misturar as 
 });
 
 const appointments = () => Array.from({ length: 23 }, (_, index) => ({
-  id_agendamento: index + 1, data_agendamento: '2026-11-01', horario_inicio: '08:00',
+  id_agendamento: index + 1, numero_diarista: index + 1, data_agendamento: '2026-11-01', horario_inicio: '08:00',
   status: index === 22 ? 'Expirado' : 'Aceito', checkin_expirado: index === 22,
   cliente: { usuario: { nome: index < 20 ? 'Rafael' : 'Nicole' } },
   agendamento_servico: [{ diarista_servico: { servico: { nome_servico: 'Limpeza de janelas' } } }],
@@ -152,7 +153,7 @@ test('diarista combina status e data, separa check-in expirado e permite limpar 
 });
 test('carrega todas as páginas da API para pesquisar registros além do centésimo', async () => {
   const records = Array.from({ length: 101 }, (_, index) => ({
-    id_agendamento: index + 1, data_agendamento: '2026-11-01', status: 'Concluido',
+    id_agendamento: index + 1, numero_diarista: index + 1, data_agendamento: '2026-11-01', status: 'Concluido',
     cliente: { usuario: { nome: index === 100 ? 'Último cliente' : 'Cliente comum' } },
   }));
   const h = harness([], records);
@@ -174,4 +175,17 @@ test('ações da diarista abrem a diária correta; finalização mantém fluxo d
   action.props.onPress();
   assert.equal(h.navigations[0][0], 'CheckInDiarista');
   assert.equal(h.navigations[0][1].agendamentoId, 1);
+});
+
+test('histórico exibe e pesquisa número próprio, mas navega usando o ID interno', async () => {
+ const h=harness([], [{id_agendamento:12,numero_diarista:1,data_agendamento:'2099-01-01',status:'Aceito',cliente:{usuario:{nome:'Pedro Reis'}}}]);
+ let tree=await h.ready();
+ assert.ok(texts(tree).includes('DIÁRIA #1'));
+ assert.equal(texts(tree).includes('DIÁRIA #12'),false);
+ const action=nodes(tree).find(n=>n.type==='TouchableOpacity'&&nodes(n).some(c=>c.type==='Text'&&c.props.children.includes('Ver diária e pagamentos')));
+ action.props.onPress();
+ assert.equal(h.navigations.at(-1)[1].agendamentoId,12);
+ nodes(tree).find(n=>n.props.accessibilityLabel==='Buscar no histórico').props.onChangeText('12');
+ tree=h.render();
+ assert.equal(texts(tree).some(t=>t.startsWith('DIÁRIA #')),false);
 });

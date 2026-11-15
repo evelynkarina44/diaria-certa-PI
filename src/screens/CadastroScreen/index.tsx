@@ -11,8 +11,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { useResponsive } from '../../contexts/ResponsiveContext';
+import { PublicChoiceLayout, EntryBrand, desktopChoiceStyles as webStyles } from '../../components/public-choice-layout';
 
 export default function CadastroScreen({ navigation }: any) {
+  const { desktop } = useResponsive();
   function handleCliente() {
     navigation.navigate('CadastroCliente');
   }
@@ -23,12 +26,13 @@ export default function CadastroScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <PublicChoiceLayout>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, desktop && webStyles.scrollContent]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.container}>
+        <View style={[styles.container, desktop && webStyles.container]}>
 
   <TouchableOpacity
     style={styles.backButton}
@@ -43,12 +47,13 @@ export default function CadastroScreen({ navigation }: any) {
     />
   </TouchableOpacity>
 
-  <View style={styles.header}>
-    <Text style={styles.title}>
+  <EntryBrand />
+          <View style={[styles.header, desktop && webStyles.header]}>
+    <Text accessibilityRole="header" style={[styles.title, desktop && webStyles.title]}>
       Como você quer{'\n'}continuar?
     </Text>
 
-    <Text style={styles.subtitle}>
+    <Text style={[styles.subtitle, desktop && webStyles.subtitle]}>
       Selecione o tipo de conta{'\n'}
       que deseja criar
     </Text>
@@ -56,13 +61,13 @@ export default function CadastroScreen({ navigation }: any) {
 
   
 
-          <View style={styles.optionsContainer}>
+          <View style={[styles.optionsContainer, desktop && webStyles.optionsContainer]}>
             <TouchableOpacity
-              style={[styles.optionCard, styles.clientCard]}
+              style={[styles.optionCard, styles.clientCard, desktop && webStyles.optionCard, desktop && webStyles.clientCard]}
               onPress={handleCliente}
               activeOpacity={0.8}
             >
-              <View style={[styles.iconCircle, styles.clientIconCircle]}>
+              <View style={[styles.iconCircle, styles.clientIconCircle, desktop && webStyles.iconCircle]}>
                 <Ionicons
                   name="person"
                   size={44}
@@ -70,12 +75,12 @@ export default function CadastroScreen({ navigation }: any) {
                 />
               </View>
 
-              <View style={styles.optionContent}>
-                <Text style={styles.optionTitle}>
+              <View style={[styles.optionContent, desktop && webStyles.optionContent]}>
+                <Text style={[styles.optionTitle, desktop && webStyles.optionTitle]}>
                   Sou cliente
                 </Text>
 
-                <Text style={styles.optionDescription}>
+                <Text style={[styles.optionDescription, desktop && webStyles.optionDescription]}>
                   Quero contratar{'\n'}
                   serviços de limpeza
                 </Text>
@@ -89,11 +94,11 @@ export default function CadastroScreen({ navigation }: any) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.optionCard, styles.workerCard]}
+              style={[styles.optionCard, styles.workerCard, desktop && webStyles.optionCard, desktop && webStyles.workerCard]}
               onPress={handleDiarista}
               activeOpacity={0.8}
             >
-              <View style={[styles.iconCircle, styles.workerIconCircle]}>
+              <View style={[styles.iconCircle, styles.workerIconCircle, desktop && webStyles.iconCircle]}>
                 <Ionicons
                   name="person"
                   size={44}
@@ -101,12 +106,12 @@ export default function CadastroScreen({ navigation }: any) {
                 />
               </View>
 
-              <View style={styles.optionContent}>
-                <Text style={styles.optionTitle}>
+              <View style={[styles.optionContent, desktop && webStyles.optionContent]}>
+                <Text style={[styles.optionTitle, desktop && webStyles.optionTitle]}>
                   Sou diarista
                 </Text>
 
-                <Text style={styles.optionDescription}>
+                <Text style={[styles.optionDescription, desktop && webStyles.optionDescription]}>
                   Quero encontrar{'\n'}
                   oportunidades
                 </Text>
@@ -121,6 +126,7 @@ export default function CadastroScreen({ navigation }: any) {
           </View>
         </View>
       </ScrollView>
+      </PublicChoiceLayout>
     </SafeAreaView>
   );
 }

@@ -40,7 +40,7 @@ export const styles = StyleSheet.create({
   legendEmpty: { width: 12, height: 12, borderRadius: 6, borderWidth: 1, borderColor: '#D0D0D0', marginLeft: 10 },
   legendText: { color: '#888888', fontFamily: fonts.regular, fontSize: 9 },
   timeInputRow: { flexDirection: 'row', gap: 9 },
-  timeInput: { flex: 1, height: 47, borderWidth: 1, borderColor: '#D5D5D5', borderRadius: 10, paddingHorizontal: 13, color: colors.text, fontFamily: fonts.medium, backgroundColor: '#FFFFFF' },
+  timeInput: { flex: 1, minWidth: 0, height: 47, borderWidth: 1, borderColor: '#D5D5D5', borderRadius: 10, paddingHorizontal: 13, color: colors.text, fontFamily: fonts.medium, backgroundColor: '#FFFFFF' },
   addTimeButton: { minWidth: 118, height: 47, borderRadius: 10, backgroundColor: orange, flexDirection: 'row', gap: 5, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
   addTimeText: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: fontSizes.sm ?? 12 },
   registeredTimesTitle: { color: colors.text, fontFamily: fonts.semibold, fontSize: fontSizes.sm ?? 12, marginTop: 18, marginBottom: 8 },

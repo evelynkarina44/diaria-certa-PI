@@ -3,6 +3,7 @@ import type { AppointmentStatus, Profile, PaginatedResponse } from './types';
 import type { ResumoPagamento } from './pagamentoService';
 
 export type TrackingAppointment = {
+  numero_diarista?: number;
   confirmacao_cliente_expirada?: boolean;
   confirmacao_cliente_limite_em?: string | null;
   aguardando_confirmacao_cliente?: boolean;
@@ -22,8 +23,8 @@ export type TrackingAppointment = {
 };
 export type TrackingResponse = PaginatedResponse<TrackingAppointment> & { atualizado_em: string };
 export const trackingService = {
-  listar(page = 1) {
-    return request<TrackingResponse>({ method: 'GET', url: '/api/agendamento/acompanhamento', params: { page, limit: 100 } });
+  listar(page = 1, status?: 'Aceito') {
+    return request<TrackingResponse>({ method: 'GET', url: '/api/agendamento/acompanhamento', params: { page, limit: 100, ...(status ? { status } : {}) } });
   },
 };
 export type TrackingProfile = Extract<Profile, 'CLIENTE' | 'DIARISTA'>;

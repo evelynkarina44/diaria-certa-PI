@@ -1,10 +1,10 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const root = path.resolve(__dirname, '..'), ts = require(path.join(root, 'node_modules/typescript'));
-function load(file, dependencies = {}) {
+function load(file, dependencies = {}, globals = {}) {
   const exports = {};
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.React, esModuleInterop: true } }).outputText,
-    { exports, Date, Intl, require: name => { if (!(name in dependencies)) throw new Error(name); return dependencies[name]; } });
+    { exports, Date, Intl, ...globals, require: name => { if (!(name in dependencies)) throw new Error(name); return dependencies[name]; } });
   return exports;
 }
 const houses = [
@@ -38,16 +38,22 @@ const native = Object.fromEntries(['ActivityIndicator','ScrollView','Text','Text
 async function bookingHarness(addresses) {
   const h = hooks(), estimates = [], bookings = [];
   const user = { cliente: [{ id_cliente: 2 }] };
-  const profile = { id_diarista: 8, disponibilidade_diarista: [{ id_agenda: 31, disponivel: true, dia_semana: '2099-01-01', horario_inicio: '09:00', horario_fim: '10:00' }], combo_base: [], diarista_servico: [{ id_diarista_servico: 3, id_servico: 4, preco: 100, servico: { nome_servico: 'Limpar' } }] };
-  const navigation = { addListener: () => () => {}, navigate() {}, goBack() {} };
+  let profile = { id_diarista: 8, disponibilidade_diarista: [{ id_agenda: 31, disponivel: true, dia_semana: '2099-01-01', horario_inicio: '09:00', horario_fim: '10:00' }], combo_base: [], diarista_servico: [{ id_diarista_servico: 3, id_servico: 4, preco: 100, servico: { nome_servico: 'Limpar' } }] };
+  let focus, tick, reads = 0;
+  const navigation = { addListener: (_event, fn) => { focus = fn; return () => {}; }, isFocused: () => true, navigate() {}, goBack() {} };
+  const watcher = load('src/utils/watchAvailability.ts', {
+    'react-native': { AppState: { currentState: 'active', addEventListener: () => ({remove(){}}) }, Platform: {OS:'android'} },
+  }, {setInterval: fn => { tick = fn; return 1; }, clearInterval(){}});
+
   const Screen = load('src/screens/AgendarDiariaScreen/index.tsx', {
     react: h.react, 'react-native': native, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' }, '@expo/vector-icons': { Ionicons: 'Icon' }, './styles': { styles: {} },
+    '../../utils/watchAvailability': watcher,
     '../../utils/selectedHouse': houseModule, '../../components/page-header': require('./page-header-fixture.cjs'),
     '../../components/action-modal': { ActionModal: 'ActionModal' },
     '../../contexts/GlobalContext': { useAuth: () => ({ user }) },
     '../../services/api': { getErrorMessage: error => error.message },
     '../../services/clienteService': { clienteService: { buscarPorId: async () => ({ id_cliente: 2, qtd_comodos: 99, tamanho_casa: 'media', endereco: addresses }) } },
-    '../../services/diaristaService': { diaristaService: { buscarPorId: async () => profile } },
+    '../../services/diaristaService': { diaristaService: { buscarPorId: async () => { reads++; return profile; } } },
     '../../services/agendamentoService': { agendamentoService: {
       estimar: async payload => { estimates.push(payload); return { valor_estimado: 100 }; },
       criar: async payload => { bookings.push(payload); return { id_agendamento: 44 }; },
@@ -58,7 +64,11 @@ async function bookingHarness(addresses) {
   async function flush() { for (let i = 0; i < 4; i++) { render(); await new Promise(resolve => setImmediate(resolve)); } return render(); }
   function button(label) { return nodes.find(node => node.type === 'TouchableOpacity' && node.children.some(child => child?.type === 'Text' && child.children.includes(label))); }
   await flush();
-  return { render, flush, estimates, bookings, button, get nodes() { return nodes; } };
+  return { render, flush, estimates, bookings, button, get nodes() { return nodes; },
+    get profile() { return profile; }, get reads() { return reads; },
+    setAvailability(slots) { profile = {...profile, disponibilidade_diarista: slots}; },
+    focus: () => focus(), tick: () => tick(),
+  };
 }
 test('com várias casas não calcula nem envia até selecionar; resumo e solicitação usam a Casa 2', async () => {
   const h = await bookingHarness(houses);
@@ -122,3 +132,35 @@ test('cadastro e edição salvam dados por endereço, sem sobrescrever a outra c
   assert.equal(houses[0].qtd_comodos, 3);
 });
 
+
+test('agenda aberta recebe novos horários e dias sem remontar a tela nem perder a casa selecionada', async () => {
+  const h = await bookingHarness([houses[0]]);
+  const slots = h.profile.disponibilidade_diarista;
+  h.setAvailability([...slots, {...slots[0], id_agenda:32, horario_inicio:'1970-01-01T11:00:00.000Z',horario_fim:'1970-01-01T12:00:00.000Z'}]);
+  h.tick(); await h.flush();
+  assert.ok(h.button('09:00')); assert.ok(h.button('11:00'));
+  h.button('11:00').props.onPress(); await h.flush();
+  h.button('Limpar').props.onPress(); await h.flush();
+  assert.equal(h.estimates.at(-1).horario_inicio,'11:00');
+  assert.equal(h.estimates.at(-1).id_endereco,21);
+  h.setAvailability([{...slots[0], id_agenda:33,dia_semana:'2099-02-03',horario_inicio:'14:00',horario_fim:'15:00'}]);
+  h.tick(); await h.flush();
+  assert.ok(h.button('14:00'));
+  assert.equal(h.button('11:00'),undefined);
+  assert.equal(h.estimates.at(-1).data_agendamento,'2099-02-03');
+  assert.equal(h.estimates.at(-1).horario_inicio,'14:00');
+});
+
+test('atualização conserva horário ainda válido e limpa seleção se a agenda ficar vazia', async () => {
+  const h=await bookingHarness([houses[0]]);
+  const slot=h.profile.disponibilidade_diarista[0];
+  h.setAvailability([slot,{...slot,id_agenda:32,horario_inicio:'11:00',horario_fim:'12:00'}]);
+  h.focus();await h.flush();
+  h.button('11:00').props.onPress();await h.flush();
+  h.button('Limpar').props.onPress();await h.flush();
+  h.tick();await h.flush();
+  assert.equal(h.estimates.at(-1).horario_inicio,'11:00');
+  h.setAvailability([]);h.tick();await h.flush();
+  assert.equal(h.button('11:00'),undefined);
+  assert.equal(h.button('Confirmar Agendamento').props.disabled,true);
+});

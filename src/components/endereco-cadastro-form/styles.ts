@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
   cepError: { color: '#B42318', fontFamily: fonts.medium, fontSize: fontSizes.sm ?? 11, marginTop: -6, marginBottom: 10 },
   cepHint: { color: '#18A4B5', fontFamily: fonts.medium, fontSize: fontSizes.sm ?? 11, marginTop: -6, marginBottom: 10 },
   row: { width: '100%', flexDirection: 'row', gap: 10 },
-  flexField: { flex: 1 },
-  numberField: { width: 105 },
-  stateField: { width: 75 },
+  flexField: { flex: 1, minWidth: 0 },
+  numberField: { width: 105, flexShrink: 1, minWidth: 70 },
+  stateField: { width: 75, flexShrink: 0 },
 });

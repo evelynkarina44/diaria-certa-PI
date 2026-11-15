@@ -45,6 +45,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   userHeader: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 104,
@@ -67,6 +68,7 @@ export const styles = StyleSheet.create({
   },
   userInfo: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 12,
   },
   userName: {
@@ -121,8 +123,12 @@ export const styles = StyleSheet.create({
   },
   items: {
     width: '100%',
+    flex: 1,
+    minHeight: 0,
   },
+  itemsContent: { paddingBottom: 12 },
   footer: {
+    flexShrink: 0,
     marginTop: 'auto',
     paddingBottom: 12,
     borderTopWidth: 1,

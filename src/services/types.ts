@@ -194,7 +194,15 @@ export type Ocorrencia = {
   data_ocorrencia: string;
 };
 
+export type AppointmentLocation = {
+  distancia_km: number | null;
+  ponto_destino: { latitude: number; longitude: number } | null;
+  precisao: 'cep';
+};
+
 export type Agendamento = {
+  numero_diarista?: number;
+  distancia_km?: number | null;
   confirmacao_cliente_expirada?: boolean;
   confirmacao_cliente_limite_em?: string | null;
   aguardando_confirmacao_cliente?: boolean;

@@ -1,5 +1,7 @@
+import { useResponsive } from '../../contexts/ResponsiveContext';
+import { profileMenu, profileAccess } from '../../utils/navigationMenu';
 import { useRef, useState } from 'react';
-import { Animated, Image, Modal, Platform, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -25,36 +27,14 @@ function blurActiveElement() {
 
 export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps) {
   const { user } = useAuth();
+  const { sidebar } = useResponsive();
   const [visible, setVisible] = useState(false);
   const [logoutVisible, setLogoutVisible] = useState(false);
   const translateX = useRef(new Animated.Value(-380)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
-  const hasCliente = Boolean(user?.cliente?.length);
-  const hasDiarista = Boolean(user?.diarista?.length);
-  const accessDestination = !hasCliente
-    ? { route: 'CadastroCliente', label: 'Criar perfil de cliente', icon: 'person-add-outline' as const }
-    : !hasDiarista
-      ? { route: 'CadastroDiarista', label: 'Criar perfil de diarista', icon: 'person-add-outline' as const }
-      : { route: 'SelecionarPerfil', label: 'Trocar perfil ativo', icon: 'swap-horizontal-outline' as const };
-
-  const items = profile === 'diarista'
-    ? [
-        { route: 'PerfilDiaristaEdicao', label: 'Meu perfil', icon: 'person-outline' as const },
-        { route: 'HomeDiarista', label: 'Página inicial', icon: 'home-outline' as const },
-        { route: 'AcompanharDiarias', label: 'Minhas diárias', icon: 'list-circle-outline' as const },
-        { route: 'ServicosDiarista', label: 'Meus serviços', icon: 'sparkles-outline' as const },
-        { route: 'CombosDiarista', label: 'Meus combos', icon: 'layers-outline' as const },
-        { route: 'AgendaDiarista', label: 'Minha agenda', icon: 'calendar-outline' as const },
-        { route: 'HistoricoDiarista', label: 'Histórico', icon: 'clipboard-outline' as const },
-      ]
-    : [
-        { route: 'PerfilCliente', label: 'Meu perfil', icon: 'person-outline' as const },
-        { route: 'EncontrarDiarista', label: 'Página inicial', icon: 'home-outline' as const },
-        { route: 'AcompanharDiarias', label: 'Minhas diárias', icon: 'list-circle-outline' as const },
-        { route: 'HistoricoCliente', label: 'Histórico', icon: 'clipboard-outline' as const },
-        { route: 'FavoritosCliente', label: 'Favoritos', icon: 'heart-outline' as const },
-      ];
+  const accessDestination = profileAccess(Boolean(user?.cliente?.length), Boolean(user?.diarista?.length));
+  const items = profileMenu(profile);
 
   function open() {
     blurActiveElement();
@@ -88,6 +68,8 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
   function openLogout() {
     close(() => setLogoutVisible(true));
   }
+
+  if (sidebar) return null;
 
   return (
     <>
@@ -128,7 +110,7 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
 
               <Text style={styles.menuTitle}>{profile === 'diarista' ? 'Menu da diarista' : 'Menu do cliente'}</Text>
 
-              <View style={styles.items}>
+              <ScrollView style={styles.items} contentContainerStyle={styles.itemsContent} showsVerticalScrollIndicator={false}>
                 {items.map((item) => (
                   <TouchableOpacity key={item.route} style={styles.item} onPress={() => navigate(item.route)} activeOpacity={0.7}>
                     <View style={[styles.itemIcon, { backgroundColor: `${accentColor}16` }]}>
@@ -146,7 +128,7 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
                   <Text style={styles.itemText}>{accessDestination.label}</Text>
                   <Ionicons name="chevron-forward" size={18} color="#A0A0A0" />
                 </TouchableOpacity>
-              </View>
+              </ScrollView>
 
               <View style={styles.footer}>
                 <TouchableOpacity style={styles.logoutButton} onPress={openLogout} activeOpacity={0.75} accessibilityLabel="Sair da conta">

@@ -206,3 +206,25 @@ export const styles = StyleSheet.create({
     fontSize: fontSizes.sm ?? 12,
   },
 });
+
+/** Applied only to desktop web; native and narrow browsers keep their original styles. */
+export const desktopStyles = StyleSheet.create({
+  layout: { flexDirection: 'row', minHeight: 0 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center' },
+  container: { flex: 0, flexBasis: 'auto', flexShrink: 0, width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: 40, paddingTop: 24, paddingBottom: 40 },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 18 },
+  logo: { width: 46, height: 46 },
+  brandName: { fontFamily: fonts.semibold, fontSize: 20, color: '#173A41' },
+  header: { marginTop: 28, marginBottom: 30 },
+  title: { fontSize: 28, lineHeight: 38, color: '#173A41' },
+  subtitle: { fontSize: 14, lineHeight: 23, color: '#738184', marginTop: 6 },
+  form: { marginBottom: 24 },
+  input: { height: 52, borderWidth: 1, borderColor: '#DBE7E8', borderRadius: 12 },
+  passwordContainer: { height: 52, borderWidth: 1, borderColor: '#DBE7E8', borderRadius: 12 },
+  passwordContainerFocused: { borderColor: '#137E8D' },
+  link: { color: '#137E8D' },
+  loginButton: { height: 54, backgroundColor: '#FF6B2C', borderRadius: 12 },
+  footer: { flexWrap: 'wrap', rowGap: 4, marginTop: 24 },
+  visual: { flex: 1, margin: 16, marginLeft: 0, borderRadius: 22, overflow: 'hidden', backgroundColor: '#E7E5D8' },
+  photo: { ...StyleSheet.absoluteFill, width: '100%', height: '100%' },
+});

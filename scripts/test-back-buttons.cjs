@@ -30,11 +30,11 @@ test('perfis, históricos, agendamento e avaliação usam o cabeçalho compartil
 test('cabeçalho adapta altura ao texto, preserva menu e cores de cada perfil', () => {
   const menu = { type: 'Menu', props: {}, children: [] };
   const tree = PageHeader({ title: 'Meus serviços', subtitle: 'Gerencie seus serviços e preços.', accentColor: '#FF6B2C', left: menu });
-  assert.equal(tree.props.style[1].backgroundColor, '#FF6B2C');
+  assert.equal(tree.props.style.find(style => style?.backgroundColor).backgroundColor, '#FF6B2C');
   assert.equal(tree.props.style[0].height, undefined);
   assert.equal(tree.children[0].children[0], menu);
   const title = walk(tree).find(node => node.props.accessibilityRole === 'header');
-  assert.equal(title.props.style.fontSize, 24);
+  assert.equal(title.props.style[0].fontSize, 24);
   assert.equal(title.props.numberOfLines, undefined);
   assert.equal(walk(tree).filter(node => node.props.accessibilityLabel === 'Voltar').length, 0);
 });

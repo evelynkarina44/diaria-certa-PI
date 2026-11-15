@@ -1,3 +1,4 @@
+import { ResponsiveShell } from '../components/responsive-shell';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import HomeScreen from '../screens/HomeScreen';
@@ -23,6 +24,7 @@ import HomeDiaristaScreen from '../screens/HomeDiaristaScreen';
 import PerfilDiaristaEdicaoScreen from '../screens/PerfilDiaristaEdicaoScreen';
 import CheckInDiaristaScreen from '../screens/CheckInDiaristaScreen';
 
+import DetalhesDiariaScreen from '../screens/DetalhesDiariaScreen';
 import SolicitacoesDiaristaScreen from '../screens/SolicitacoesDiaristaScreen';
 import HistoricoDiaristaScreen from '../screens/HistoricoDiaristaScreen';
 
@@ -41,6 +43,7 @@ export function Routes() {
   return (
     <Stack.Navigator
       initialRouteName="Home"
+      layout={({ children, state, navigation }) => <ResponsiveShell routeName={state.routes[state.index].name} navigation={navigation}>{children}</ResponsiveShell>}
       screenOptions={{
         headerShown: false,
       }}
@@ -80,6 +83,7 @@ export function Routes() {
         component={EncontrarDiaristaScreen}
       />
 
+      <Stack.Screen name="DetalhesDiaria" component={DetalhesDiariaScreen} />
       <Stack.Screen name="Chatbot" component={ChatbotScreen} />
       <Stack.Screen name="AcompanharDiarias" component={AcompanharDiariasScreen} />
 

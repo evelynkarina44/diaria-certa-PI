@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from './styles';
+import { watchAvailability } from '../../utils/watchAvailability';
 import { selectedHouse } from '../../utils/selectedHouse';
 import { useAuth } from '../../contexts/GlobalContext';
 import { agendamentoService } from '../../services/agendamentoService';
@@ -74,7 +75,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
     }
     let active = true;
     let request = 0;
-    async function carregarDados(initial = false) {
+    async function carregarDados() {
       const id = ++request;
       try {
         const [diarista, clienteProfile] = await Promise.all([
@@ -83,24 +84,14 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
         if (!active || id !== request) return;
         setProfile(diarista);
         setCliente(clienteProfile);
-        if (initial) {
-          const firstAvailability = (diarista.disponibilidade_diarista ?? []).find(item => item.disponivel && item.horario_fim && futureAvailability(item));
-          if (firstAvailability) {
-            const key = dateKey(firstAvailability.dia_semana);
-            const [year, month] = key.split('-').map(Number);
-            setMesExibido(new Date(year, month - 1, 1));
-            setDataSelecionada(key);
-            setHorarioSelecionado(timeValue(firstAvailability.horario_inicio));
-          }
-        }
+        setError('');
       } catch (cause) {
         if (active && id === request) setError(getErrorMessage(cause));
       } finally {
         if (active && id === request) setLoading(false);
       }
     }
-    void carregarDados(true);
-    const unsubscribe = navigation.addListener('focus', () => void carregarDados());
+    const unsubscribe = watchAvailability(navigation, carregarDados);
     return () => { active = false; unsubscribe(); };
   }, [diaristaId, user?.cliente, navigation]);
 
@@ -108,6 +99,22 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
     () => (profile?.disponibilidade_diarista ?? []).filter((item) => item.disponivel && item.horario_fim && futureAvailability(item)),
     [profile],
   );
+  // Reconciliar após toda resposta evita depender de qual consulta inicial terminou primeiro.
+  // Preserva a escolha válida; se ela sair da agenda, seleciona outro horário atualizado.
+  useEffect(() => {
+    const selected = disponibilidades.find(item => dateKey(item.dia_semana) === dataSelecionada && timeValue(item.horario_inicio) === horarioSelecionado);
+    if (selected) return;
+    const next = disponibilidades.find(item => dateKey(item.dia_semana) === dataSelecionada) ?? disponibilidades[0];
+    const key = next ? dateKey(next.dia_semana) : '';
+    setDataSelecionada(key);
+    setHorarioSelecionado(next ? timeValue(next.horario_inicio) : '');
+    setConfirmBooking(false);
+    if (key && key !== dataSelecionada) {
+      const [year, month] = key.split('-').map(Number);
+      setMesExibido(new Date(year, month - 1, 1));
+    }
+  }, [disponibilidades, dataSelecionada, horarioSelecionado]);
+
   const disponibilidadesDoDia = useMemo(
     () => disponibilidades.filter((item) => dateKey(item.dia_semana) === dataSelecionada),
     [dataSelecionada, disponibilidades],
@@ -178,7 +185,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
       })
       .finally(() => { if (active) setEstimating(false); });
     return () => { active = false; };
-  }, [cliente, enderecoSelecionadoId, comboSelecionado, dataSelecionada, horarioSelecionado, servicosSelecionados]);
+  }, [cliente, profile, enderecoSelecionadoId, comboSelecionado, dataSelecionada, horarioSelecionado, servicosSelecionados]);
 
   function selecionarData(key: string) {
     const slots = disponibilidades.filter((item) => dateKey(item.dia_semana) === key);

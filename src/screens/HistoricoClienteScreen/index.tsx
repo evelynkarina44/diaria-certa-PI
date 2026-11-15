@@ -1,3 +1,4 @@
+import { ResponsiveGrid } from '../../components/responsive-grid';
 import { HeaderMenu } from '../../components/header-menu';
 import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
@@ -390,7 +391,7 @@ export default function HistoricoClienteScreen({
           {!exibirFavoritos ? (
             <>
               {Boolean(erroHistorico) && <Text style={styles.emptyText}>{erroHistorico}</Text>}
-              {!loading && !erroHistorico && paginaHistorico.data.map(renderHistoryCard)}
+              <ResponsiveGrid>{!loading && !erroHistorico && paginaHistorico.data.map(renderHistoryCard)}</ResponsiveGrid>
               {!loading && !erroHistorico && paginaHistorico.pages > 1 && (
                 <View style={styles.paginationActions}>
                   <TouchableOpacity accessibilityRole="button" accessibilityLabel="Página anterior"
@@ -437,9 +438,9 @@ export default function HistoricoClienteScreen({
                   </TouchableOpacity>}
                 </View>
               </View>
-              <View style={styles.favoritesList}>
+              <ResponsiveGrid style={styles.favoritesList}>
                 {favoritosFiltrados.map((item) => renderCard(item))}
-              </View>
+              </ResponsiveGrid>
               {Boolean(erroFavoritos) && <Text style={styles.emptyText}>{erroFavoritos}</Text>}
               {!loading && !erroFavoritos && favoritosFiltrados.length === 0 && (
                 <View style={styles.favoriteEmpty}>

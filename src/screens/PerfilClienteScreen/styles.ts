@@ -102,6 +102,7 @@ export const styles = StyleSheet.create({
 
   profileInfo: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 17,
   },
 
@@ -112,6 +113,7 @@ export const styles = StyleSheet.create({
   },
 
   name: {
+    flexShrink: 1,
     color: colors.text,
     fontFamily: fonts.semibold,
     fontSize: fontSizes['2xl'] ?? 21,
@@ -232,6 +234,7 @@ export const styles = StyleSheet.create({
   },
 
   cardTitle: {
+    flexShrink: 1,
     color: colors.text,
     fontFamily: fonts.semibold,
     fontSize: fontSizes.md ?? 15,
@@ -254,6 +257,7 @@ export const styles = StyleSheet.create({
   },
 
   detailText: {
+    flexShrink: 1,
     color: '#666666',
     fontFamily: fonts.regular,
     fontSize: fontSizes.sm ?? 12,

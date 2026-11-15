@@ -1,3 +1,4 @@
+import { ResponsiveGrid } from '../../components/responsive-grid';
 import { PageHeader } from '../../components/page-header';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -154,7 +155,7 @@ export default function ServicosDiaristaScreen({ navigation }: any) {
         {loading ? <ActivityIndicator color="#FF6B2C" style={styles.loader} /> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {!loading && !filteredServices.length ? <View style={styles.emptyCard}><Text style={styles.emptyText}>{atuais.length ? 'Nenhum serviço encontrado.' : 'Nenhum serviço cadastrado.'}</Text></View> : null}
-        {visibleServices.map((item) => (
+        <ResponsiveGrid>{visibleServices.map((item) => (
           <View key={item.id_diarista_servico} style={styles.card}>
             <View style={styles.cardIcon}><Ionicons name="sparkles-outline" size={21} color="#FF6B2C" /></View>
             <View style={styles.cardContent}>
@@ -168,7 +169,7 @@ export default function ServicosDiaristaScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
+        ))}</ResponsiveGrid>
         {pages > 1 && <View style={styles.pagination}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Página anterior de serviços"
             disabled={currentPage === 1} onPress={() => changePage(currentPage - 1)}

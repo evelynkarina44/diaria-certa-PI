@@ -1,3 +1,5 @@
+import { useResponsive } from '../../contexts/ResponsiveContext';
+import { ResponsiveGrid } from '../../components/responsive-grid';
 import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -35,6 +37,7 @@ function monthTitle(date: Date) {
 }
 
 export default function HomeDiaristaScreen({ navigation }: any) {
+  const { columns } = useResponsive();
   const [aba, setAba] = useState<'agenda' | 'solicitacoes'>(
     'agenda'
   );
@@ -151,7 +154,7 @@ export default function HomeDiaristaScreen({ navigation }: any) {
           contentContainerStyle={styles.scrollContent}
         >
           {aba === 'agenda' ? (
-            <>
+            <ResponsiveGrid>
               <View style={styles.calendar}>
                 <View style={styles.calendarHeader}>
                   <TouchableOpacity
@@ -263,12 +266,12 @@ export default function HomeDiaristaScreen({ navigation }: any) {
                   </View>
                 </View>
               </View>
-              <View style={styles.trackingSection}>
+              <View style={[styles.trackingSection, columns > 1 && { marginTop: 0, paddingTop: 0, borderTopWidth: 0 }]}>
                 <AppointmentTracker navigation={navigation} profile="DIARISTA" compact />
               </View>
 
 
-            </>
+            </ResponsiveGrid>
           ) : (
             <View style={styles.emptyState}>
               <Ionicons

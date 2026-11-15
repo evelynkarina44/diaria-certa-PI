@@ -1,3 +1,4 @@
+import { ResponsiveGrid } from '../../components/responsive-grid';
 import { HeaderMenu } from '../../components/header-menu';
 import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
@@ -14,6 +15,7 @@ import type { Agendamento } from '../../services/types';
 
 type RegistroHistorico = {
   id: number;
+  numero: number | null;
   nome: string;
   avaliacao: NonNullable<Agendamento['avaliacao']>[number] | null;
   endereco: string;
@@ -94,6 +96,7 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
     const endereco = item.endereco;
     return {
       id: item.id_agendamento,
+      numero: item.numero_diarista ?? null,
       nome: item.cliente?.usuario?.nome ?? 'Cliente',
       avaliacao: item.avaliacao?.find(review => review.autor_tipo === 'Cliente') ?? null,
       endereco: endereco ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}` : 'Endereço não informado',
@@ -145,7 +148,7 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
     return (
       <View key={registro.id} style={styles.historyCard}>
         <View style={styles.historyCardTop}>
-          <Text style={styles.bookingNumber}>DIÁRIA #{registro.id}</Text>
+          <Text style={styles.bookingNumber}>DIÁRIA #{registro.numero ?? '—'}</Text>
           <View style={[styles.historyStatus, { backgroundColor: color + '14' }]}>
             <Ionicons name={statusIcons[registro.checkinExpirado ? 'Checkin_expirado' : registro.status]} size={15} color={color} />
             <Text style={[styles.historyStatusText, { color }]}>{registro.confirmacaoExpirada ? 'Confirmação não recebida' : registro.checkinExpirado ? 'Check-in expirado' : statusLabels[registro.status]}</Text>
@@ -240,7 +243,7 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
               </View>
               {temFiltros && <TouchableOpacity style={styles.resetFilters} onPress={limparFiltros}><Ionicons name="close-outline" size={17} color="#C2410C" /><Text style={styles.sortText}>Limpar filtros</Text></TouchableOpacity>}
             </View>
-          {!loading && !error && paginaHistorico.data.map(renderCard)}
+          <ResponsiveGrid>{!loading && !error && paginaHistorico.data.map(renderCard)}</ResponsiveGrid>
               {!loading && !error && paginaHistorico.pages > 1 && (
                 <View style={styles.paginationActions}>
                   <TouchableOpacity accessibilityRole="button" accessibilityLabel="Página anterior"

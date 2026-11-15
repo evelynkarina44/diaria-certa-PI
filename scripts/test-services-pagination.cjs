@@ -15,6 +15,7 @@ function harness(count) {
   const imports = {
     react, 'react-native': Object.fromEntries(['ActivityIndicator','ScrollView','Text','TextInput','TouchableOpacity','View'].map(n => [n, n])),
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' }, '@expo/vector-icons': { Ionicons: 'Icon' },
+    '../../components/responsive-grid': { ResponsiveGrid: 'ResponsiveGrid' },
     '../../components/page-header': { PageHeader: 'PageHeader' }, '../../components/header-menu': { HeaderMenu: 'HeaderMenu' },
     '../../components/profile-edit-modal': { ProfileEditModal: 'ProfileEditModal' },
     '../../contexts/GlobalContext': { useAuth: () => ({ user }) },

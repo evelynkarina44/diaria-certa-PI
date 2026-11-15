@@ -37,6 +37,7 @@ function harness(initial = favoriteRecords) {
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@expo/vector-icons': { Ionicons: 'Icon' },
     '../../components/header-menu': { HeaderMenu: 'HeaderMenu' },
+    '../../components/responsive-grid': { ResponsiveGrid: 'ResponsiveGrid' },
     '../../components/page-header': require('./page-header-fixture.cjs'),
     '../../components/action-modal': { ActionModal: 'ActionModal' },
     '../../services/favoritoService': { favoritoService: {

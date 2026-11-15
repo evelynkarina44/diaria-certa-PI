@@ -1,8 +1,10 @@
+import { bookingTime, distanceLabel } from '../../utils/appointmentLocation';
+import { ResponsiveGrid } from '../../components/responsive-grid';
 import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActionModal } from '../../components/action-modal';
 
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +19,8 @@ import { useAuth } from '../../contexts/GlobalContext';
 type Solicitacao = {
   id: number;
   nome: string;
+  foto?: string | null;
+  distancia?: number | null;
   avaliacao: string;
   endereco: string;
   data: string;
@@ -35,6 +39,7 @@ export default function SolicitacoesDiaristaScreen({
     'solicitacoes'
   );
 
+  const [failedPhotos, setFailedPhotos] = useState<string[]>([]);
   const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
@@ -65,14 +70,14 @@ export default function SolicitacoesDiaristaScreen({
     return {
       id: item.id_agendamento,
       nome: item.cliente?.usuario?.nome ?? 'Cliente',
+      foto: item.cliente?.usuario?.foto_perfil,
+      distancia: item.distancia_km,
       avaliacao: '-',
       endereco: endereco
         ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}`
         : 'Endereço não informado',
       data: new Date(item.data_agendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }),
-      horario: item.horario_inicio
-        ? new Date(item.horario_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
-        : 'Horário não informado',
+      horario: bookingTime(item.horario_inicio),
       valor: Number(item.valor_estimado ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
       servicos: (item.agendamento_servico ?? [])
         .map((service) => service.diarista_servico?.servico?.nome_servico)
@@ -231,7 +236,7 @@ export default function SolicitacoesDiaristaScreen({
               </Text>
             </View>
           ) : (
-            <View style={styles.list}>
+            <ResponsiveGrid style={styles.list}>
               {solicitacoes.map((solicitacao) => (
                 <View
                   key={solicitacao.id}
@@ -239,11 +244,13 @@ export default function SolicitacoesDiaristaScreen({
                 >
                   <View style={styles.requestTop}>
                     <View style={styles.avatar}>
-                      <Ionicons
-                        name="person"
-                        size={37}
-                        color="#FFFFFF"
-                      />
+                      {solicitacao.foto && !failedPhotos.includes(solicitacao.foto) ? (
+                        <Image source={{ uri: solicitacao.foto }} style={styles.avatarImage} resizeMode="cover"
+                          accessibilityLabel={`Foto de ${solicitacao.nome}`}
+                          onError={() => setFailedPhotos(current => [...current, solicitacao.foto!])} />
+                      ) : (
+                        <Ionicons name="person" size={37} color="#FFFFFF" />
+                      )}
                     </View>
 
                     <View style={styles.requestInfo}>
@@ -251,26 +258,12 @@ export default function SolicitacoesDiaristaScreen({
                         {solicitacao.nome}
                       </Text>
 
-                      <View style={styles.ratingRow}>
-                        <Text style={styles.smallLabel}>
-                          Avaliação
-                        </Text>
-
-                        <Text style={styles.rating}>
-                          {solicitacao.avaliacao}
-                        </Text>
-
-                        <Ionicons
-                          name="star"
-                          size={11}
-                          color="#FFB800"
-                        />
-                      </View>
+                      <Text style={styles.clientCaption}>Cliente da diária</Text>
 
                       <View style={styles.infoRow}>
                         <Ionicons
-                          name="search-outline"
-                          size={10}
+                          name="location-outline"
+                          size={16}
                           color="#999999"
                         />
 
@@ -294,12 +287,24 @@ export default function SolicitacoesDiaristaScreen({
                   </View>
 
                   <View style={styles.detailsBox}>
-                    <View style={styles.detailRow}><Ionicons name="time-outline" size={15} color="#FF6B2C" /><Text style={styles.detailText}>Início: {solicitacao.horario}</Text></View>
+                    <View style={styles.detailRow}><Ionicons name="time-outline" size={18} color="#FF6B2C" /><Text style={styles.detailText}>Início: {solicitacao.horario}</Text></View>
                     <View style={styles.detailRow}><Ionicons name="sparkles-outline" size={15} color="#FF6B2C" /><Text style={styles.detailText}>{solicitacao.servicos}</Text></View>
                     <View style={styles.detailRow}><Ionicons name="cash-outline" size={15} color="#FF6B2C" /><Text style={styles.detailValue}>{solicitacao.valor}</Text></View>
                     {solicitacao.observacoes ? <View style={styles.detailRow}><Ionicons name="chatbubble-outline" size={15} color="#FF6B2C" /><Text style={styles.detailText}>{solicitacao.observacoes}</Text></View> : null}
                   </View>
 
+                  <View style={styles.distanceRow}>
+                    <Ionicons name="navigate-outline" size={18} color="#E55318" />
+                    <Text style={styles.distanceText}>{distanceLabel(solicitacao.distancia)}</Text>
+                  </View>
+                  <Text style={styles.distanceHint}>Entre seu endereço e o CEP da casa · linha reta</Text>
+                  <TouchableOpacity style={styles.detailsButton} accessibilityRole="button"
+                    accessibilityLabel={`Ver detalhes da diária de ${solicitacao.nome}`}
+                    onPress={() => navigation.navigate('DetalhesDiaria', { agendamentoId: solicitacao.id })}>
+                    <Ionicons name="reader-outline" size={20} color="#E55318" />
+                    <Text style={styles.detailsButtonText}>Ver detalhes e localização</Text>
+                    <Ionicons name="chevron-forward" size={19} color="#E55318" />
+                  </TouchableOpacity>
                   <View style={styles.actions}>
                     <TouchableOpacity
                       style={[styles.rejectButton, processingId === solicitacao.id && styles.disabled]}
@@ -324,7 +329,7 @@ export default function SolicitacoesDiaristaScreen({
 
                 </View>
               ))}
-            </View>
+            </ResponsiveGrid>
           )}
         </ScrollView>
       </View>

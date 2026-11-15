@@ -73,7 +73,7 @@ test('completion of a click from an old profile cannot redirect the new profile'
 
 test('client dashboard is menu-only and bell/provider are connected without remounting navigation', () => {
  const client = fs.readFileSync(path.join(root, 'src/screens/EncontrarDiaristaScreen/index.tsx'), 'utf8');
- const menu = fs.readFileSync(path.join(root, 'src/components/header-menu/index.tsx'), 'utf8');
+ const menu = fs.readFileSync(path.join(root, 'src/utils/navigationMenu.ts'), 'utf8');
  const app = fs.readFileSync(path.join(root, 'App.tsx'), 'utf8');
  const provider = fs.readFileSync(path.join(root, 'src/contexts/NotificationContext.tsx'), 'utf8');
  assert.equal(client.includes('<AppointmentTracker'), false);

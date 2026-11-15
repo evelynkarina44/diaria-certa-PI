@@ -139,10 +139,12 @@ export const styles = StyleSheet.create({
 
   profileInfo: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 17,
   },
 
   name: {
+    flexShrink: 1,
     color: colors.text,
     fontFamily: fonts.semibold,
     fontSize: fontSizes['2xl'] ?? 21,

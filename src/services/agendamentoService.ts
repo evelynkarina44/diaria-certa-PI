@@ -1,6 +1,7 @@
 import { request } from './api';
 import type {
   Agendamento,
+  AppointmentLocation,
   AgendamentoCreate,
   AppointmentStatus,
   PaginatedResponse,
@@ -32,6 +33,9 @@ export const agendamentoService = {
       method: 'GET',
       url: `/api/agendamento/${id}`,
     });
+  },
+  localizacao(id: number) {
+    return request<AppointmentLocation>({ method: 'GET', url: `/api/agendamento/${id}/localizacao` });
   },
   estimar(data: AgendamentoCreate) {
     return request<AgendamentoEstimativa>({

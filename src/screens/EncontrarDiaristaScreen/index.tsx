@@ -1,3 +1,4 @@
+import { ResponsiveGrid } from '../../components/responsive-grid';
 import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -827,7 +828,7 @@ export default function EncontrarDiaristaScreen({
                 Nenhuma diarista encontrada com os filtros informados.
               </Text>
             )}
-            {diaristas.map((diarista) => (
+            <ResponsiveGrid style={styles.list}>{diaristas.map((diarista) => (
               <View
                 key={diarista.id}
                 style={styles.professionalCard}
@@ -920,7 +921,7 @@ export default function EncontrarDiaristaScreen({
                   />
                 </TouchableOpacity>
               </View>
-            ))}
+            ))}</ResponsiveGrid>
           </View>
           {!erro && totalPaginas > 1 && (
             <View style={styles.pagination}>

@@ -1,5 +1,5 @@
 type HistoryItem = {
-  id: number; nome: string; status?: string; checkinExpirado?: boolean;
+  id: number; numero?: number | null; nome: string; status?: string; checkinExpirado?: boolean;
   dataISO?: string; horario?: string; servicos?: string;
 };
 
@@ -9,7 +9,7 @@ export function filterHistory<T extends HistoryItem>(
   const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const terms = normalize(search.trim()).split(/\s+/).filter(Boolean);
   return items.filter(item => {
-    const text = normalize([item.nome, item.servicos, item.id].join(' '));
+    const text = normalize([item.nome, item.servicos, item.numero === undefined ? item.id : item.numero].join(' '));
     const dateParts = item.dataISO?.slice(0, 10).split('-');
     const displayDate = dateParts?.length === 3 ? dateParts.reverse().join('/') : '';
     const matchesStatus = status === 'Todos' || (status === 'Checkin_expirado'

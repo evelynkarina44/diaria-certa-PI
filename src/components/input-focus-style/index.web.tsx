@@ -4,6 +4,13 @@ import React from 'react';
 // As bordas normais/de erro ficam intactas; o teclado mantém uma indicação discreta de foco.
 export function InputFocusStyle() {
   return <style>{`
+    /* Permite que campos flexíveis encolham em telas estreitas. */
+    input, textarea, select {
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
     input:focus,
     textarea:focus,
     select:focus {

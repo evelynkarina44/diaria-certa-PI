@@ -2,6 +2,7 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const ts = require('../node_modules/typescript');
 const exportsHeader = {};
 const imports = {
+  '../../contexts/ResponsiveContext': { useResponsive: () => ({ desktop: false }) },
   react: { createElement: (type, props, ...children) => ({ type, props: { ...props, children }, children }) },
   'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', StyleSheet: { create: value => value } },
   '@expo/vector-icons': { Ionicons: 'Icon' },

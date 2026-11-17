@@ -194,6 +194,8 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 10,
     marginTop: 18,
     marginBottom: 8,
   },
@@ -201,12 +203,13 @@ export const styles = StyleSheet.create({
   attachmentTitle: {
     color: colors.text,
     fontFamily: fonts.semibold,
-    fontSize: 10,
+    fontSize: 13,
+    lineHeight: 20,
   },
 
   uploadButton: {
     minWidth: 73,
-    height: 29,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -225,7 +228,8 @@ export const styles = StyleSheet.create({
   uploadButtonText: {
     color: '#555555',
     fontFamily: fonts.medium,
-    fontSize: 9,
+    fontSize: 12,
+    lineHeight: 18,
   },
 
   attachmentsList: {
@@ -235,7 +239,7 @@ export const styles = StyleSheet.create({
 
   attachmentItem: {
     width: '100%',
-    minHeight: 30,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -247,23 +251,25 @@ export const styles = StyleSheet.create({
 
   attachmentName: {
     flex: 1,
-    color: '#888888',
+    color: '#475467',
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 12,
+    lineHeight: 18,
     marginLeft: 7,
   },
 
   removeAttachment: {
-    width: 28,
-    height: 28,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   noAttachments: {
-    color: '#AAAAAA',
+    color: '#667085',
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: 12,
+    lineHeight: 18,
     textAlign: 'center',
     marginTop: 8,
   },

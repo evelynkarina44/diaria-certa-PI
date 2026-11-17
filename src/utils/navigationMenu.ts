@@ -14,7 +14,8 @@ const workerItems = [
   { route: 'AgendaDiarista', label: 'Minha agenda', icon: 'calendar-outline' as const },
   { route: 'AvaliacoesRecebidas', label: 'Avaliações recebidas', icon: 'star-outline' as const },
 ];
-export const profileMenu = (profile: 'cliente' | 'diarista') => profile === 'diarista' ? workerItems : clientItems;
+const adminItems = [{ route: 'AdminDenuncias', label: 'Central de denúncias', icon: 'shield-checkmark-outline' as const }, { route: 'AdminUsuarios', label: 'Tabela de usuários', icon: 'people-outline' as const }];
+export const profileMenu = (profile: 'cliente' | 'diarista' | 'admin') => profile === 'admin' ? adminItems : profile === 'diarista' ? workerItems : clientItems;
 export function profileAccess(hasCliente: boolean, hasDiarista: boolean) {
   return !hasCliente ? { route: 'CadastroCliente', label: 'Criar perfil de cliente', icon: 'person-add-outline' as const }
     : !hasDiarista ? { route: 'CadastroDiarista', label: 'Criar perfil de diarista', icon: 'person-add-outline' as const }

@@ -1,3 +1,4 @@
+import { AttachmentGallery } from '../../components/attachment-gallery';
 import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useState } from 'react';
 
@@ -161,6 +162,7 @@ export default function PerfilDiaristaScreen({
               <View key={item.id_avaliacao} style={styles.reviewCard}>
                 <Text style={styles.reviewTitle}>{item.autor ?? 'Cliente'} • {Number(item.nota).toFixed(1)}</Text>
                 <Text style={styles.reviewText}>{item.comentario || 'Avaliação sem comentário.'}</Text>
+                <AttachmentGallery resource="avaliacao" id={item.id_avaliacao} attachments={item.anexos} />
               </View>
             ))
           ) : <Text style={styles.emptyText}>Ainda não há avaliações públicas.</Text>}</>);

@@ -25,7 +25,7 @@ export type ListQuery = {
   limit?: number;
 };
 
-export type Profile = 'CLIENTE' | 'DIARISTA';
+export type Profile = 'CLIENTE' | 'DIARISTA' | 'ADMIN';
 
 export type Usuario = {
   id_usuario: number;
@@ -36,6 +36,7 @@ export type Usuario = {
   foto_perfil: string | null;
   data_cadastro?: string;
   tipo: 'CLIENTE' | 'DIARISTA' | 'AMBOS';
+  administrador?: boolean;
   cliente?: Array<{ id_cliente: number }>;
   diarista?: Array<{ id_diarista: number }>;
   profiles: Profile[];
@@ -95,6 +96,7 @@ export type DiaristaServico = {
 };
 
 export type Avaliacao = {
+  anexos?: import('./reportAttachmentService').MediaAttachment[];
   id_avaliacao: number;
   id_agendamento: number;
   id_cliente: number;

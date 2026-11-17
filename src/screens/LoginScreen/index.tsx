@@ -57,7 +57,9 @@ export default function LoginScreen({ navigation }: any) {
       const user = await login(normalizedEmail, password);
       const destination = user.requiresProfileSelection
         ? 'SelecionarPerfil'
-        : user.activeProfile === 'DIARISTA'
+        : user.activeProfile === 'ADMIN'
+          ? 'AdminDenuncias'
+          : user.activeProfile === 'DIARISTA'
           ? 'HomeDiarista'
           : 'EncontrarDiarista';
       navigation.reset({

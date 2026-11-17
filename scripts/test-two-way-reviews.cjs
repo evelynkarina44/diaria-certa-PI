@@ -22,26 +22,30 @@ function hooks() {
 }
 const native=Object.fromEntries(['ActivityIndicator','ScrollView','Text','TextInput','TouchableOpacity','View'].map(key=>[key,key]));
 native.StyleSheet={create:value=>value};
+native.Platform={OS:'web'};
 const walk=node=>!node||typeof node!=='object'?[]:[node,...(node.children??[]).flat(Infinity).flatMap(walk)];
-function reviewHarness(worker, {allowed=true,previous=null,desktop=false}={}) {
-  const h=hooks(),writes=[],navigations=[];
+function reviewHarness(worker, {allowed=true,previous=null,desktop=false,uploadFailure=false,reviewUploadFailure=false,video=false,videoDuration=5000,videoSize=2048}={}) {
+  const h=hooks(),writes=[],navigations=[],reportWrites=[],uploads=[],reviewUploads=[];
+  let uploadFailed=false,reviewUploadFailed=false;
   const summary={pode_avaliar:!worker&&allowed,pode_avaliar_cliente:worker&&allowed,avaliacao_cliente:worker?null:previous,avaliacao_diarista:worker?previous:null};
-  const booking={cliente:{usuario:{nome:'Cliente exemplo'}},diarista:{usuario:{nome:'Diarista exemplo'}}};
+  const booking={cliente:{id_usuario:7,usuario:{nome:'Cliente exemplo'}},diarista:{id_usuario:8,usuario:{nome:'Diarista exemplo'}}};
   const navigation={navigate:(...args)=>navigations.push(args),goBack(){}};
   const Screen=compile('src/screens/AvaliacaoScreen/index.tsx',{
+    'expo-image-picker':{launchImageLibraryAsync:async()=>({canceled:false,assets:[{uri:'data:image/png;base64,AA==',base64:'AA==',fileName:video?'prova.mp4':'prova.png',type:video?'video':'image',mimeType:video?'video/mp4':'image/png',duration:videoDuration,fileSize:videoSize}]})},
+    '../../services/reportAttachmentService':{reportAttachmentService:{upload:async(id,image)=>{uploads.push({id,image});if(uploadFailure&&!uploadFailed){uploadFailed=true;throw new Error('Falha de conexão');}return{id_anexo:'image'};}},reviewAttachmentService:{upload:async(id,media)=>{reviewUploads.push({id,media});if(reviewUploadFailure&&!reviewUploadFailed){reviewUploadFailed=true;throw new Error('Falha no vídeo');}return{id_anexo:'review-media'};}}},
     '../../contexts/ResponsiveContext':{useResponsive:()=>({desktop})},
     react:h.react,'react-native':native,'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'},'@expo/vector-icons':{Ionicons:'Icon'},
     './styles':{styles:new Proxy({},{get:(_,key)=>key})},'../../components/page-header':{PageHeader:'PageHeader'},'../../components/action-modal':{ActionModal:'ActionModal'},
     '../../components/star-rating':{StarRating:'StarRating'},'../../services/api':{getErrorMessage:error=>error.message},
-    '../../services/avaliacaoService':{avaliacaoService:{criar:async data=>writes.push(data)}},
-    '../../services/denunciaService':{denunciaService:{}},
+    '../../services/avaliacaoService':{avaliacaoService:{criar:async data=>{writes.push(data);return{id_avaliacao:66};}}},
+    '../../services/denunciaService':{denunciaService:{criar:async data=>{reportWrites.push(data);return{id_denuncia:77};}}},
     '../../services/agendamentoService':{agendamentoService:{buscarPorId:async()=>booking}},
     '../../services/pagamentoService':{pagamentoService:{buscar:async()=>summary}},
   }).default;
   let nodes=[];
   function render(){h.begin();nodes=walk(Screen({navigation,route:{params:{agendamentoId:40,avaliarCliente:worker}}}));h.effects();}
   async function flush(){for(let i=0;i<4;i++){render();await new Promise(resolve=>setImmediate(resolve));}render();}
-  return {flush,writes,get nodes(){return nodes;},button:label=>nodes.find(n=>n.type==='TouchableOpacity'&&n.children.some(c=>c?.type==='Text'&&c.children.includes(label)))};
+  return {flush,writes,reportWrites,uploads,reviewUploads,navigations,get nodes(){return nodes;},button:label=>nodes.find(n=>n.type==='TouchableOpacity'&&n.children.some(c=>c?.type==='Text'&&c.children.includes(label)))};
 }
 test('diarista avalia cliente após checkout, envia nota e comentário e não duplica envio',async()=>{
   const h=reviewHarness(true);await h.flush();
@@ -68,6 +72,7 @@ test('comentários recebidos aparecem abertos na tela separada, com paginação 
     '../../contexts/GlobalContext':{useAuth:()=>({user:{id_usuario:1,activeProfile:'CLIENTE'}})},
     '../../services/api':{getErrorMessage:error=>error.message},
     '../../utils/watchAvailability':{watchAvailability:(_nav,fn)=>{refresh=fn;void fn();return()=>{};}},
+    '../attachment-gallery':{AttachmentGallery:'AttachmentGallery'},
     '../../services/avaliacaoService':{avaliacaoService:{recebidas:async(page,limit)=>{requests.push([page,limit]);return{
       data:[{id_avaliacao:page,nota:4,comentario:'Cliente muito gentil',autor:'Profissional exemplo',data_avaliacao:'2026-11-16T12:00:00Z'}],
       media:4,pagination:{page,limit,total:4,pages:2},
@@ -86,6 +91,44 @@ test('perfis e tela separada incluem avaliações recebidas, sem bloco na págin
   for(const screen of ['PerfilClienteScreen','PerfilDiaristaEdicaoScreen','AvaliacoesRecebidasScreen']){
     assert.ok(fs.readFileSync(path.join(root,'src/screens',screen,'index.tsx'),'utf8').includes('<ReceivedReviews navigation={navigation}'));
   }
+});
+
+test('anexo pendente recusado pode ser removido para concluir sem duplicar o registro',async()=>{
+ for(const report of [false,true]){
+  const h=reviewHarness(true,{video:true,uploadFailure:report,reviewUploadFailure:!report});await h.flush();
+  h.nodes.find(n=>n.type==='StarRating').props.onChange(report?1:4);await h.flush();
+  if(report){h.button('Denúncia').props.onPress();await h.flush();h.nodes.find(n=>n.type==='TextInput').props.onChangeText('Relato');await h.flush();}
+  await h.button(report?'Anexar':'Anexar foto ou vídeo').props.onPress();await h.flush();
+  async function send(){
+   h.button(report?'Enviar':'Enviar avaliação').props.onPress();await h.flush();
+   if(!report){await h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Enviar avaliação?').props.onConfirm();await h.flush();}
+  }
+  await send();h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Confira os dados').props.onClose();await h.flush();
+  const remove=h.nodes.find(n=>n.props.accessibilityLabel==='Remover anexo da '+(report?'denúncia':'avaliação')+' 1');
+  assert.equal(remove.props.disabled,false);remove.props.onPress();await h.flush();
+  await send();await h.flush();
+  assert.equal((report?h.reportWrites:h.writes).length,1);
+  assert.equal((report?h.uploads:h.reviewUploads).length,1,'não tenta reenviar o arquivo removido');
+  assert.equal(h.nodes.find(n=>n.type==='ActionModal'&&n.props.title===(report?'Denúncia enviada':'Avaliação enviada')).props.visible,true);
+ }
+});
+
+test('denúncia envia imagem real e retoma upload sem duplicar o relato após falha',async()=>{
+ const h=reviewHarness(true,{uploadFailure:true});await h.flush();
+ h.nodes.find(n=>n.type==='StarRating').props.onChange(1);await h.flush();
+ h.button('Denúncia').props.onPress();await h.flush();
+ h.nodes.find(n=>n.type==='TextInput').props.onChangeText('Descrição do ocorrido.');
+ await h.button('Anexar').props.onPress();await h.flush();
+ await h.button('Enviar').props.onPress();await h.flush();
+ assert.equal(h.reportWrites.length,1);assert.equal(h.uploads.length,1);assert.equal(h.uploads[0].id,77);
+ assert.equal(h.uploads[0].image.name,'prova.png');
+ assert.equal(h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Denúncia enviada').props.visible,false);
+ assert.equal(h.navigations.length,0);
+ h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Confira os dados').props.onClose();await h.flush();
+ await h.button('Enviar').props.onPress();await h.flush();
+ assert.equal(h.reportWrites.length,1,'não cria outra denúncia para retomar o anexo');
+ assert.equal(h.uploads.length,2);
+ assert.equal(h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Denúncia enviada').props.visible,true);
 });
 
 test('avaliação web separa nota do formulário para os dois perfis, sem duplicar envio',async()=>{
@@ -110,6 +153,68 @@ test('avaliações recebidas usam a família tipográfica global em todos os tex
     const line=source.split('\n').find(line=>line.trimStart().startsWith(name+': {'));
     assert.ok(line.includes('fontFamily: fonts.'),name);
   }
+});
+
+test('cliente e diarista anexam foto e vídeo na avaliação e só confirmam após todos os uploads',async()=>{
+ for(const worker of [false,true])for(const video of [false,true]){
+  const h=reviewHarness(worker,{video});await h.flush();
+  h.nodes.find(n=>n.type==='StarRating').props.onChange(4);await h.flush();
+  await h.button('Anexar foto ou vídeo').props.onPress();await h.flush();
+  h.button('Enviar avaliação').props.onPress();await h.flush();
+  await h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Enviar avaliação?').props.onConfirm();await h.flush();
+  assert.equal(h.writes.length,1);assert.equal(h.reviewUploads.length,1);assert.equal(h.reviewUploads[0].id,66);
+  assert.equal(h.reviewUploads[0].media.type,video?'video':'image');
+  assert.equal(h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Avaliação enviada').props.visible,true);
+ }
+});
+test('falha no anexo da avaliação retoma sem criar uma segunda avaliação',async()=>{
+ const h=reviewHarness(true,{video:true,reviewUploadFailure:true});await h.flush();
+ h.nodes.find(n=>n.type==='StarRating').props.onChange(5);await h.flush();
+ await h.button('Anexar foto ou vídeo').props.onPress();await h.flush();
+ async function send(){h.button('Enviar avaliação').props.onPress();await h.flush();await h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Enviar avaliação?').props.onConfirm();await h.flush();}
+ await send();assert.equal(h.writes.length,1);
+ assert.equal(h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Avaliação enviada').props.visible,false);
+ h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Confira os dados').props.onClose();await h.flush();
+ await send();assert.equal(h.writes.length,1);assert.equal(h.reviewUploads.length,2);
+ assert.equal(h.reviewUploads[0].media.key,h.reviewUploads[1].media.key);
+ assert.equal(h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Avaliação enviada').props.visible,true);
+});
+test('denúncia aceita vídeo dos dois perfis e recusa duração e tamanho excessivos',async()=>{
+ for(const worker of [false,true]){
+  const h=reviewHarness(worker,{video:true});await h.flush();
+  h.nodes.find(n=>n.type==='StarRating').props.onChange(1);await h.flush();h.button('Denúncia').props.onPress();await h.flush();
+  h.nodes.find(n=>n.type==='TextInput').props.onChangeText('Descrição');await h.flush();
+  await h.button('Anexar').props.onPress();await h.flush();
+  await h.button('Enviar').props.onPress();await h.flush();
+  assert.equal(h.uploads[0].image.type,'video');assert.equal(h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Denúncia enviada').props.visible,true);
+ }
+ for(const options of [{videoDuration:61000},{videoSize:11*1024*1024}]){
+  const h=reviewHarness(false,{video:true,...options});await h.flush();
+  await h.button('Anexar foto ou vídeo').props.onPress();await h.flush();
+  assert.equal(h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Confira os dados').props.visible,true);
+  assert.equal(h.uploads.length+h.reviewUploads.length,0);
+ }
+});
+
+test('cliente e diarista recebem confirmação de denúncia antes de retornar à página inicial',async()=>{
+ for(const worker of [false,true]){
+  const h=reviewHarness(worker);await h.flush();
+  h.nodes.find(n=>n.type==='StarRating').props.onChange(1);await h.flush();
+  h.button('Denúncia').props.onPress();await h.flush();
+  h.nodes.find(n=>n.type==='TextInput').props.onChangeText('Descrição do ocorrido.');await h.flush();
+  const send=h.button('Enviar').props.onPress;
+  await Promise.all([send(),send()]);await h.flush();
+  assert.equal(h.reportWrites.length,1);
+  assert.equal(h.navigations.length,0,'aguarda a pessoa fechar o aviso');
+  const modal=h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Denúncia enviada');
+  assert.equal(modal.props.visible,true);assert.equal(modal.props.variant,'success');
+  assert.ok(modal.props.message.includes('será analisada'));
+  assert.equal(h.button('Enviar').props.disabled,true);
+  await send();assert.equal(h.reportWrites.length,1,'sucesso impede reenvio por callback antigo');
+  modal.props.onClose();await h.flush();
+  assert.equal(h.navigations[0][0],worker?'HomeDiarista':'EncontrarDiarista');
+  assert.equal(h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Denúncia enviada').props.visible,false);
+ }
 });
 
 test('nova rota tem acesso nos menus dos dois perfis e página inicial não carrega avaliações', () => {

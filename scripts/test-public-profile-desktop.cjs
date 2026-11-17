@@ -7,7 +7,7 @@ function harness(desktop){
  useState(initial){const i=cursor++;if(!(i in state))state[i]=initial;return[state[i],v=>state[i]=typeof v==='function'?v(state[i]):v];},
  useEffect(fn,deps){const i=cursor++;if(!state[i]||deps.some((d,j)=>d!==state[i][j])){state[i]=deps;effects.push(fn);}}};
  const styles=new Proxy({},{get:(_,key)=>String(key)});
- const imports={react,'react-native':Object.fromEntries(['ActivityIndicator','Alert','Image','ScrollView','Text','TouchableOpacity','View'].map(n=>[n,n])),
+ const imports={'../../components/attachment-gallery':{AttachmentGallery:'AttachmentGallery'},react,'react-native':Object.fromEntries(['ActivityIndicator','Alert','Image','ScrollView','Text','TouchableOpacity','View'].map(n=>[n,n])),
  'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'},'@expo/vector-icons':{Ionicons:'Icon'},'./styles':{styles},
  '../../contexts/ResponsiveContext':{useResponsive:()=>({desktop})},'../../components/page-header':{PageHeader:'PageHeader'},
  '../../services/diaristaService':{diaristaService:{buscarPorId:async id=>{calls.push(['get',id]);return profile;}}},

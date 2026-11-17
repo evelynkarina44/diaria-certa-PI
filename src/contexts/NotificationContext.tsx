@@ -18,7 +18,7 @@ const NotificationContext = createContext<NotificationContextValue>({
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const key = user && user.activeProfile ? user.id_usuario + ':' + user.activeProfile : '';
+  const key = user && user.activeProfile && user.activeProfile !== 'ADMIN' ? user.id_usuario + ':' + user.activeProfile : '';
   const owner = useRef(key); owner.current = key;
   const [dataOwner, setDataOwner] = useState('');
   const [items, setItems] = useState<AppNotification[]>([]);

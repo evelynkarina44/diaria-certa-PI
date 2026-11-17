@@ -1,3 +1,6 @@
+import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
+import { reportAttachmentService, reviewAttachmentService, type ReportImage } from '../../services/reportAttachmentService';
 import { useResponsive } from '../../contexts/ResponsiveContext';
 import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
@@ -39,7 +42,13 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
   const [modoDenuncia, setModoDenuncia] = useState(false);
   const [denuncia, setDenuncia] = useState('');
 
-  const [imagens, setImagens] = useState<string[]>([]);
+  const [imagens, setImagens] = useState<ReportImage[]>([]);
+  const [reviewMedia, setReviewMedia] = useState<ReportImage[]>([]);
+  const [reviewId, setReviewId] = useState<number | null>(null);
+  const reviewCreated = useRef<number | null>(null), uploadedReviewMedia = useRef(0);
+  const [reportId, setReportId] = useState<number | null>(null);
+  const uploadedImages = useRef(0), reportLock = useRef(false), reportSent = useRef(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const agendamentoId = Number(route.params?.agendamentoId);
   const avaliarCliente = route.params?.avaliarCliente === true;
@@ -84,7 +93,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
 
   function selecionarAvaliacao(valor: number) {
     // A seleção é local; somente o envio depende da validação da diária na API.
-    if (saved || loading) return;
+    if (saved || loading || reviewId) return;
     setAvaliacao(valor);
 
     // Se mudar a nota, volta para a avaliação normal.
@@ -106,27 +115,41 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
     navigation.goBack();
   }
 
-  function adicionarImagem() {
-    if (imagens.length >= 3) {
-      return;
-    }
-
-    const numero = imagens.length + 1;
-
-    setImagens((listaAtual) => [
-      ...listaAtual,
-      `Imagem WhatsApp ${numero}.png`,
-    ]);
+  async function adicionarImagem(paraAvaliacao = false) {
+    const selectedMedia = paraAvaliacao ? reviewMedia : imagens;
+    if (reportLock.current || loading || (paraAvaliacao ? saved : reportSent.current) || selectedMedia.length >= 3) return;
+    reportLock.current = true; setLoading(true);
+    try {
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) throw new Error('Permita o acesso à galeria para anexar fotos ou vídeos.');
+      }
+      const selected = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsEditing: false, quality: 0.85, base64: true, allowsMultipleSelection: false, videoMaxDuration: 60 });
+      if (selected.canceled) return;
+      const asset = selected.assets[0];
+      if (!asset?.uri) throw new Error('Não foi possível ler o arquivo.');
+      const video = asset.type === 'video';
+      const limit = (video ? 10 : 5) * 1024 * 1024;
+      if ((asset.fileSize ?? asset.file?.size ?? 0) > limit) throw new Error(video ? 'O vídeo deve ter até 10 MB.' : 'A foto deve ter até 5 MB.');
+      if (video && (asset.duration ?? 0) > 60000) throw new Error('O vídeo deve ter até 1 minuto.');
+      if (video && asset.mimeType && asset.mimeType !== 'video/mp4') throw new Error('Selecione um vídeo MP4 (H.264). Outros formatos precisam ser convertidos antes do envio.');
+      const media: ReportImage = { uri: asset.uri, base64: video ? undefined : asset.base64 ?? undefined, file: asset.file,
+        type: video ? 'video' : 'image', name: asset.fileName || (video ? 'Vídeo' : 'Foto') + ' ' + (selectedMedia.length + 1),
+        key: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) + '-' + Math.random().toString(36).slice(2) };
+      (paraAvaliacao ? setReviewMedia : setImagens)(current => current.length >= 3 ? current : [...current, media]);
+    } catch (cause) { setError(getErrorMessage(cause)); }
+    finally { reportLock.current = false; setLoading(false); }
   }
 
   function removerImagem(index: number) {
+    if (loading || reportSent.current || index < uploadedImages.current) return;
     setImagens((listaAtual) =>
       listaAtual.filter((_, indice) => indice !== index)
     );
   }
 
   async function enviarAvaliacao(confirmed = false) {
-    if (sending.current || !ready || saved) return;
+    if (sending.current || loading || !ready || saved) return;
     if (avaliacao < 1 || avaliacao > 5) { setError('Escolha uma nota de 1 a 5 estrelas.'); return; }
     if (comentario.trim().length > 2000) { setError('O comentário deve ter no máximo 2000 caracteres.'); return; }
     if (!confirmed) { setConfirmReview(true); return; }
@@ -134,19 +157,27 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
     setError('');
     try {
       setLoading(true);
-      await avaliacaoService.criar({
+      let id = reviewCreated.current;
+      if (!id) {
+      const result = await avaliacaoService.criar({
         id_agendamento: agendamentoId,
         nota: avaliacao,
         comentario: comentario.trim() || null,
         publica: true,
         anonima: false,
       });
+      id = result.id_avaliacao; reviewCreated.current = id; setReviewId(id);
+      }
+      for (let i = uploadedReviewMedia.current; i < reviewMedia.length; i++) {
+        await reviewAttachmentService.upload(id, reviewMedia[i]);
+        uploadedReviewMedia.current = i + 1;
+      }
       setSaved(true);
       setConfirmReview(false);
       setSuccessNotice(avaliarCliente ? 'Sua avaliação do cliente foi registrada. Obrigado!' : 'Sua avaliação da diarista foi registrada. Obrigado!');
     } catch (error) {
       setConfirmReview(false);
-      setError(getErrorMessage(error));
+      setError((reviewCreated.current ? 'A avaliação foi registrada. Tente novamente para concluir os anexos. Se um arquivo foi recusado, remova ou substitua apenas o arquivo pendente, sem duplicar a avaliação. ' : '') + getErrorMessage(error));
     } finally {
       sending.current = false;
       setLoading(false);
@@ -154,23 +185,24 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
   }
 
   async function enviarDenuncia() {
-    if (!idUsuarioDenunciado || !denuncia.trim()) {
-      setError('Informe a denúncia e abra esta tela por uma diária.');
-      return;
-    }
+    if (reportLock.current || loading || reportSent.current) return;
+    if (!idUsuarioDenunciado || !denuncia.trim()) { setError('Informe a denúncia e abra esta tela por uma diária.'); return; }
+    reportLock.current = true; setLoading(true);
     try {
-      setLoading(true);
-      await denunciaService.criar({
-        id_usuario_denunciado: idUsuarioDenunciado,
-        motivo: 'outro',
-        descricao: denuncia.trim(),
-      });
-      navigation.navigate(avaliarCliente ? 'HomeDiarista' : 'EncontrarDiarista');
-    } catch (error) {
-      setError(getErrorMessage(error));
-    } finally {
-      setLoading(false);
-    }
+      let id = reportId;
+      if (!id) {
+        const result = await denunciaService.criar({ id_usuario_denunciado: idUsuarioDenunciado, motivo: 'outro', descricao: denuncia.trim() });
+        id = result.id_denuncia; setReportId(id);
+      }
+      for (let i = uploadedImages.current; i < imagens.length; i++) {
+        await reportAttachmentService.upload(id, imagens[i]);
+        uploadedImages.current = i + 1;
+      }
+      reportSent.current = true;
+      setReportSuccess(true);
+    } catch (cause) {
+      setError('Não foi possível concluir o envio. Se o relato já foi registrado, tente novamente para anexar os arquivos restantes. Arquivos recusados ainda não enviados podem ser removidos ou substituídos, sem duplicar a denúncia. ' + getErrorMessage(cause));
+    } finally { reportLock.current = false; setLoading(false); }
   }
 
   const question = (<>            <Text style={styles.title}>
@@ -179,7 +211,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
             </Text>
 
             {/* ESTRELAS */}
-            <StarRating value={avaliacao} onChange={selecionarAvaliacao} disabled={saved || loading} />
+            <StarRating value={avaliacao} onChange={selecionarAvaliacao} disabled={saved || loading || Boolean(reviewId)} />
 
             <View style={styles.divider} />
             {avaliacao > 0 && <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: '#555555', marginBottom: 12 }}>Nota: {avaliacao} de 5 estrelas</Text>}
@@ -192,16 +224,33 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
               placeholderTextColor="#9B9B9B"
               value={comentario}
               onChangeText={setComentario}
-              editable={ready && !saved && !loading}
+              editable={ready && !saved && !loading && !reviewId}
               maxLength={2000}
               accessibilityLabel={avaliarCliente ? "Comentário sobre o cliente" : "Comentário sobre a diarista"}
               multiline
               textAlignVertical="top"
             />
 
+            <View style={styles.attachmentsList}>
+              <Text style={styles.attachmentTitle}>Fotos e vídeos (opcional · até 3)</Text>
+              <Text style={styles.noAttachments}>Fotos até 5 MB · MP4 (H.264) até 10 MB e 1 minuto. Os anexos acompanham sua avaliação pública.</Text>
+              {reviewMedia.map((media, index) => <View key={media.key ?? String(index)} style={styles.attachmentItem}>
+                <Ionicons name={media.type === 'video' ? 'videocam-outline' : 'image-outline'} size={18} color="#008A99" />
+                <Text style={styles.attachmentName} numberOfLines={1}>{media.name}{index < uploadedReviewMedia.current ? ' · Enviado' : ''}</Text>
+                <TouchableOpacity accessibilityLabel={'Remover anexo da avaliação ' + (index + 1)} disabled={loading || index < uploadedReviewMedia.current || saved}
+                  onPress={() => { if (!loading && !saved && index >= uploadedReviewMedia.current) setReviewMedia(current => current.filter((_, i) => i !== index)); }} style={styles.removeAttachment}>
+                  <Ionicons name="close" size={18} color="#667085" />
+                </TouchableOpacity>
+              </View>)}
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Anexar foto ou vídeo à avaliação" style={styles.uploadButton}
+                disabled={!ready || loading || saved || reviewMedia.length >= 3} onPress={() => void adicionarImagem(true)}>
+                <Text style={styles.uploadButtonText}>Anexar foto ou vídeo</Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.bottomArea}>
               {/* DENÚNCIA SOMENTE COM 1 ESTRELA */}
-              {avaliacao === 1 && ready && !saved && (
+              {avaliacao === 1 && ready && !saved && !reviewId && (
                 <View style={styles.reportArea}>
                   <Text style={styles.reportDescription}>
                     Se deseja criar uma denúncia, clique no botão
@@ -282,25 +331,28 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
               }
               placeholderTextColor="#9B9B9B"
               value={denuncia}
+              editable={!loading && !reportId}
+              maxLength={2000}
               onChangeText={setDenuncia}
               multiline
               textAlignVertical="top"
             />
 
+            <Text style={styles.noAttachments}>Fotos até 5 MB · Vídeos MP4 (H.264) até 10 MB e 1 minuto. Anexos privados para você e a administração.</Text>
             {/* ANEXOS */}
             <View style={styles.attachmentHeader}>
               <Text style={styles.attachmentTitle}>
-                Anexo de imagens (Máx de 3)
+                Fotos e vídeos (até 3)
               </Text>
 
               <TouchableOpacity
                 style={[
                   styles.uploadButton,
-                  imagens.length >= 3 &&
+                  (imagens.length >= 3 || loading || reportSent.current) &&
                     styles.uploadButtonDisabled,
                 ]}
-                onPress={adicionarImagem}
-                disabled={imagens.length >= 3}
+                onPress={() => void adicionarImagem()}
+                disabled={imagens.length >= 3 || loading || reportSent.current}
                 activeOpacity={0.7}
               >
                 <Ionicons
@@ -310,20 +362,20 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
                 />
 
                 <Text style={styles.uploadButtonText}>
-                  Upload
+                  Anexar
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* IMAGENS SIMULADAS */}
+            {/* IMAGENS SELECIONADAS */}
             <View style={styles.attachmentsList}>
               {imagens.map((imagem, index) => (
                 <View
-                  key={`${imagem}-${index}`}
+                  key={`${imagem.name}-${index}`}
                   style={styles.attachmentItem}
                 >
                   <Ionicons
-                    name="image-outline"
+                    name={imagem.type === 'video' ? 'videocam-outline' : 'image-outline'}
                     size={15}
                     color="#A0A0A0"
                   />
@@ -332,12 +384,14 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
                     style={styles.attachmentName}
                     numberOfLines={1}
                   >
-                    {imagem}
+                    {imagem.name}{index < uploadedImages.current ? ' · Enviado' : ''}
                   </Text>
 
                   <TouchableOpacity
+                    accessibilityLabel={'Remover anexo da denúncia ' + (index + 1)}
                     style={styles.removeAttachment}
                     onPress={() => removerImagem(index)}
+                    disabled={loading || reportSent.current || index < uploadedImages.current}
                     activeOpacity={0.7}
                   >
                     <Ionicons
@@ -351,7 +405,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
 
               {imagens.length === 0 && (
                 <Text style={styles.noAttachments}>
-                  Nenhuma imagem anexada
+                  Nenhuma foto ou vídeo anexado
                 </Text>
               )}
             </View>
@@ -359,7 +413,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
             <TouchableOpacity
               style={styles.reportSendButton}
               onPress={enviarDenuncia}
-              disabled={loading}
+              disabled={loading || reportSent.current}
               activeOpacity={0.85}
             >
               {loading ? (
@@ -373,6 +427,9 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
           </View>
         )}
       </ScrollView>
+      <ActionModal visible={reportSuccess && !error} variant="success" title="Denúncia enviada"
+        message="Sua denúncia foi enviada com sucesso e será analisada pela moderação. Obrigado por ajudar a manter a comunidade segura."
+        confirmLabel="Entendi" onClose={() => { setReportSuccess(false); navigation.navigate(avaliarCliente ? 'HomeDiarista' : 'EncontrarDiarista'); }} />
       <ActionModal visible={Boolean(error)} variant="error" title="Confira os dados" message={error} onClose={() => setError('')} />
       <ActionModal visible={confirmReview && !error} variant="confirm" title="Enviar avaliação?"
         message={`Deseja enviar a nota ${avaliacao} de 5 estrelas${comentario.trim() ? ' e seu comentário' : ''} para esta diária?`}

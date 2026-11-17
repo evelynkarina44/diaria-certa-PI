@@ -12,7 +12,7 @@ export function ResponsiveShell({ children, routeName, navigation }: ShellProps)
   const { width } = useWindowDimensions();
   const { user } = useAuth();
   const layout = responsiveLayout('web', width, routeName, Boolean(user?.activeProfile));
-  const profile = user?.activeProfile === 'DIARISTA' ? 'diarista' : 'cliente';
+  const profile = user?.activeProfile === 'ADMIN' ? 'admin' : user?.activeProfile === 'DIARISTA' ? 'diarista' : 'cliente';
   const accent = profile === 'diarista' ? '#FF6B2C' : '#008A99';
   const [hoveredRoute, setHoveredRoute] = useState<string | null>(null);
   const [brokenPhoto, setBrokenPhoto] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export function ResponsiveShell({ children, routeName, navigation }: ShellProps)
             <View style={styles.brandText}><Text style={styles.brandName}>Diária Certa</Text><Text style={styles.brandCaption}>CONEXAO QUE FACILITA SEU DIA A DIA</Text></View>
           </View>
           <Pressable style={styles.account} accessibilityRole="button" accessibilityLabel="Abrir meu perfil"
-            onPress={() => navigation.navigate(profile === 'diarista' ? 'PerfilDiaristaEdicao' : 'PerfilCliente')}>
+            onPress={() => navigation.navigate(profile === 'admin' ? 'AdminDenuncias' : profile === 'diarista' ? 'PerfilDiaristaEdicao' : 'PerfilCliente')}>
             <View style={[styles.avatar, { backgroundColor: accent + '12' }]}>
               {user?.foto_perfil && brokenPhoto !== user.foto_perfil
                 ? <Image source={{ uri: user.foto_perfil }} style={styles.photo} onError={() => setBrokenPhoto(user.foto_perfil!)} />
@@ -35,7 +35,7 @@ export function ResponsiveShell({ children, routeName, navigation }: ShellProps)
               <Text style={styles.accountEmail} numberOfLines={1}>{user?.email}</Text></View>
           </Pressable>
           <ScrollView style={styles.menuScroll} contentContainerStyle={styles.menuContent} showsVerticalScrollIndicator={false}>
-            <Text style={styles.menuCaption}>{profile === 'diarista' ? 'ÁREA DA DIARISTA' : 'ÁREA DO CLIENTE'}</Text>
+            <Text style={styles.menuCaption}>{profile === 'admin' ? 'ADMINISTRAÇÃO' : profile === 'diarista' ? 'ÁREA DA DIARISTA' : 'ÁREA DO CLIENTE'}</Text>
             {profileMenu(profile).map(item => {
               const selected = item.route === routeName || (item.route === 'HomeDiarista' && routeName === 'SolicitacoesDiarista');
               return <Pressable key={item.route} accessibilityRole="button" accessibilityLabel={item.label} accessibilityState={{ selected }}
@@ -46,12 +46,14 @@ export function ResponsiveShell({ children, routeName, navigation }: ShellProps)
                 {selected && <View style={[styles.activeDot, { backgroundColor: accent }]} />}
               </Pressable>;
             })}
-            <View style={styles.divider} />
+            {(profile !== 'admin' || (user?.profiles.length ?? 0) > 1) && <>
+          <View style={styles.divider} />
             <Pressable onHoverIn={() => setHoveredRoute(access.route)} onHoverOut={() => setHoveredRoute(null)}
               style={({ pressed }) => [styles.menuItem, (hoveredRoute === access.route || pressed) && styles.hover]}
-              accessibilityRole="button" accessibilityLabel={access.label} onPress={() => navigation.navigate(access.route)}>
-              <Ionicons name={access.icon} size={20} color="#667085" /><Text style={styles.menuLabel}>{access.label}</Text>
+              accessibilityRole="button" accessibilityLabel={access.label} onPress={() => navigation.navigate(profile === 'admin' ? 'SelecionarPerfil' : access.route)}>
+              <Ionicons name={access.icon} size={20} color="#667085" /><Text style={styles.menuLabel}>{profile === 'admin' ? 'Trocar perfil ativo' : access.label}</Text>
             </Pressable>
+          </>}
           </ScrollView>
           <View style={styles.logout}><LogoutButton navigation={navigation} variant="compact" /></View>
         </View>}

@@ -23,7 +23,7 @@ export default function SelecionarPerfilScreen({ navigation }: any) {
       await selectProfile(profile);
       navigation.reset({
         index: 0,
-        routes: [{ name: profile === 'DIARISTA' ? 'HomeDiarista' : 'EncontrarDiarista' }],
+        routes: [{ name: profile === 'ADMIN' ? 'AdminDenuncias' : profile === 'DIARISTA' ? 'HomeDiarista' : 'EncontrarDiarista' }],
       });
     } catch (cause) {
       setError(getErrorMessage(cause));
@@ -50,6 +50,17 @@ export default function SelecionarPerfilScreen({ navigation }: any) {
           </View>
 
           <View style={[styles.optionsContainer, desktop && webStyles.optionsContainer]}>
+            {user?.profiles.includes('ADMIN') && (
+              <TouchableOpacity style={[styles.optionCard, styles.clientCard, desktop && webStyles.optionCard]}
+                onPress={() => choose('ADMIN')} disabled={Boolean(loading)} activeOpacity={0.8}>
+                <View style={[styles.iconCircle, styles.clientIconCircle]}><Ionicons name="shield-checkmark" size={36} color="#FFFFFF" /></View>
+                <View style={styles.optionContent}>
+                  <Text style={styles.optionTitle}>Administração</Text>
+                  <Text style={styles.optionDescription}>Gerenciar denúncias</Text>
+                </View>
+                {loading === 'ADMIN' ? <ActivityIndicator color="#008A99" /> : <Ionicons name="chevron-forward" size={30} color="#008A99" />}
+              </TouchableOpacity>
+            )}
             {user?.profiles.includes('CLIENTE') && (
               <TouchableOpacity
                 style={[styles.optionCard, styles.clientCard, desktop && webStyles.optionCard, desktop && webStyles.clientCard]}

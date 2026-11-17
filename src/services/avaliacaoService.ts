@@ -16,7 +16,7 @@ const crud = createCrudService<
 >('/api/avaliacao');
 
 export type AvaliacaoRecebida = {
-  id_avaliacao: number; nota: number; comentario?: string | null; data_avaliacao: string; autor: string;
+  anexos?: import('./reportAttachmentService').MediaAttachment[]; id_avaliacao: number; nota: number; comentario?: string | null; data_avaliacao: string; autor: string;
 };
 export type AvaliacoesRecebidas = PaginatedResponse<AvaliacaoRecebida> & { media: number | null };
 export const avaliacaoService = {

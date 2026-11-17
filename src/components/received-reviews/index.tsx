@@ -1,3 +1,4 @@
+import { AttachmentGallery } from '../attachment-gallery';
 import { fonts, ui } from '../../global';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -60,6 +61,7 @@ function Reviews({ navigation, compact, worker, standalone }: { navigation: any;
           <Text style={styles.date}>{new Date(review.data_avaliacao).toLocaleDateString('pt-BR')}</Text></View>
         <Text accessibilityLabel={review.nota + ' de 5 estrelas'} style={styles.stars}>{'★'.repeat(Math.max(0, Math.min(5, Math.round(review.nota))))}{'☆'.repeat(5 - Math.max(0, Math.min(5, Math.round(review.nota))))} <Text style={styles.summary}>{review.nota.toFixed(1)}</Text></Text>
         <Text style={styles.comment}>{review.comentario?.trim() || 'Avaliação sem comentário.'}</Text>
+        <AttachmentGallery resource="avaliacao" id={review.id_avaliacao} attachments={review.anexos} />
       </View>)}
       {data && !data.pagination.total && <Text style={styles.comment}>As avaliações que você receber após as diárias aparecerão aqui.</Text>}
       {data && data.pagination.pages > 1 && <View style={styles.pagination}>

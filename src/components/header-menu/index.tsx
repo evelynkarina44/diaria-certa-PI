@@ -11,7 +11,7 @@ import { styles } from './styles';
 
 type HeaderMenuProps = {
   navigation: any;
-  profile: 'cliente' | 'diarista';
+  profile: 'cliente' | 'diarista' | 'admin';
   accentColor: string;
 };
 
@@ -35,6 +35,8 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
 
   const accessDestination = profileAccess(Boolean(user?.cliente?.length), Boolean(user?.diarista?.length));
   const items = profileMenu(profile);
+  const showProfileAccess = profile !== 'admin' || (user?.profiles.length ?? 0) > 1;
+  const accessItem = profile === 'admin' ? { route: 'SelecionarPerfil', label: 'Trocar perfil ativo', icon: 'swap-horizontal-outline' as const } : accessDestination;
 
   function open() {
     blurActiveElement();
@@ -108,7 +110,7 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
               </TouchableOpacity>
               </View>
 
-              <Text style={styles.menuTitle}>{profile === 'diarista' ? 'Menu da diarista' : 'Menu do cliente'}</Text>
+              <Text style={styles.menuTitle}>{profile === 'admin' ? 'Menu do administrador' : profile === 'diarista' ? 'Menu da diarista' : 'Menu do cliente'}</Text>
 
               <ScrollView style={styles.items} contentContainerStyle={styles.itemsContent} showsVerticalScrollIndicator={false}>
                 {items.map((item) => (
@@ -121,13 +123,13 @@ export function HeaderMenu({ navigation, profile, accentColor }: HeaderMenuProps
                   </TouchableOpacity>
                 ))}
 
-                <TouchableOpacity style={styles.item} onPress={() => navigate(accessDestination.route)} activeOpacity={0.7}>
+                {showProfileAccess && <TouchableOpacity style={styles.item} onPress={() => navigate(accessItem.route)} activeOpacity={0.7}>
                   <View style={[styles.itemIcon, { backgroundColor: `${accentColor}16` }]}>
-                    <Ionicons name={accessDestination.icon} size={20} color={accentColor} />
+                    <Ionicons name={accessItem.icon} size={20} color={accentColor} />
                   </View>
-                  <Text style={styles.itemText}>{accessDestination.label}</Text>
+                  <Text style={styles.itemText}>{accessItem.label}</Text>
                   <Ionicons name="chevron-forward" size={18} color="#A0A0A0" />
-                </TouchableOpacity>
+                </TouchableOpacity>}
               </ScrollView>
 
               <View style={styles.footer}>

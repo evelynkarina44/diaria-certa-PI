@@ -1,3 +1,5 @@
+import AdminUsuariosScreen from '../screens/AdminUsuariosScreen';
+import AdminDenunciasScreen from '../screens/AdminDenunciasScreen';
 import AvaliacoesRecebidasScreen from '../screens/AvaliacoesRecebidasScreen';
 import { ResponsiveShell } from '../components/responsive-shell';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -83,6 +85,8 @@ export function Routes() {
         component={EncontrarDiaristaScreen}
       />
 
+      <Stack.Screen name="AdminUsuarios" component={AdminUsuariosScreen} />
+      <Stack.Screen name="AdminDenuncias" component={AdminDenunciasScreen} />
       <Stack.Screen name="DetalhesDiaria" component={DetalhesDiariaScreen} />
       <Stack.Screen name="Chatbot" component={ChatbotScreen} />
       <Stack.Screen name="AvaliacoesRecebidas" component={AvaliacoesRecebidasScreen} />

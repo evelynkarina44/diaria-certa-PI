@@ -6,6 +6,12 @@ const clienteColor = '#18C7C8';
 const laranja = '#FF6B2C';
 
 export const styles = StyleSheet.create({
+  desktopContainer: { maxWidth: 1280, paddingHorizontal: 24, paddingTop: 24 },
+  desktopCard: { padding: 20, marginBottom: 0, borderRadius: 16 },
+  desktopName: { fontSize: 18, lineHeight: 26 },
+  desktopDetail: { fontSize: 14, lineHeight: 22 },
+  desktopCaption: { fontSize: 12, lineHeight: 18 },
+
   favoritesBody: { backgroundColor: '#F6FAFA' },
   favoriteToolbar: { gap: 16, marginBottom: 20, paddingTop: 6 },
   favoriteSummary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },

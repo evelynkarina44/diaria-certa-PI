@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/GlobalContext';
@@ -37,7 +37,7 @@ export function NotificationBell({ navigation, accentColor = '#18C7C8' }: { navi
       if (!item.lida) await notification.markRead(item.id);
       if (session !== currentSession.current || !navigation.isFocused()) return;
       setVisible(false);
-      const route = item.acao === 'checkin' ? 'CheckIn' : item.acao === 'avaliacao' ? 'Avaliacao' : item.acao === 'pagamento' ? 'Pagamento' : item.acao === 'diaria' ? 'CheckInDiarista' : 'AcompanharDiarias';
+      const route = item.acao === 'checkin' ? 'CheckIn' : item.acao === 'avaliacao' ? 'Avaliacao' : item.acao === 'pagamento' ? 'Pagamento' : item.acao === 'diaria' ? 'CheckInDiarista' : (user?.activeProfile === 'DIARISTA' ? 'MinhasDiariasDiarista' : 'MinhasDiariasCliente');
       navigation.navigate(route, { agendamentoId: item.id_agendamento });
     } catch (cause) { if (session === currentSession.current) showError(cause); }
     finally { if (session === currentSession.current) { operation.current = false; setBusy(false); } }
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   counter: { position: 'absolute', top: -5, right: -6, minWidth: 20, height: 20, paddingHorizontal: 4, borderRadius: 10, backgroundColor: '#D92D20', alignItems: 'center', justifyContent: 'center' },
   counterText: { color: '#FFFFFF', fontSize: 10, fontFamily: 'Poppins_600SemiBold' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', padding: 18, justifyContent: 'center', alignItems: 'center' },
-  panel: { width: '100%', maxWidth: 540, maxHeight: '85%', borderRadius: 20, backgroundColor: '#FFFFFF', padding: 20 },
+  panel: { width: '100%', maxWidth: Platform.OS === 'web' ? 760 : 540, maxHeight: Platform.OS === 'web' ? '90%' : '85%', borderRadius: 20, backgroundColor: '#FFFFFF', padding: 20 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontFamily: 'Poppins_600SemiBold', fontSize: 21, color: '#222222' },
   subtitle: { fontFamily: 'Poppins_400Regular', fontSize: 11, color: '#667085', marginTop: 10, lineHeight: 18 },

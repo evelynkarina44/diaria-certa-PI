@@ -406,7 +406,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
         confirmLabel="Enviar solicitação" cancelLabel="Revisar" busy={saving}
         onConfirm={() => confirmarAgendamento(true)} onClose={() => setConfirmBooking(false)} />
       <ActionModal visible={Boolean(bookingNotice) && !error} variant="success" title="Solicitação enviada" message={bookingNotice}
-        confirmLabel="Acompanhar solicitação" onClose={() => { setBookingNotice(''); navigation.navigate('AcompanharDiarias'); }} />
+        confirmLabel="Acompanhar solicitação" onClose={() => { setBookingNotice(''); navigation.navigate('MinhasDiariasCliente'); }} />
     </SafeAreaView>
   );
 }

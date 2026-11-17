@@ -8,7 +8,7 @@ function harness(reviews, appointments) {
   let cursor = 0, response = reviews, focus;
   const slots = [], effects = [], requests = [], navigations = [];
   const react = {
-    createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
+    createElement: (type, props, ...children) => ({ type, props: { ...props, children: type === 'DailyFiltersLayout' ? [props.search, props.status, props.date, props.results, props.sort, props.reset] : children } }),
     useState(initial) {
       const index = cursor++;
       if (!(index in slots)) slots[index] = initial;
@@ -30,6 +30,8 @@ function harness(reviews, appointments) {
     return exports;
   }
   const imports = {
+    '../../contexts/ResponsiveContext': { useResponsive: () => ({ desktop: false }) },
+    '../../components/daily-filters-layout': { DailyFiltersLayout: 'DailyFiltersLayout', StatusFilters: 'FilterScroll' },
     '../../utils/historyFilters': utility('src/utils/historyFilters.ts'),
     '../../utils/inputMasks': utility('src/utils/inputMasks.ts'),
     react, 'react-native': native,
@@ -130,11 +132,11 @@ test('diarista pagina dez por vez, muda de página e volta à primeira ao pesqui
   tree = h.render();
   assert.equal(countCards(), 3);
   assert.equal(button('Próxima página').props.disabled, true);
-  button('Buscar no histórico').props.onChangeText('Nicole');
+  button('Buscar nas minhas diárias').props.onChangeText('Nicole');
   tree = h.render();
   assert.equal(countCards(), 3);
   assert.equal(button('Próxima página'), undefined);
-  button('Buscar no histórico').props.onChangeText('');
+  button('Buscar nas minhas diárias').props.onChangeText('');
   tree = h.render();
   assert.ok(texts(tree).includes('Página 1 de 3'));
 });
@@ -160,7 +162,7 @@ test('carrega todas as páginas da API para pesquisar registros além do centés
   const h = harness([], records);
   let tree = await h.ready();
   assert.deepEqual(h.requests.map(query => query.page ?? 1), [1, 2]);
-  nodes(tree).find(node => node.props.accessibilityLabel === 'Buscar no histórico').props.onChangeText('ultimo cliente');
+  nodes(tree).find(node => node.props.accessibilityLabel === 'Buscar nas minhas diárias').props.onChangeText('ultimo cliente');
   tree = h.render();
   assert.ok(texts(tree).includes('DIÁRIA #101'));
   assert.equal(texts(tree).filter(text => text.startsWith('DIÁRIA #')).length, 1);
@@ -186,7 +188,7 @@ test('histórico exibe e pesquisa número próprio, mas navega usando o ID inter
  const action=nodes(tree).find(n=>n.type==='TouchableOpacity'&&nodes(n).some(c=>c.type==='Text'&&c.props.children.includes('Ver diária e pagamentos')));
  action.props.onPress();
  assert.equal(h.navigations.at(-1)[1].agendamentoId,12);
- nodes(tree).find(n=>n.props.accessibilityLabel==='Buscar no histórico').props.onChangeText('12');
+ nodes(tree).find(n=>n.props.accessibilityLabel==='Buscar nas minhas diárias').props.onChangeText('12');
  tree=h.render();
  assert.equal(texts(tree).some(t=>t.startsWith('DIÁRIA #')),false);
 });

@@ -39,16 +39,16 @@ test('cabeçalho adapta altura ao texto, preserva menu e cores de cada perfil', 
   assert.equal(walk(tree).filter(node => node.props.accessibilityLabel === 'Voltar').length, 0);
 });
 test('telas autenticadas usam o padrão e Minhas diárias não duplica título', () => {
-  for (const name of ['ServicosDiarista', 'CombosDiarista', 'AgendaDiarista', 'HomeDiarista', 'SolicitacoesDiarista', 'EncontrarDiarista', 'Pagamento', 'CheckIn', 'CheckInDiarista', 'Chatbot', 'AcompanharDiarias']) {
+  for (const name of ['ServicosDiarista', 'CombosDiarista', 'AgendaDiarista', 'HomeDiarista', 'SolicitacoesDiarista', 'EncontrarDiarista', 'Pagamento', 'CheckIn', 'CheckInDiarista', 'Chatbot', 'HistoricoDiarista']) {
     const source = fs.readFileSync(path.join(root, 'src/screens', name + 'Screen/index.tsx'), 'utf8');
     assert.match(source, /<PageHeader/);
   }
-  const screen = fs.readFileSync(path.join(root, 'src/screens/AcompanharDiariasScreen/index.tsx'), 'utf8');
-  assert.match(screen, /showTitle=\{false\}/);
+  const screen = fs.readFileSync(path.join(root, 'src/screens/HistoricoDiaristaScreen/index.tsx'), 'utf8');
+  assert.ok(screen.includes('title="Minhas diárias"'));
 });
 
-test('perfis não exibem título, mas preservam a navegação de voltar', () => {
-  for (const name of ['PerfilCliente', 'PerfilDiaristaEdicao', 'PerfilDiarista']) {
+test('perfis de edição não exibem título, mas preservam a navegação de voltar', () => {
+  for (const name of ['PerfilCliente', 'PerfilDiaristaEdicao']) {
     const source = fs.readFileSync(path.join(root, 'src/screens', name + 'Screen/index.tsx'), 'utf8');
     const header = source.match(/<PageHeader[\s\S]*?\/>/)[0];
     assert.doesNotMatch(header, /title=/);
@@ -59,12 +59,13 @@ test('perfis não exibem título, mas preservam a navegação de voltar', () => 
   assert.ok(walk(tree).some(node => node.props.accessibilityLabel === 'Voltar'));
 });
 
-test('Minhas diárias usa menu do perfil ativo, descrição no topo e mantém sininho', () => {
-  const screen = fs.readFileSync(path.join(root, 'src/screens/AcompanharDiariasScreen/index.tsx'), 'utf8');
-  assert.match(screen, /left=\{<HeaderMenu/);
-  assert.match(screen, /profile=\{profile === 'DIARISTA' \? 'diarista' : 'cliente'\}/);
-  assert.match(screen, /subtitle="Acompanhe solicitações, pagamentos e serviços\."/);
-  assert.match(screen, /right=\{<NotificationBell/);
-  assert.match(screen, /showSubtitle=\{false\}/);
-  assert.doesNotMatch(screen, /onBack=/);
+test('Minhas diárias reutiliza os históricos com menu e descrição, sem tela duplicada', () => {
+  for(const name of ['HistoricoClienteScreen','HistoricoDiaristaScreen']){
+    const screen = fs.readFileSync(path.join(root,'src/screens',name,'index.tsx'),'utf8');
+    assert.match(screen, /left=\{<HeaderMenu/);
+    assert.ok(screen.includes('Minhas diárias'));
+    assert.ok(screen.includes('Consulte suas diárias, pagamentos e avaliações.'));
+    assert.doesNotMatch(screen, /onBack=/);
+  }
+  assert.equal(fs.existsSync(path.join(root,'src/screens/AcompanharDiariasScreen/index.tsx')),false);
 });

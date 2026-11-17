@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 type ActionModalProps = {
@@ -57,7 +57,7 @@ export function ActionModal({
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.5)' },
-  dialog: { width: '100%', maxWidth: 430, maxHeight: '85%', borderRadius: 20, backgroundColor: '#FFFFFF', padding: 24 },
+  dialog: { width: '100%', maxWidth: Platform.OS === 'web' ? 600 : 430, maxHeight: Platform.OS === 'web' ? '90%' : '85%', borderRadius: 20, backgroundColor: '#FFFFFF', padding: 24 },
   content: { alignItems: 'center' },
   icon: { width: 62, height: 62, borderRadius: 31, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   title: { fontFamily: 'Poppins_600SemiBold', fontSize: 20, color: '#222222', textAlign: 'center' },

@@ -176,7 +176,7 @@ export default function ChatbotScreen({ navigation }: any) {
               <TouchableOpacity style={[styles.primary, (busy || Boolean(failedInput)) && styles.disabled]} disabled={busy || Boolean(failedInput)} onPress={() => proposalAction(true)}><Text style={styles.primaryText}>Confirmar solicitação</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.secondary, busy && styles.disabled]} disabled={busy} onPress={() => proposalAction(false)}><Text style={styles.secondaryText}>Cancelar proposta</Text></TouchableOpacity>
             </View> : <Text style={styles.status}>{proposal.status === 'Confirmada' ? `Solicitação #${proposal.id_agendamento} enviada. Aguarde o aceite da diarista.` : proposal.status === 'Cancelada' ? 'Proposta cancelada.' : 'Proposta encerrada. Peça uma nova busca para atualizar os dados.'}</Text>}
-            {proposal.status === 'Confirmada' ? <TouchableOpacity style={styles.primary} onPress={() => navigation.navigate('AcompanharDiarias')}><Text style={styles.primaryText}>Acompanhar solicitação</Text></TouchableOpacity> : null}
+            {proposal.status === 'Confirmada' ? <TouchableOpacity style={styles.primary} onPress={() => navigation.navigate('MinhasDiariasCliente')}><Text style={styles.primaryText}>Acompanhar solicitação</Text></TouchableOpacity> : null}
           </View> : null}
           {timeline.after.map(renderMessage)}
           {conversation?.opcoes.length ? <View style={styles.options}>{conversation.opcoes.map((option) => <TouchableOpacity key={`${option.tipo}-${option.id}`} style={[styles.option, busy && styles.disabled]} onPress={() => select(option)} disabled={busy}><Text style={styles.optionText}>{option.label}</Text></TouchableOpacity>)}</View> : null}

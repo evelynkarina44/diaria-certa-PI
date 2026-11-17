@@ -1,3 +1,4 @@
+import { fonts, ui } from '../../global';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,16 +29,16 @@ export function ClientHouses({ cliente, onUpdated }: { cliente: Cliente | null; 
       <View style={styles.headingRow}>
         <Text style={styles.title}>Minhas casas</Text>
         <TouchableOpacity accessibilityRole="button" disabled={!cliente} style={styles.add} onPress={() => { setEditing(null); setCreating(true); }}>
-          <Ionicons name="add-circle-outline" size={20} color="#008A99" /><Text style={styles.addText}>Adicionar</Text>
+          <Ionicons name="add-circle-outline" size={ui.icon} color="#008A99" /><Text style={styles.addText}>Adicionar</Text>
         </TouchableOpacity>
       </View>
       <Text style={styles.hint}>Cadastre cada residência e escolha onde será a diária.</Text>
       {addresses.map((address, index) => (
         <View key={address.id_endereco} style={styles.card}>
           <View style={styles.headingRow}>
-            <View style={styles.nameRow}><Ionicons name="home-outline" size={21} color="#008A99" /><Text style={styles.name}>{address.apelido || `Casa ${index + 1}`}</Text></View>
+            <View style={styles.nameRow}><Ionicons name="home-outline" size={ui.icon} color="#008A99" /><Text style={styles.name}>{address.apelido || `Casa ${index + 1}`}</Text></View>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Editar ${address.apelido || `Casa ${index + 1}`}`} style={styles.edit} onPress={() => { setCreating(false); setEditing(address); }}>
-              <Ionicons name="create-outline" size={21} color="#008A99" />
+              <Ionicons name="create-outline" size={ui.icon} color="#008A99" />
             </TouchableOpacity>
           </View>
           <Text style={styles.text}>{address.logradouro}, {address.numero}{address.complemento ? ` — ${address.complemento}` : ''}</Text>
@@ -73,17 +74,17 @@ export function ClientHouses({ cliente, onUpdated }: { cliente: Cliente | null; 
   );
 }
 const styles = StyleSheet.create({
-  section: { backgroundColor: '#FFFFFF', padding: 16, borderRadius: 18, marginBottom: 18, gap: 10 },
+  section: { backgroundColor: '#FFFFFF', padding: ui.padding, borderRadius: ui.radius, borderWidth: 1, borderColor: '#E4E7EC', marginBottom: ui.sectionGap, gap: ui.gap },
   headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  title: { fontFamily: 'Poppins_600SemiBold', fontSize: 17, color: '#182230' },
-  hint: { fontFamily: 'Poppins_400Regular', fontSize: 12, lineHeight: 19, color: '#667085' },
-  add: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 44 },
-  addText: { fontFamily: 'Poppins_600SemiBold', fontSize: 12, color: '#008A99' },
-  card: { borderWidth: 1, borderColor: '#E4E7EC', borderRadius: 14, padding: 12, gap: 4 },
+  title: { fontFamily: fonts.semibold, fontSize: ui.sectionTitle, lineHeight: ui.sectionLine, color: '#182230' },
+  hint: { fontFamily: fonts.regular, fontSize: ui.caption, lineHeight: ui.captionLine, color: '#667085' },
+  add: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: ui.control },
+  addText: { fontFamily: fonts.semibold, fontSize: ui.body, lineHeight: ui.bodyLine, color: '#008A99' },
+  card: { borderWidth: 1, borderColor: '#E4E7EC', borderRadius: ui.radius, padding: ui.padding, gap: 4 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1 },
-  name: { flex: 1, fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: '#182230' },
-  edit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  text: { fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#475467', lineHeight: 19 },
-  meta: { fontFamily: 'Poppins_500Medium', fontSize: 12, color: '#008A99', marginTop: 5 },
+  name: { flex: 1, fontFamily: fonts.semibold, fontSize: ui.body, lineHeight: ui.bodyLine, color: '#182230' },
+  edit: { width: ui.control, height: ui.control, alignItems: 'center', justifyContent: 'center' },
+  text: { fontFamily: fonts.regular, fontSize: ui.body, lineHeight: ui.bodyLine, color: '#475467' },
+  meta: { fontFamily: fonts.medium, fontSize: ui.body, lineHeight: ui.bodyLine, color: '#008A99', marginTop: 5 },
 });
 

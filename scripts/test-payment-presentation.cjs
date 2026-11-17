@@ -44,13 +44,13 @@ test('aviso de expiração distingue estorno em processamento de estorno efetiva
   summary.parcelas[0].status = 'Estornado';
   assert.match(h.paymentNotice(summary), /Entrada devolvida integralmente/);
 });
-function screen(summary) {
+function screen(summary, desktop = false) {
   let index = 0;
   const updates = {};
   const context = {
     React: { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) },
     ...Object.fromEntries(['SafeAreaView','View','Text','ScrollView','TouchableOpacity','Ionicons','ActionModal','ActivityIndicator'].map(name => [name, name])),
-    PageHeader: 'PageHeader', styles: {}, useAuth: () => ({ user: { id_usuario: 1, activeProfile: 'CLIENTE' } }),
+    PageHeader: 'PageHeader', styles: new Proxy({}, { get: (_, key) => key }), useResponsive: () => ({ desktop }), useAuth: () => ({ user: { id_usuario: 1, activeProfile: 'CLIENTE' } }),
     useRef: initial => ({ current: initial }), useEffect() {},
     useState(initial) { const slot = index++; return [slot === 0 ? summary : initial, value => { updates[slot] = value; }]; },
   };
@@ -93,3 +93,46 @@ test('não renderiza parcelas de outra diária', () => {
   assert.equal(texts.some(text => text.includes('DIÁRIA #99') || text.includes('Entrada · 50%')), false);
 });
 
+
+test('pagamento desktop organiza resumo e parcelas em colunas e mantém controles', () => {
+ const {nodes,texts}=screen(base(),true);
+ assert.ok(nodes.some(n=>n.props.style==='desktopColumns'));
+ assert.ok(nodes.some(n=>n.props.style==='desktopSummaryColumn'));
+ assert.ok(nodes.some(n=>n.props.style==='desktopInstallments'));
+ assert.ok(nodes.some(n=>n.props.style==='desktopFooter'));
+ const scroll=nodes.find(n=>n.type==='ScrollView');
+ assert.equal(scroll.props.showsVerticalScrollIndicator,false);
+ const header=nodes.find(n=>n.type==='PageHeader');
+ assert.equal(header.props.allowBackWithSidebar,true);
+ assert.ok(header.props.subtitle);
+ assert.ok(texts.includes('Pagar entrada'));
+ assert.ok(texts.includes('Como funciona'));
+ assert.ok(texts.includes('Acompanhar minhas diárias'));
+});
+test('pagamento mobile preserva parcelas empilhadas e sem descrição extra', () => {
+ const {nodes}=screen(base());
+ assert.equal(nodes.some(n=>n.props.style==='desktopColumns'),false);
+ assert.ok(nodes.some(n=>n.props.style==='mobileColumns'));
+ assert.ok(nodes.some(n=>n.props.style==='mobileInstallments'));
+ assert.equal(nodes.find(n=>n.type==='PageHeader').props.subtitle,undefined);
+});
+
+test('rodapé web agrupa atualizar, ajuda e acompanhamento, sem atualização duplicada', () => {
+ const {nodes}=screen(base(),true);
+ const group=nodes.find(n=>n.props.style==='desktopFooterActions');
+ assert.ok(group);
+ const descendants=n=>!n||typeof n!=='object'?[]:[n,...(n.children??[]).flat(Infinity).flatMap(descendants)];
+ const actions=descendants(group);
+ assert.ok(actions.some(n=>n.props.accessibilityLabel==='Atualizar pagamento'));
+ for(const label of ['Como funciona','Acompanhar minhas diárias']){
+ assert.ok(actions.some(n=>n.type==='Text'&&n.children.includes(label)));
+ }
+ assert.equal(nodes.filter(n=>n.props.accessibilityLabel==='Atualizar pagamento').length,1);
+});
+test('mobile mantém atualizar fora do grupo de ajuda e acompanhamento',()=>{
+ const {nodes}=screen(base());
+ const group=nodes.find(n=>n.props.style==='mobileFooterActions');
+ const children=(group.children??[]).flat(Infinity);
+ assert.equal(children.some(n=>n?.props?.accessibilityLabel==='Atualizar pagamento'),false);
+ assert.equal(nodes.filter(n=>n.props.accessibilityLabel==='Atualizar pagamento').length,1);
+});

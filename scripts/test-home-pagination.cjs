@@ -166,7 +166,7 @@ test('modal mostra as casas, marca a seleção e possui atalho para gerenciar en
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root, 'src/components/location-picker-modal/index.tsx'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2020, esModuleInterop: true },
   }).outputText, { exports, require: name => name === 'react' ? { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) }
-    : name === 'react-native' ? { ...Object.fromEntries(['ActivityIndicator','Modal','ScrollView','Text','TouchableOpacity','View'].map(key => [key, key])), StyleSheet: { create: value => value } }
+    : name === 'react-native' ? { ...Object.fromEntries(['ActivityIndicator','Modal','ScrollView','Text','TouchableOpacity','View'].map(key => [key, key])), Platform: { OS: 'android' }, StyleSheet: { create: value => value } }
     : { Ionicons: 'Icon' } });
   const tree = exports.LocationPickerModal({ visible: true, addresses: houses, selectedId: 21, loading: false, onSelect: address => calls.push(address.id_endereco), onClose: () => calls.push('close'), onManage: () => calls.push('manage') });
   const nodes = node => !node || typeof node !== 'object' ? [] : [node, ...(node.children ?? []).flat(Infinity).flatMap(nodes)];

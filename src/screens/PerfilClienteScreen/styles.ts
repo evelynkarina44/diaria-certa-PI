@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fonts, fontSizes } from '../../global';
+import { colors, fonts, fontSizes, ui } from '../../global';
 
 const clienteColor = '#18C7C8';
 const laranja = '#FF6B2C';
@@ -64,10 +64,35 @@ export const styles = StyleSheet.create({
     marginBottom: 28,
   },
 
+  desktopProfileHeader: {
+    marginBottom: ui.sectionGap,
+  },
+
+  desktopAvatar: {
+    width: ui.profileAvatar,
+    height: ui.profileAvatar,
+    borderRadius: ui.profileAvatar / 2,
+    borderWidth: 2,
+    marginTop: 0,
+    flexShrink: 0,
+  },
+
+  desktopAvatarImage: {
+    borderRadius: ui.profileAvatar / 2,
+  },
+
+  desktopEditPhotoButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    top: -2,
+    right: -2,
+  },
+
   avatar: {
-    width: 105,
-    height: 105,
-    borderRadius: 53,
+    width: ui.profileAvatar,
+    height: ui.profileAvatar,
+    borderRadius: ui.profileAvatar / 2,
     borderWidth: 3,
     borderColor: clienteColor,
     backgroundColor: '#D5D5D5',
@@ -80,7 +105,7 @@ export const styles = StyleSheet.create({
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 53,
+    borderRadius: ui.profileAvatar / 2,
   },
 
   editPhotoButton: {
@@ -116,7 +141,8 @@ export const styles = StyleSheet.create({
     flexShrink: 1,
     color: colors.text,
     fontFamily: fonts.semibold,
-    fontSize: fontSizes['2xl'] ?? 21,
+    fontSize: ui.title,
+    lineHeight: ui.titleLine,
   },
 
   ratingRow: {
@@ -130,15 +156,17 @@ export const styles = StyleSheet.create({
   ratingNumber: {
     color: colors.text,
     fontFamily: fonts.semibold,
-    fontSize: 11,
+    fontSize: ui.body,
     marginRight: 3,
+    lineHeight: ui.bodyLine,
   },
 
   ratingCount: {
     color: '#999999',
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: ui.caption,
     marginLeft: 3,
+    lineHeight: ui.captionLine,
   },
 
   historyRow: {
@@ -151,7 +179,8 @@ export const styles = StyleSheet.create({
   historyText: {
     color: '#8F8F8F',
     fontFamily: fonts.regular,
-    fontSize: fontSizes.sm ?? 12,
+    fontSize: ui.body,
+    lineHeight: ui.bodyLine,
   },
 
   certificateBox: {
@@ -221,23 +250,26 @@ export const styles = StyleSheet.create({
 
   detailsCard: {
     marginTop: 16,
-    borderRadius: 14,
+    borderRadius: ui.radius,
+    borderWidth: 1,
+    borderColor: '#E4E7EC',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    gap: 6,
+    paddingHorizontal: ui.padding,
+    paddingVertical: ui.padding,
+    gap: ui.gap,
     shadowColor: '#000000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    elevation: 0,
   },
 
   cardTitle: {
     flexShrink: 1,
     color: colors.text,
     fontFamily: fonts.semibold,
-    fontSize: fontSizes.md ?? 15,
+    fontSize: ui.sectionTitle,
+    lineHeight: ui.sectionLine,
   },
 
   sectionHeader: {
@@ -248,9 +280,9 @@ export const styles = StyleSheet.create({
   },
 
   editButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: ui.control,
+    height: ui.control,
+    borderRadius: ui.control / 2,
     backgroundColor: '#EEEEEE',
     alignItems: 'center',
     justifyContent: 'center',
@@ -264,8 +296,8 @@ export const styles = StyleSheet.create({
     flexShrink: 1,
     color: '#666666',
     fontFamily: fonts.regular,
-    fontSize: fontSizes.sm ?? 12,
-    lineHeight: 20,
+    fontSize: ui.body,
+    lineHeight: ui.bodyLine,
   },
 
   logoutButton: {

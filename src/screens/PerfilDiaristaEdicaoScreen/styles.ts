@@ -4,6 +4,7 @@ import {
   colors,
   fonts,
   fontSizes,
+  ui,
 } from '../../global';
 
 const diaristaColor = '#FF6B2C';
@@ -86,11 +87,36 @@ export const styles = StyleSheet.create({
     marginBottom: 28,
   },
 
-  avatar: {
-    width: 105,
-    height: 105,
+  desktopProfileHeader: {
+    marginBottom: ui.sectionGap,
+  },
 
-    borderRadius: 53,
+  desktopAvatar: {
+    width: ui.profileAvatar,
+    height: ui.profileAvatar,
+    borderRadius: ui.profileAvatar / 2,
+    borderWidth: 2,
+    marginTop: 0,
+    flexShrink: 0,
+  },
+
+  desktopAvatarImage: {
+    borderRadius: ui.profileAvatar / 2,
+  },
+
+  desktopEditPhotoButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    top: -2,
+    right: -2,
+  },
+
+  avatar: {
+    width: ui.profileAvatar,
+    height: ui.profileAvatar,
+
+    borderRadius: ui.profileAvatar / 2,
 
     backgroundColor: '#D5D5D5',
 
@@ -108,7 +134,7 @@ export const styles = StyleSheet.create({
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 53,
+    borderRadius: ui.profileAvatar / 2,
   },
 
   editPhotoButton: {
@@ -147,7 +173,8 @@ export const styles = StyleSheet.create({
     flexShrink: 1,
     color: colors.text,
     fontFamily: fonts.semibold,
-    fontSize: fontSizes['2xl'] ?? 21,
+    fontSize: ui.title,
+    lineHeight: ui.titleLine,
   },
 
   ratingRow: {
@@ -164,25 +191,28 @@ export const styles = StyleSheet.create({
   ratingNumber: {
     color: colors.text,
     fontFamily: fonts.semibold,
-    fontSize: 11,
+    fontSize: ui.body,
 
     marginRight: 3,
+    lineHeight: ui.bodyLine,
   },
 
   ratingCount: {
     color: '#999999',
     fontFamily: fonts.regular,
-    fontSize: 9,
+    fontSize: ui.caption,
 
     marginLeft: 3,
+    lineHeight: ui.captionLine,
   },
 
   historyText: {
     color: '#999999',
     fontFamily: fonts.regular,
-    fontSize: fontSizes.sm ?? 12,
+    fontSize: ui.body,
 
     marginTop: 5,
+    lineHeight: ui.bodyLine,
   },
 
   // =========================
@@ -191,7 +221,7 @@ export const styles = StyleSheet.create({
 
   section: {
     width: '100%',
-    marginBottom: 27,
+    marginBottom: ui.sectionGap,
   },
 
   sectionHeader: {
@@ -205,14 +235,15 @@ export const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.text,
     fontFamily: fonts.semibold,
-    fontSize: fontSizes.md ?? 15,
+    fontSize: ui.sectionTitle,
+    lineHeight: ui.sectionLine,
   },
 
   editButton: {
-    width: 28,
-    height: 28,
+    width: ui.control,
+    height: ui.control,
 
-    borderRadius: 14,
+    borderRadius: ui.control / 2,
 
     backgroundColor: '#EEEEEE',
 
@@ -248,12 +279,14 @@ export const styles = StyleSheet.create({
 
     minHeight: 75,
 
-    borderRadius: 14,
+    borderRadius: ui.radius,
+    borderWidth: 1,
+    borderColor: '#E4E7EC',
 
     backgroundColor: '#FFFFFF',
 
-    paddingHorizontal: 18,
-    paddingVertical: 15,
+    paddingHorizontal: ui.padding,
+    paddingVertical: ui.padding,
 
     justifyContent: 'center',
 
@@ -262,10 +295,10 @@ export const styles = StyleSheet.create({
       width: 0,
       height: 3,
     },
-    shadowOpacity: 0.13,
+    shadowOpacity: 0,
     shadowRadius: 5,
 
-    elevation: 4,
+    elevation: 0,
   },
 
   detailLabel: {
@@ -275,8 +308,8 @@ export const styles = StyleSheet.create({
   aboutText: {
     color: colors.text,
     fontFamily: fonts.regular,
-    fontSize: fontSizes.sm ?? 12,
-    lineHeight: 19,
+    fontSize: ui.body,
+    lineHeight: ui.bodyLine,
   },
 
   // =========================

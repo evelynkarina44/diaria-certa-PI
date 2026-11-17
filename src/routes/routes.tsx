@@ -1,3 +1,4 @@
+import AvaliacoesRecebidasScreen from '../screens/AvaliacoesRecebidasScreen';
 import { ResponsiveShell } from '../components/responsive-shell';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -35,7 +36,6 @@ import ServicosDiaristaScreen from '../screens/ServicosDiaristaScreen';
 import CombosDiaristaScreen from '../screens/CombosDiaristaScreen';
 import AgendaDiaristaScreen from '../screens/AgendaDiaristaScreen';
 import ChatbotScreen from '../screens/ChatbotScreen';
-import AcompanharDiariasScreen from '../screens/AcompanharDiariasScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -85,7 +85,7 @@ export function Routes() {
 
       <Stack.Screen name="DetalhesDiaria" component={DetalhesDiariaScreen} />
       <Stack.Screen name="Chatbot" component={ChatbotScreen} />
-      <Stack.Screen name="AcompanharDiarias" component={AcompanharDiariasScreen} />
+      <Stack.Screen name="AvaliacoesRecebidas" component={AvaliacoesRecebidasScreen} />
 
       <Stack.Screen
         name="PerfilDiarista"
@@ -163,7 +163,7 @@ export function Routes() {
 />
 
 <Stack.Screen
-  name="HistoricoDiarista"
+  name="MinhasDiariasDiarista"
   component={HistoricoDiaristaScreen}
 />
 
@@ -173,7 +173,7 @@ export function Routes() {
 />
 
 <Stack.Screen
-  name="HistoricoCliente"
+  name="MinhasDiariasCliente"
   component={HistoricoClienteScreen}
 />
 

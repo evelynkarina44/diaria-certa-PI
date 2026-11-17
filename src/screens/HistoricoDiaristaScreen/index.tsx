@@ -1,4 +1,5 @@
-import { FilterScroll } from '../../components/filter-scroll';
+import { DailyFiltersLayout, StatusFilters } from '../../components/daily-filters-layout';
+import { useResponsive } from '../../contexts/ResponsiveContext';
 import { ResponsiveGrid } from '../../components/responsive-grid';
 import { HeaderMenu } from '../../components/header-menu';
 import { PageHeader } from '../../components/page-header';
@@ -66,6 +67,7 @@ const statusFilters = [
 
 
 export default function HistoricoDiaristaScreen({ navigation }: any) {
+  const { desktop } = useResponsive();
   const [historicoReal, setHistoricoReal] = useState<RegistroHistorico[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -147,9 +149,9 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
   function renderCard(registro: RegistroHistorico) {
     const color = statusColors[registro.status];
     return (
-      <View key={registro.id} style={styles.historyCard}>
+      <View key={registro.id} style={[styles.historyCard, desktop && styles.desktopCard]}>
         <View style={styles.historyCardTop}>
-          <Text style={styles.bookingNumber}>DIÁRIA #{registro.numero ?? '—'}</Text>
+          <Text style={[styles.bookingNumber, desktop && styles.desktopCaption]}>DIÁRIA #{registro.numero ?? '—'}</Text>
           <View style={[styles.historyStatus, { backgroundColor: color + '14' }]}>
             <Ionicons name={statusIcons[registro.checkinExpirado ? 'Checkin_expirado' : registro.status]} size={15} color={color} />
             <Text style={[styles.historyStatusText, { color }]}>{registro.confirmacaoExpirada ? 'Confirmação não recebida' : registro.checkinExpirado ? 'Check-in expirado' : statusLabels[registro.status]}</Text>
@@ -161,13 +163,13 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
               ? <Image source={{ uri: registro.foto }} style={styles.historyPhoto} onError={() => setFotosComErro(current => [...current, registro.id])} />
               : <Ionicons name="person-outline" size={27} color="#C2410C" />}
           </View>
-          <View style={styles.info}><Text style={styles.historyName}>{registro.nome}</Text><Text style={styles.profileLink}>Cliente da diária</Text></View>
+          <View style={styles.info}><Text style={[styles.historyName, desktop && styles.desktopName]}>{registro.nome}</Text><Text style={[styles.profileLink, desktop && styles.desktopCaption]}>Cliente da diária</Text></View>
         </View>
         <View style={styles.historyDetails}>
-          <View style={styles.detailRow}><Ionicons name="calendar-outline" size={17} color="#C2410C" /><Text style={styles.detailText}>{registro.data}</Text></View>
-          <View style={styles.detailRow}><Ionicons name="time-outline" size={17} color="#C2410C" /><Text style={styles.detailText}>{registro.horario ? `Início às ${registro.horario}` : 'Horário não informado'}</Text></View>
-          <View style={styles.detailRow}><Ionicons name="location-outline" size={17} color="#C2410C" /><Text style={styles.detailText}>{registro.endereco}</Text></View>
-          {Boolean(registro.servicos) && <View style={styles.detailRow}><Ionicons name="sparkles-outline" size={17} color="#C2410C" /><Text style={styles.detailText}>{registro.servicos}</Text></View>}
+          <View style={styles.detailRow}><Ionicons name="calendar-outline" size={17} color="#C2410C" /><Text style={[styles.detailText, desktop && styles.desktopDetail]}>{registro.data}</Text></View>
+          <View style={styles.detailRow}><Ionicons name="time-outline" size={17} color="#C2410C" /><Text style={[styles.detailText, desktop && styles.desktopDetail]}>{registro.horario ? `Início às ${registro.horario}` : 'Horário não informado'}</Text></View>
+          <View style={styles.detailRow}><Ionicons name="location-outline" size={17} color="#C2410C" /><Text style={[styles.detailText, desktop && styles.desktopDetail]}>{registro.endereco}</Text></View>
+          {Boolean(registro.servicos) && <View style={styles.detailRow}><Ionicons name="sparkles-outline" size={17} color="#C2410C" /><Text style={[styles.detailText, desktop && styles.desktopDetail]}>{registro.servicos}</Text></View>}
         </View>
         <View style={styles.reviewCard}>
           <Text style={styles.reviewTitle}>Avaliação recebida do cliente</Text>
@@ -184,7 +186,7 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
           ) : <Text style={styles.reviewEmpty}>Esta diária ainda não foi avaliada pelo cliente.</Text>}
         </View>
         <View style={styles.historyFooter}>
-          <View><Text style={styles.totalLabel}>Valor da diária</Text><Text style={styles.totalValue}>{registro.valor == null ? 'Não informado' : Number(registro.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text></View>
+          <View><Text style={[styles.totalLabel, desktop && styles.desktopCaption]}>Valor da diária</Text><Text style={styles.totalValue}>{registro.valor == null ? 'Não informado' : Number(registro.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text></View>
           {['Aceito', 'Em_andamento', 'Concluido'].includes(registro.status) || registro.checkinExpirado || registro.confirmacaoExpirada ? (
             <TouchableOpacity accessibilityRole="button" style={styles.paymentButton}
               onPress={() => navigation.navigate('CheckInDiarista', { agendamentoId: registro.id })}>
@@ -200,35 +202,35 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <PageHeader title="Histórico" subtitle="Consulte suas diárias, pagamentos e avaliações." accentColor="#FF6B2C"
+      <PageHeader title="Minhas diárias" subtitle="Consulte suas diárias, pagamentos e avaliações." accentColor="#FF6B2C"
         left={<HeaderMenu navigation={navigation} profile="diarista" accentColor="#FF6B2C" />} />
       <View style={styles.body}>
-        <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={[styles.scrollContent, styles.historyContainer]}
+        <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={[styles.scrollContent, styles.historyContainer, desktop && styles.desktopContainer]}
           showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {loading && <ActivityIndicator color="#FF6B2C" />}
-            <View style={styles.historyToolbar}>
-              <View style={styles.historySearch}>
+            <DailyFiltersLayout
+              search={<View style={styles.historySearch}>
                 <Ionicons name="search-outline" size={20} color="#667085" />
-                <TextInput style={styles.historyInput} placeholder="Buscar cliente, serviço ou nº da diária" placeholderTextColor="#98A2B3" accessibilityLabel="Buscar no histórico" value={busca} onChangeText={setBusca} />
+                <TextInput style={styles.historyInput} placeholder="Buscar cliente, serviço ou nº da diária" placeholderTextColor="#98A2B3" accessibilityLabel="Buscar nas minhas diárias" value={busca} onChangeText={setBusca} />
                 {Boolean(busca) && <TouchableOpacity accessibilityLabel="Limpar busca" onPress={() => setBusca('')}><Ionicons name="close-circle" size={20} color="#98A2B3" /></TouchableOpacity>}
-              </View>
-              <Text style={styles.filterLabel}>Status do agendamento</Text>
-              <FilterScroll accentColor="#C2410C" contentContainerStyle={styles.statusFilterList}>
+              </View>}
+              status={<><Text style={styles.filterLabel}>Status do agendamento</Text>
+              <StatusFilters accentColor="#C2410C" contentContainerStyle={styles.statusFilterList}>
                 {statusFilters.map(([value, label]) => (
                   <TouchableOpacity key={value} accessibilityRole="button" accessibilityState={{ selected: statusFiltro === value }} onPress={() => setStatusFiltro(value)} style={[styles.statusChip, statusFiltro === value && styles.statusChipSelected]}>
                     <Ionicons name={statusIcons[value]} size={16} color={statusFiltro === value ? '#FFFFFF' : '#667085'} />
                     <Text style={[styles.statusChipText, statusFiltro === value && styles.statusChipTextSelected]}>{label}</Text>
                   </TouchableOpacity>
                 ))}
-              </FilterScroll>
-              <Text style={styles.filterLabel}>Data da diária</Text>
+              </StatusFilters></>}
+              date={<><Text style={styles.filterLabel}>Data da diária</Text>
               <View style={styles.historySearch}>
                 <Ionicons name="calendar-outline" size={20} color="#667085" />
                 <TextInput style={styles.historyInput} placeholder="dd/mm/aaaa" placeholderTextColor="#98A2B3" accessibilityLabel="Filtrar por data da diária" keyboardType="number-pad" maxLength={10} value={dataFiltro} onChangeText={value => setDataFiltro(formatDate(value))} />
                 {Boolean(dataFiltro) && <TouchableOpacity accessibilityLabel="Limpar data" onPress={() => setDataFiltro('')}><Ionicons name="close-circle" size={20} color="#98A2B3" /></TouchableOpacity>}
               </View>
-              <Text style={styles.dateHint}>Você também pode digitar só o dia ou dia/mês.</Text>
-              <View style={styles.resultsRow}>
+              <Text style={styles.dateHint}>Você também pode digitar só o dia ou dia/mês.</Text></>}
+              results={<View style={styles.resultsRow}>
                 <Text style={styles.resultCount}>{loading ? 'Atualizando...' : `${historicoFiltrado.length} ${historicoFiltrado.length === 1 ? 'diária encontrada' : 'diárias encontradas'}`}</Text>
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar agendamentos"
                   accessibilityState={{ disabled: loading, busy: loading }}
@@ -236,14 +238,14 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
                   style={[styles.refreshButton, loading && styles.refreshButtonDisabled]}>
                   {loading ? <ActivityIndicator size="small" color="#C2410C" /> : <Ionicons name="refresh-outline" size={22} color="#C2410C" />}
                 </TouchableOpacity>
-              </View>
-              <View style={styles.sortRow}>
+              </View>}
+              sort={<View style={styles.sortRow}>
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel="Alterar ordenação" style={styles.sortButton} onPress={() => setOrdem(current => current === 'recentes' ? 'antigos' : 'recentes')}>
                   <Ionicons name="swap-vertical-outline" size={16} color="#C2410C" /><Text style={styles.sortText}>{ordem === 'recentes' ? 'Mais recentes' : 'Mais antigas'}</Text>
                 </TouchableOpacity>
-              </View>
-              {temFiltros && <TouchableOpacity style={styles.resetFilters} onPress={limparFiltros}><Ionicons name="close-outline" size={17} color="#C2410C" /><Text style={styles.sortText}>Limpar filtros</Text></TouchableOpacity>}
-            </View>
+              </View>}
+              reset={temFiltros && <TouchableOpacity style={styles.resetFilters} onPress={limparFiltros}><Ionicons name="close-outline" size={17} color="#C2410C" /><Text style={styles.sortText}>Limpar filtros</Text></TouchableOpacity>}
+            />
           <ResponsiveGrid>{!loading && !error && paginaHistorico.data.map(renderCard)}</ResponsiveGrid>
               {!loading && !error && paginaHistorico.pages > 1 && (
                 <View style={styles.paginationActions}>
@@ -272,10 +274,10 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
               <Text style={styles.emptyText}>{temFiltros ? 'Tente outro cliente, status ou data.' : 'Suas diárias aparecerão aqui.'}</Text>
             </View>
           )}
-          {!loading && Boolean(error) && <Text style={styles.emptyText}>Não foi possível carregar o histórico. Toque no ícone de atualização para tentar novamente.</Text>}
+          {!loading && Boolean(error) && <Text style={styles.emptyText}>Não foi possível carregar suas diárias. Toque no ícone de atualização para tentar novamente.</Text>}
         </ScrollView>
       </View>
-      <ActionModal visible={errorModalVisible} variant="error" title="Não foi possível carregar o histórico"
+      <ActionModal visible={errorModalVisible} variant="error" title="Não foi possível carregar suas diárias"
         message={error} accentColor="#FF6B2C" onClose={() => setErrorModalVisible(false)} />
     </SafeAreaView>
   );

@@ -12,6 +12,7 @@ function harness() {
     useEffect: () => {},
   };
   const native = Object.fromEntries(['ActivityIndicator','Modal','Pressable','ScrollView','Text','View'].map(name => [name, name]));
+  native.Platform = { OS: 'android' };
   native.StyleSheet = { create: value => value, absoluteFill: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 } };
   const output = {};
   const source = fs.readFileSync(path.join(root, 'src/components/action-modal/index.tsx'), 'utf8');

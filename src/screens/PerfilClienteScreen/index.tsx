@@ -1,3 +1,4 @@
+import { useResponsive } from '../../contexts/ResponsiveContext';
 import { ReceivedReviews } from '../../components/received-reviews';
 import { formatCpf, formatPhone } from '../../utils/inputMasks';
 import { PageHeader } from '../../components/page-header';
@@ -24,6 +25,7 @@ type EditSection = 'photo' | 'personal' | null;
 
 export default function PerfilClienteScreen({ navigation }: any) {
   const { user, refreshSession } = useAuth();
+  const { sidebar, desktop } = useResponsive();
   const [profile, setProfile] = useState<Cliente | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -87,16 +89,17 @@ export default function PerfilClienteScreen({ navigation }: any) {
         <PageHeader onBack={() => navigation.goBack()} bottomSpace={20} />
 
         <View style={styles.content}>
-          <View style={styles.profileHeader}>
-            <View style={styles.avatar}>
+          <View style={[styles.profileHeader, desktop && styles.desktopProfileHeader]}>
+            <View style={[styles.avatar, desktop && styles.desktopAvatar]}>
               {profileUser?.foto_perfil ? (
-                <Image source={{ uri: profileUser.foto_perfil }} style={styles.avatarImage} />
+                <Image source={{ uri: profileUser.foto_perfil }} style={[styles.avatarImage, desktop && styles.desktopAvatarImage]} resizeMode="cover" />
               ) : (
-                <Ionicons name="person" size={65} color="#FFFFFF" />
+                <Ionicons name="person" size={desktop ? 44 : 65} color="#FFFFFF" />
               )}
 
               <TouchableOpacity
-                style={styles.editPhotoButton}
+                style={[styles.editPhotoButton, desktop && styles.desktopEditPhotoButton]}
+                hitSlop={10}
                 onPress={() => setEditSection('photo')}
                 activeOpacity={0.7}
                 accessibilityLabel="Editar foto do perfil"
@@ -130,13 +133,13 @@ export default function PerfilClienteScreen({ navigation }: any) {
 
             <TouchableOpacity
               onPress={() =>
-                navigation.navigate('HistoricoCliente')
+                navigation.navigate('MinhasDiariasCliente')
               }
               activeOpacity={0.7}
             >
               <View style={styles.historyRow}>
                 <Text style={styles.historyText}>
-                  Ver histórico
+                  Ver minhas diárias
                 </Text>
 
                 <Ionicons
@@ -155,7 +158,7 @@ export default function PerfilClienteScreen({ navigation }: any) {
           <View style={styles.sectionHeader}>
             <Text style={styles.cardTitle}>Dados pessoais</Text>
             <TouchableOpacity style={styles.editButton} onPress={() => setEditSection('personal')} activeOpacity={0.7} accessibilityLabel="Editar dados pessoais">
-              <Ionicons name="pencil" size={14} color="#111111" />
+              <Ionicons name="pencil" size={20} color="#111111" />
             </TouchableOpacity>
           </View>
           <Text style={styles.detailText}><Text style={styles.detailLabel}>E-mail: </Text>{profileUser?.email ?? 'Não informado'}</Text>
@@ -168,7 +171,8 @@ export default function PerfilClienteScreen({ navigation }: any) {
 
         <ClientHouses cliente={profile} onUpdated={loadProfile} />
 
-        <ProfileAccessActions
+        {!sidebar && <>
+          <ProfileAccessActions
           navigation={navigation}
           style={styles.profileAccessButton}
         />
@@ -176,6 +180,7 @@ export default function PerfilClienteScreen({ navigation }: any) {
           navigation={navigation}
           style={styles.logoutButton}
         />
+        </>}
         </View>
       </ScrollView>
 

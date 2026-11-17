@@ -23,14 +23,15 @@ function hooks() {
 const native=Object.fromEntries(['ActivityIndicator','ScrollView','Text','TextInput','TouchableOpacity','View'].map(key=>[key,key]));
 native.StyleSheet={create:value=>value};
 const walk=node=>!node||typeof node!=='object'?[]:[node,...(node.children??[]).flat(Infinity).flatMap(walk)];
-function reviewHarness(worker, {allowed=true,previous=null}={}) {
+function reviewHarness(worker, {allowed=true,previous=null,desktop=false}={}) {
   const h=hooks(),writes=[],navigations=[];
   const summary={pode_avaliar:!worker&&allowed,pode_avaliar_cliente:worker&&allowed,avaliacao_cliente:worker?null:previous,avaliacao_diarista:worker?previous:null};
   const booking={cliente:{usuario:{nome:'Cliente exemplo'}},diarista:{usuario:{nome:'Diarista exemplo'}}};
   const navigation={navigate:(...args)=>navigations.push(args),goBack(){}};
   const Screen=compile('src/screens/AvaliacaoScreen/index.tsx',{
+    '../../contexts/ResponsiveContext':{useResponsive:()=>({desktop})},
     react:h.react,'react-native':native,'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'},'@expo/vector-icons':{Ionicons:'Icon'},
-    './styles':{styles:{}},'../../components/page-header':{PageHeader:'PageHeader'},'../../components/action-modal':{ActionModal:'ActionModal'},
+    './styles':{styles:new Proxy({},{get:(_,key)=>key})},'../../components/page-header':{PageHeader:'PageHeader'},'../../components/action-modal':{ActionModal:'ActionModal'},
     '../../components/star-rating':{StarRating:'StarRating'},'../../services/api':{getErrorMessage:error=>error.message},
     '../../services/avaliacaoService':{avaliacaoService:{criar:async data=>writes.push(data)}},
     '../../services/denunciaService':{denunciaService:{}},
@@ -58,11 +59,12 @@ test('avaliação já enviada reaparece bloqueada e cliente continua dependendo 
   const client=reviewHarness(false,{allowed:false});await client.flush();
   assert.equal(client.button('Enviar avaliação').props.disabled,true);
 });
-test('comentários recebidos aparecem abertos na home, com paginação e atualização automática',async()=>{
+test('comentários recebidos aparecem abertos na tela separada, com paginação e atualização automática',async()=>{
   const h=hooks(),requests=[];let refresh;
   const navigation={};
   const Component=compile('src/components/received-reviews/index.tsx',{
     react:h.react,'react-native':native,'@expo/vector-icons':{Ionicons:'Icon'},
+    '../../global':{fonts:{regular:'Poppins-Regular',semibold:'Poppins-SemiBold'},ui:compile('src/global/ui.ts',{}).ui},
     '../../contexts/GlobalContext':{useAuth:()=>({user:{id_usuario:1,activeProfile:'CLIENTE'}})},
     '../../services/api':{getErrorMessage:error=>error.message},
     '../../utils/watchAvailability':{watchAvailability:(_nav,fn)=>{refresh=fn;void fn();return()=>{};}},
@@ -72,16 +74,52 @@ test('comentários recebidos aparecem abertos na home, com paginação e atualiz
     };}}},
   }).ReceivedReviews;
   let nodes=[];
-  async function flush(){for(let i=0;i<3;i++){h.begin();nodes=walk(Component({navigation,compact:true}));h.effects();await new Promise(resolve=>setImmediate(resolve));}}
+  async function flush(){for(let i=0;i<3;i++){h.begin();nodes=walk(Component({navigation,standalone:true}));h.effects();await new Promise(resolve=>setImmediate(resolve));}}
   await flush();
   assert.ok(nodes.some(n=>n.type==='Text'&&n.children.includes('Cliente muito gentil')));
-  assert.deepEqual(requests[0],[1,3]);
+  assert.deepEqual(requests[0],[1,5]);
   nodes.find(n=>n.props.accessibilityLabel==='Próximas avaliações').props.onPress();await flush();
-  assert.deepEqual(requests.at(-1),[2,3]);await refresh();await flush();
+  assert.deepEqual(requests.at(-1),[2,5]);await refresh();await flush();
   assert.equal(requests.length,3);
 });
-test('perfis e página inicial incluem o painel de avaliações recebidas',()=>{
-  for(const screen of ['PerfilClienteScreen','PerfilDiaristaEdicaoScreen','EncontrarDiaristaScreen']){
+test('perfis e tela separada incluem avaliações recebidas, sem bloco na página inicial',()=>{
+  for(const screen of ['PerfilClienteScreen','PerfilDiaristaEdicaoScreen','AvaliacoesRecebidasScreen']){
     assert.ok(fs.readFileSync(path.join(root,'src/screens',screen,'index.tsx'),'utf8').includes('<ReceivedReviews navigation={navigation}'));
+  }
+});
+
+test('avaliação web separa nota do formulário para os dois perfis, sem duplicar envio',async()=>{
+ for(const worker of [true,false]){
+ const h=reviewHarness(worker,{desktop:true});await h.flush();
+ assert.ok(h.nodes.some(n=>n.props.style==='desktopColumns'));
+ assert.ok(h.nodes.some(n=>n.props.style==='desktopRatingPanel'));
+ assert.ok(h.nodes.some(n=>n.props.style==='desktopFormPanel'));
+ assert.equal(h.nodes.filter(n=>n.type==='StarRating').length,1);
+ assert.equal(h.nodes.filter(n=>n.type==='TextInput').length,1);
+ assert.ok(h.button('Enviar avaliação'));
+ const header=h.nodes.find(n=>n.type==='PageHeader');
+ assert.equal(header.props.allowBackWithSidebar,true);
+ }
+});
+
+test('avaliações recebidas usam a família tipográfica global em todos os textos',()=>{
+  const source=fs.readFileSync(path.join(root,'src/components/received-reviews/index.tsx'),'utf8');
+  assert.ok(source.includes("import { fonts, ui } from '../../global'"));
+  assert.ok(!source.includes('fontWeight:'));
+  for(const name of ['heading','summary','author','date','stars','comment','error']){
+    const line=source.split('\n').find(line=>line.trimStart().startsWith(name+': {'));
+    assert.ok(line.includes('fontFamily: fonts.'),name);
+  }
+});
+
+test('nova rota tem acesso nos menus dos dois perfis e página inicial não carrega avaliações', () => {
+  const home=fs.readFileSync(path.join(root,'src/screens/EncontrarDiaristaScreen/index.tsx'),'utf8');
+  assert.ok(!home.includes('ReceivedReviews'));
+  const routes=fs.readFileSync(path.join(root,'src/routes/routes.tsx'),'utf8');
+  assert.ok(routes.includes('name="AvaliacoesRecebidas" component={AvaliacoesRecebidasScreen}'));
+  const menu=compile('src/utils/navigationMenu.ts',{});
+  for(const profile of ['cliente','diarista']){
+    const item=menu.profileMenu(profile).find(item=>item.route==='AvaliacoesRecebidas');
+    assert.equal(item.label,'Avaliações recebidas');
   }
 });

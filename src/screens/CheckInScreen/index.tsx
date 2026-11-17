@@ -102,11 +102,11 @@ function Confirmacao({ navigation, route }: any) {
         </View>}
         {busy && <ActivityIndicator color="#18C7C8" />}
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar diária" accessibilityState={{ disabled: busy, busy }} disabled={busy} style={{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', backgroundColor: '#E8FAFA' }} onPress={() => void reload.current()}>{busy ? <ActivityIndicator size="small" color="#008A99" /> : <Ionicons name="refresh-outline" size={22} color="#008A99" />}</TouchableOpacity>
-        <TouchableOpacity style={styles.outline} onPress={() => navigation.navigate('AcompanharDiarias')}><Text style={styles.outlineText}>Minhas diárias</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.outline} onPress={() => navigation.navigate('MinhasDiariasCliente')}><Text style={styles.outlineText}>Minhas diárias</Text></TouchableOpacity>
       </ScrollView>
       <ActionModal visible={Boolean(error)} variant="error" title="Não foi possível confirmar" message={error} onClose={() => setError('')} />
       <ActionModal visible={!error && Boolean(success)} variant="success" title="Diária iniciada" message={success} confirmLabel="Acompanhar diária"
-        onClose={() => { setSuccess(''); navigation.navigate('AcompanharDiarias'); }} />
+        onClose={() => { setSuccess(''); navigation.navigate('MinhasDiariasCliente'); }} />
       <ActionModal visible={confirmStart && !error && !success} variant="confirm" title="A diarista está no local?"
         message="Confirme apenas se a profissional chegou e o serviço pode começar. O horário de início será registrado agora. Nenhuma parcela é cobrada ao confirmar."
         confirmLabel="Sim, iniciar diária" cancelLabel="Ainda não" busy={busy} onConfirm={confirm} onClose={() => setConfirmStart(false)} />

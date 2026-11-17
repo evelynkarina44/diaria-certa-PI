@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { colors, fonts, fontSizes } from '../../global';
 
 export const styles = StyleSheet.create({
@@ -11,7 +11,7 @@ export const styles = StyleSheet.create({
   },
   content: {
     width: '100%',
-    maxWidth: 390,
+    maxWidth: Platform.OS === 'web' ? 600 : 390,
     alignItems: 'center',
     borderRadius: 18,
     backgroundColor: colors.white,

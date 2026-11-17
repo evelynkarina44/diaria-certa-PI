@@ -78,7 +78,7 @@ test('same professional on two dates keeps independent stages and actions', () =
  assert.equal(trackingState(paid, 'CLIENTE', now).step, 3);
  assert.equal(unpaid.id_agendamento, 41);
 });
-test('home panels, shared menu and post-booking flows link to tracking, not history', () => {
+test('home, menu e pós-agendamento abrem a lista unificada de diárias', () => {
  const client = fs.readFileSync(path.join(root, 'src/screens/EncontrarDiaristaScreen/index.tsx'), 'utf8');
  assert.equal(client.includes('<AppointmentTracker'), false);
  assert.ok(client.includes('<NotificationBell'));
@@ -86,10 +86,11 @@ test('home panels, shared menu and post-booking flows link to tracking, not hist
  assert.ok(worker.includes('<AppointmentTracker'));
  assert.ok(worker.includes('<NotificationBell'));
  const menu = fs.readFileSync(path.join(root, 'src/utils/navigationMenu.ts'), 'utf8');
- assert.equal(menu.split("route: 'AcompanharDiarias'").length - 1, 2);
+ assert.ok(menu.includes("route: 'MinhasDiariasCliente'"));
+ assert.ok(menu.includes("route: 'MinhasDiariasDiarista'"));
  for (const screen of ['AgendarDiariaScreen','PagamentoScreen','AvaliacaoScreen','ChatbotScreen']) {
   const source = fs.readFileSync(path.join(root, 'src/screens', screen, 'index.tsx'), 'utf8');
-  assert.ok(source.includes("navigation.navigate('AcompanharDiarias')"), screen);
+  assert.ok(source.includes("'MinhasDiariasCliente'"), screen);
  }
  const tracker = fs.readFileSync(path.join(root, 'src/components/appointment-tracker/index.tsx'), 'utf8');
  assert.ok(tracker.includes('15000'));

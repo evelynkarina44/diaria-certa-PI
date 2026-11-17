@@ -45,9 +45,9 @@ test('setas movimentam a barra sem trocar o filtro e respeitam os extremos',()=>
   h.button('Ver filtros anteriores').props.onPress();
   assert.ok(h.moves[1].x<668 && h.moves[1].x>=0);
 });
-test('históricos, busca de diaristas e minhas diárias usam as mesmas setas',()=>{
+test('filtros preservam as setas no mobile e permitem apresentação responsiva nos históricos',()=>{
   for(const file of ['screens/HistoricoClienteScreen','screens/HistoricoDiaristaScreen','screens/EncontrarDiaristaScreen','components/appointment-tracker']){
     const source=fs.readFileSync(path.resolve(__dirname,'../src',file,'index.tsx'),'utf8');
-    assert.ok(source.includes('<FilterScroll'),file);
+    assert.ok(source.includes(file.includes('Historico') ? '<StatusFilters' : '<FilterScroll'),file);
   }
 });

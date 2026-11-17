@@ -1,7 +1,25 @@
 import { StyleSheet } from 'react-native';
-import { fonts } from '../../global';
+import { fonts, ui } from '../../global';
 
 export const paymentStyles = StyleSheet.create({
+  desktopContent: { maxWidth: 1280, padding: 24, paddingBottom: 32, gap: 20 },
+  desktopColumns: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 24 },
+  desktopSummaryColumn: { flexGrow: 1, flexBasis: 280, minWidth: 0 },
+  desktopSummaryCard: { padding: ui.padding, gap: 16, borderWidth: 1, borderColor: '#E4E7EC', borderRadius: ui.radius, backgroundColor: '#F9FAFB' },
+  desktopInstallments: { flexGrow: 2, flexBasis: 400, minWidth: 0, gap: 16 },
+  desktopCard: { padding: ui.padding, borderRadius: ui.radius },
+  mobileColumns: { gap: 12 },
+  mobileInstallments: { gap: 12 },
+  desktopFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, borderTopWidth: 1, borderTopColor: '#E4E7EC', paddingTop: 16 },
+  desktopSecurity: { flex: 1, minWidth: 200, justifyContent: 'flex-start' },
+  desktopFooterActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 12 },
+  desktopInfoButton: { minHeight: 44, paddingHorizontal: 12 },
+  desktopTrackButton: { minHeight: 44, paddingVertical: 10, paddingHorizontal: 16 },
+  refreshButton: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', backgroundColor: '#E8FAFA' },
+  desktopRefreshButton: { alignSelf: 'center' },
+  mobileFooterActions: { gap: 12 },
+  mobileFooter: { gap: 12 },
+
   safe: { flex: 1, backgroundColor: '#18C7C8' },
   header: { padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 },
   back: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', padding: 6 },

@@ -1,9 +1,9 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { colors, fonts, fontSizes } from '../../global';
 
 export const styles = StyleSheet.create({
-  overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.55)', paddingHorizontal: 20, paddingVertical: 28 },
-  dialog: { width: '100%', maxWidth: 420, maxHeight: '90%', overflow: 'hidden', borderRadius: 20, backgroundColor: colors.white, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 18 },
+  overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.55)', paddingHorizontal: 20, paddingVertical: Platform.OS === 'web' ? 16 : 28 },
+  dialog: { width: '100%', maxWidth: Platform.OS === 'web' ? 720 : 420, maxHeight: Platform.OS === 'web' ? '95%' : '90%', overflow: 'hidden', borderRadius: 20, backgroundColor: colors.white, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 18 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
   icon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, color: colors.text, fontFamily: fonts.semibold, fontSize: fontSizes.xl ?? 19, marginLeft: 11 },

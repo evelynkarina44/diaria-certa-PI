@@ -105,6 +105,7 @@ test('casa única é automática e usa seus dados próprios, não os valores ant
 test('cadastro e edição salvam dados por endereço, sem sobrescrever a outra casa', async () => {
   const h = hooks(), writes = [];
   const Houses = load('src/components/client-houses/index.tsx', {
+    '../../global': { ...load('src/global/fonts.ts'), ...load('src/global/ui.ts') },
     react: h.react, 'react-native': { ...native, StyleSheet: { create: value => value } }, '@expo/vector-icons': { Ionicons: 'Icon' },
     '../profile-edit-modal': { ProfileEditModal: 'ProfileEditModal' },
     '../../services/enderecoService': { enderecoService: { criar: async data => writes.push({ create: data }), atualizar: async (id, data) => writes.push({ id, data }) } },

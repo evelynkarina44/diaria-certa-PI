@@ -1,3 +1,4 @@
+import { useResponsive } from '../../contexts/ResponsiveContext';
 import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActionModal } from '../../components/action-modal';
@@ -7,7 +8,7 @@ import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { styles } from './styles';
+import { styles as baseStyles } from './styles';
 import { avaliacaoService } from '../../services/avaliacaoService';
 import { denunciaService } from '../../services/denunciaService';
 import { getErrorMessage } from '../../services/api';
@@ -20,6 +21,18 @@ export default function AvaliacaoScreen({ navigation, route }: any) {
 }
 
 function AvaliacaoDaDiaria({ navigation, route }: any) {
+  const { desktop } = useResponsive();
+  const styles = desktop ? { ...baseStyles,
+    content: [baseStyles.content, baseStyles.desktopForm],
+    title: [baseStyles.title, baseStyles.desktopTitle],
+    commentInput: [baseStyles.commentInput, baseStyles.desktopComment],
+    bottomArea: [baseStyles.bottomArea, baseStyles.desktopBottom],
+    sendButton: [baseStyles.sendButton, baseStyles.desktopSend],
+    sendButtonText: [baseStyles.sendButtonText, baseStyles.desktopButtonText],
+    reportInput: [baseStyles.reportInput, baseStyles.desktopReportInput],
+    reportSendButton: [baseStyles.reportSendButton, baseStyles.desktopSend],
+    scroll: [baseStyles.scroll, baseStyles.desktopScroll],
+  } : baseStyles;
   const [avaliacao, setAvaliacao] = useState(0);
   const [comentario, setComentario] = useState('');
 
@@ -160,28 +173,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
     }
   }
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* HEADER */}
-      <PageHeader title={avaliarCliente ? "Avaliar cliente" : "Avaliar serviço"} accentColor={accentColor} onBack={voltar} />
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-
-        {saved && <View style={{ padding: 18 }}>
-
-          <TouchableOpacity onPress={() => navigation.navigate('AcompanharDiarias')}><Text style={{ color: '#008A99', marginTop: 16 }}>Voltar às minhas diárias</Text></TouchableOpacity>
-        </View>}
-        {!modoDenuncia ? (
-          /* =========================================
-             AVALIAÇÃO NORMAL
-          ========================================= */
-          <View style={styles.content}>
-            <Text style={styles.title}>
+  const question = (<>            <Text style={styles.title}>
               {avaliarCliente ? 'Como foi sua experiência com' : 'Como foi o serviço de'}{'\n'}
               {nomeDiarista}?
             </Text>
@@ -192,7 +184,8 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
             <View style={styles.divider} />
             {avaliacao > 0 && <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: '#555555', marginBottom: 12 }}>Nota: {avaliacao} de 5 estrelas</Text>}
 
-            {/* COMENTÁRIO */}
+</>);
+  const reviewForm = (<>            {/* COMENTÁRIO */}
             <TextInput
               style={styles.commentInput}
               placeholder="Deixe um comentário... (opcional)"
@@ -242,6 +235,34 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
                 )}
               </TouchableOpacity>
             </View>
+</>);
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {/* HEADER */}
+      <PageHeader title={avaliarCliente ? "Avaliar cliente" : "Avaliar serviço"} accentColor={accentColor} onBack={voltar} allowBackWithSidebar={desktop} compact={desktop}
+        subtitle={desktop ? "Compartilhe sua experiência após a diária." : undefined} />
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[baseStyles.scrollContent, desktop && baseStyles.desktopContent]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+
+        {saved && <View style={{ padding: 18 }}>
+
+          <TouchableOpacity onPress={() => navigation.navigate(avaliarCliente ? 'MinhasDiariasDiarista' : 'MinhasDiariasCliente')}><Text style={{ color: '#008A99', marginTop: 16 }}>Voltar às minhas diárias</Text></TouchableOpacity>
+        </View>}
+        {!modoDenuncia ? (
+          /* =========================================
+             AVALIAÇÃO NORMAL
+          ========================================= */
+          <View style={styles.content}>
+            {desktop ? <View style={baseStyles.desktopColumns}>
+              <View style={baseStyles.desktopRatingPanel}>{question}</View>
+              <View style={baseStyles.desktopFormPanel}>{reviewForm}</View>
+            </View> : <>{question}{reviewForm}</>}
           </View>
         ) : (
           /* =========================================
@@ -359,7 +380,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
         onConfirm={() => enviarAvaliacao(true)} onClose={() => setConfirmReview(false)} />
       <ActionModal visible={Boolean(successNotice) && !error} variant="success" title="Avaliação enviada"
         message={successNotice} confirmLabel="Voltar às minhas diárias"
-        onClose={() => { setSuccessNotice(''); navigation.navigate('AcompanharDiarias'); }} />
+        onClose={() => { setSuccessNotice(''); navigation.navigate(avaliarCliente ? 'MinhasDiariasDiarista' : 'MinhasDiariasCliente'); }} />
     </SafeAreaView>
   );
 }

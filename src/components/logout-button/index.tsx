@@ -15,7 +15,7 @@ import { styles } from './styles';
 
 type LogoutButtonProps = {
   navigation: any;
-  variant?: 'full' | 'icon';
+  variant?: 'full' | 'icon' | 'compact';
   style?: StyleProp<ViewStyle>;
   onBeforeOpen?: () => void;
   visible?: boolean;
@@ -88,6 +88,7 @@ export function LogoutButton({
         <TouchableOpacity
           style={[
             iconOnly ? styles.iconButton : styles.fullButton,
+            variant === 'compact' && styles.compactButton,
             style,
           ]}
           onPress={openConfirmation}
@@ -97,11 +98,11 @@ export function LogoutButton({
         >
           <Ionicons
             name='log-out-outline'
-            size={iconOnly ? 20 : 23}
+            size={variant === 'compact' ? 18 : iconOnly ? 20 : 23}
             color='#D92D20'
           />
           {!iconOnly && (
-            <Text style={styles.fullButtonText}>Sair da conta</Text>
+            <Text style={[styles.fullButtonText, variant === 'compact' && styles.compactButtonText]}>Sair da conta</Text>
           )}
         </TouchableOpacity>
       )}

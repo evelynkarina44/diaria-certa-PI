@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { colors, fontSizes, fonts } from '../../global';
 
 const orange = '#FF6B2C';
@@ -39,12 +39,12 @@ export const styles = StyleSheet.create({
   legendDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: orange },
   legendEmpty: { width: 12, height: 12, borderRadius: 6, borderWidth: 1, borderColor: '#D0D0D0', marginLeft: 10 },
   legendText: { color: '#888888', fontFamily: fonts.regular, fontSize: 9 },
-  timeInputRow: { flexDirection: 'row', gap: 9 },
+  timeInputRow: { flexDirection: 'row', gap: 9, marginBottom: Platform.OS === 'web' ? 16 : 0 },
   timeInput: { flex: 1, minWidth: 0, height: 47, borderWidth: 1, borderColor: '#D5D5D5', borderRadius: 10, paddingHorizontal: 13, color: colors.text, fontFamily: fonts.medium, backgroundColor: '#FFFFFF' },
   addTimeButton: { minWidth: 118, height: 47, borderRadius: 10, backgroundColor: orange, flexDirection: 'row', gap: 5, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
   addTimeText: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: fontSizes.sm ?? 12 },
   registeredTimesTitle: { color: colors.text, fontFamily: fonts.semibold, fontSize: fontSizes.sm ?? 12, marginTop: 18, marginBottom: 8 },
-  timeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, minHeight: 48, marginBottom: 22 },
+  timeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: Platform.OS === 'web' ? 12 : 8, minHeight: 48, marginBottom: 22 },
   timeChip: { height: 38, borderRadius: 19, borderWidth: 1, borderColor: '#FFB394', backgroundColor: '#FFF6F2', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11 },
   timeChipText: { color: '#E55318', fontFamily: fonts.semibold, fontSize: 12 },
   emptyText: { color: '#999999', fontFamily: fonts.regular, fontSize: fontSizes.sm ?? 11, paddingVertical: 10 },

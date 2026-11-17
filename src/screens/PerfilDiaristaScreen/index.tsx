@@ -6,7 +6,8 @@ import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, Vi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { styles } from './styles';
+import { styles as baseStyles } from './styles';
+import { useResponsive } from '../../contexts/ResponsiveContext';
 import { diaristaService } from '../../services/diaristaService';
 import { getErrorMessage } from '../../services/api';
 import type { Diarista } from '../../services/types';
@@ -15,6 +16,30 @@ export default function PerfilDiaristaScreen({
   navigation,
   route,
 }: any) {
+  const { desktop } = useResponsive();
+  const styles = desktop ? { ...baseStyles,
+    name: [baseStyles.name, baseStyles.desktopName],
+    ratingRow: [baseStyles.ratingRow, baseStyles.desktopRating],
+    ratingValue: [baseStyles.ratingValue, baseStyles.desktopRatingValue],
+    ratingCount: [baseStyles.ratingCount, baseStyles.desktopRatingCount],
+    sectionTitle: [baseStyles.sectionTitle, baseStyles.desktopSectionTitle],
+    serviceButton: [baseStyles.serviceButton, baseStyles.desktopService],
+    serviceText: [baseStyles.serviceText, baseStyles.desktopBody],
+    aboutText: [baseStyles.aboutText, baseStyles.desktopBody],
+    infoText: [baseStyles.infoText, baseStyles.desktopBody],
+    reviewTitle: [baseStyles.reviewTitle, baseStyles.desktopReviewTitle],
+    reviewText: [baseStyles.reviewText, baseStyles.desktopBody],
+    emptyText: [baseStyles.emptyText, baseStyles.desktopBody],
+    comboDescription: [baseStyles.comboDescription, baseStyles.desktopBody],
+    comboName: [baseStyles.comboName, baseStyles.desktopReviewTitle],
+    comboCard: [baseStyles.comboCard, baseStyles.desktopCombo],
+    servicePrice: [baseStyles.servicePrice, baseStyles.desktopPrice],
+    comboMeta: [baseStyles.comboMeta, baseStyles.desktopCaption],
+    comboServices: [baseStyles.comboServices, baseStyles.desktopBody],
+    scheduleButton: [baseStyles.scheduleButton, baseStyles.desktopSchedule],
+    scheduleButtonText: [baseStyles.scheduleButtonText, baseStyles.desktopScheduleText],
+  } : baseStyles;
+  const [photoFailed, setPhotoFailed] = useState(false);
   const [profile, setProfile] = useState<Diarista | null>(null);
   const [loading, setLoading] = useState(true);
   const diaristaId = Number(route.params?.diaristaId);
@@ -26,6 +51,7 @@ export default function PerfilDiaristaScreen({
       setLoading(false);
       return;
     }
+    setPhotoFailed(false);
     diaristaService
       .buscarPorId(diaristaId)
       .then(setProfile)
@@ -43,31 +69,18 @@ export default function PerfilDiaristaScreen({
     );
   }
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <PageHeader onBack={() => navigation.goBack()} />
-        <View style={styles.imageArea}>
 
-          <View style={styles.imagePlaceholder}>
-            {profile?.usuario?.foto_perfil ? (
+  const photo = (<>{profile?.usuario?.foto_perfil && !photoFailed ? (
               <Image
                 source={{ uri: profile.usuario.foto_perfil }}
-                style={styles.profileImage}
+                style={desktop ? baseStyles.desktopPhoto : styles.profileImage}
+                onError={() => setPhotoFailed(true)}
                 resizeMode="cover"
               />
             ) : (
-              <Ionicons name="person" size={84} color="#D1D1D1" />
-            )}
-          </View>
-        </View>
-
-        <View style={styles.contentCard}>
-          <Text style={styles.name}>
+              <Ionicons name="person" size={desktop ? 64 : 84} color="#D1D1D1" />
+            )}</>);
+  const identity = (<><Text style={styles.name}>
             {profile?.usuario?.nome ?? 'Diarista'}
           </Text>
 
@@ -80,7 +93,7 @@ export default function PerfilDiaristaScreen({
               <Ionicons
                 key={item}
                 name={rating >= item ? 'star' : 'star-outline'}
-                size={19}
+                size={desktop ? 16 : 19}
                 color="#FFB800"
               />
             ))}
@@ -88,17 +101,15 @@ export default function PerfilDiaristaScreen({
             <Text style={styles.ratingCount}>
               ({profile?.avaliacao?.length ?? 0} avaliações)
             </Text>
-          </View>
-
-          <Text style={styles.sectionTitle}>
+          </View></>);
+  const about = (<><Text style={styles.sectionTitle}>
             Sobre
           </Text>
 
           <Text style={styles.aboutText}>
             {profile?.descricao ?? 'Descrição não informada.'}
-          </Text>
-
-          <Text style={styles.sectionTitle}>
+          </Text></>);
+  const services = (<><Text style={styles.sectionTitle}>
             Serviços
           </Text>
 
@@ -114,9 +125,8 @@ export default function PerfilDiaristaScreen({
                 <Text style={styles.servicePrice}>{currency(item.preco)}</Text>
               </View>
             ))}
-          </View>
-
-          <Text style={styles.sectionTitle}>Combos</Text>
+          </View></>);
+  const combos = (<><Text style={styles.sectionTitle}>Combos</Text>
           {(profile?.combo_base ?? []).length ? (
             profile?.combo_base?.map((combo) => {
               const sizes = [
@@ -138,16 +148,14 @@ export default function PerfilDiaristaScreen({
                 </View>
               );
             })
-          ) : <Text style={styles.emptyText}>Nenhum combo cadastrado.</Text>}
-
-          <Text style={styles.sectionTitle}>Localização da diarista</Text>
+          ) : <Text style={styles.emptyText}>Nenhum combo cadastrado.</Text>}</>);
+  const location = (<><Text style={styles.sectionTitle}>Localização da diarista</Text>
           <Text style={styles.infoText}>
             {profile?.endereco?.[0]
               ? `${profile.endereco[0].bairro} - ${profile.endereco[0].cidade}/${profile.endereco[0].estado}`
               : 'Localização não informada.'}
-          </Text>
-
-          <Text style={styles.sectionTitle}>Avaliações</Text>
+          </Text></>);
+  const reviews = (<><Text style={styles.sectionTitle}>Avaliações</Text>
           {(profile?.avaliacao ?? []).length ? (
             profile?.avaliacao?.map((item) => (
               <View key={item.id_avaliacao} style={styles.reviewCard}>
@@ -155,9 +163,8 @@ export default function PerfilDiaristaScreen({
                 <Text style={styles.reviewText}>{item.comentario || 'Avaliação sem comentário.'}</Text>
               </View>
             ))
-          ) : <Text style={styles.emptyText}>Ainda não há avaliações públicas.</Text>}
-
-          <TouchableOpacity
+          ) : <Text style={styles.emptyText}>Ainda não há avaliações públicas.</Text>}</>);
+  const schedule = (<><TouchableOpacity
   style={styles.scheduleButton}
   onPress={() => navigation.navigate('AgendarDiaria', { diaristaId })}
   activeOpacity={0.85}
@@ -165,8 +172,50 @@ export default function PerfilDiaristaScreen({
   <Text style={styles.scheduleButtonText}>
     Agendar diária
   </Text>
-</TouchableOpacity>
-        </View>
+</TouchableOpacity></>);
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {desktop && <PageHeader title="Perfil da diarista"
+        subtitle="Conheça a profissional, seus serviços e avaliações." accentColor="#18C7C8"
+        onBack={() => navigation.goBack()} allowBackWithSidebar compact />}
+      <ScrollView style={[styles.scroll, desktop && baseStyles.desktopScroll]}
+        contentContainerStyle={desktop ? baseStyles.desktopContent : styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        {desktop ? (
+          <>
+
+            <View style={baseStyles.desktopHero}>
+              <View style={baseStyles.desktopAvatar}>{photo}</View>
+              <View style={baseStyles.desktopIdentity}>{identity}</View>
+              <View style={baseStyles.desktopBooking}>{schedule}</View>
+            </View>
+            <View style={baseStyles.desktopColumns}>
+              <View style={baseStyles.desktopMain}>
+                <View style={baseStyles.desktopSection}>{about}</View>
+                <View style={baseStyles.desktopSection}>{services}</View>
+                <View style={baseStyles.desktopSection}>{combos}</View>
+              </View>
+              <View style={baseStyles.desktopAside}>
+                <View style={baseStyles.desktopSection}>{location}</View>
+                <View style={baseStyles.desktopSection}>{reviews}</View>
+              </View>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.imageArea}>
+              <View style={styles.imagePlaceholder}>{photo}</View>
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}
+                accessibilityRole="button" accessibilityLabel="Voltar" activeOpacity={0.8}>
+                <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.contentCard}>
+              {identity}{about}{services}{combos}{location}{reviews}{schedule}
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

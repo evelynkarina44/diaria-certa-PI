@@ -7,6 +7,19 @@ const laranja = '#FF6B2C';
 const vermelho = '#FF3338';
 
 export const styles = StyleSheet.create({
+  desktopScroll: { borderTopLeftRadius: 25, borderTopRightRadius: 25 },
+  desktopContent: { flexGrow: 0, width: '100%', maxWidth: 1280, alignSelf: 'center', padding: 24 },
+  desktopForm: { flex: 0, minHeight: 0, padding: 0, paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
+  desktopColumns: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 24 },
+  desktopRatingPanel: { flexGrow: 1, flexBasis: 280, minWidth: 0, padding: 20, borderWidth: 1, borderColor: '#E4E7EC', borderRadius: 16, backgroundColor: '#F9FAFB' },
+  desktopFormPanel: { flexGrow: 2, flexBasis: 400, minWidth: 0, padding: 20, borderWidth: 1, borderColor: '#E4E7EC', borderRadius: 16 },
+  desktopTitle: { fontSize: 20, lineHeight: 28 },
+  desktopComment: { minHeight: 140, fontSize: 14, lineHeight: 22, borderRadius: 12, borderWidth: 1, borderColor: '#D0D5DD' },
+  desktopBottom: { marginTop: 20, paddingTop: 0 },
+  desktopSend: { height: 44, marginTop: 16, borderRadius: 12 },
+  desktopButtonText: { fontSize: 14, lineHeight: 22 },
+  desktopReportInput: { height: 140, marginTop: 20, borderRadius: 12 },
+
   safeArea: {
     flex: 1,
     backgroundColor: clienteColor,

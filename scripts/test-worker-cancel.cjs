@@ -25,6 +25,7 @@ function harness(status = 'Aceito', fail = false, expired = false) {
   const native = Object.fromEntries(['ActivityIndicator', 'ScrollView', 'Text', 'TouchableOpacity', 'View'].map(name => [name, name]));
   native.AppState = { currentState: 'active', addEventListener: () => ({ remove() {} }) };
   const imports = {
+    '../../contexts/ResponsiveContext': { useResponsive: () => ({ desktop: false }) },
     react, 'react-native': native,
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@expo/vector-icons': { Ionicons: 'Icon' },

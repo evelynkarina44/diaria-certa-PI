@@ -64,7 +64,7 @@ test('card conserva ID exclusivo do agendamento nos pagamentos e no check-in', (
   const context = {
     React: { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) },
     View: 'View', Text: 'Text', Image: 'Image', TouchableOpacity: 'Button', Ionicons: 'Icon',
-    styles: {}, statusColors: { Aceito: '#008A99' }, statusLabels: { Aceito: 'Aceito' }, statusIcons: { Aceito: 'checkmark' },
+    desktop: false, styles: {}, statusColors: { Aceito: '#008A99' }, statusLabels: { Aceito: 'Aceito' }, statusIcons: { Aceito: 'checkmark' },
     fotosComErro: [], abrirPerfil() {}, alternarFavorito() {},
     navigation: { push: (...args) => calls.push(args), navigate: (...args) => calls.push(args) },
   };

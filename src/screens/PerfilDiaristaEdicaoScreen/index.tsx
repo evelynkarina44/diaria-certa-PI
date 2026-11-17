@@ -1,3 +1,4 @@
+import { useResponsive } from '../../contexts/ResponsiveContext';
 import { ReceivedReviews } from '../../components/received-reviews';
 import { formatCpf, formatPhone } from '../../utils/inputMasks';
 import { PageHeader } from '../../components/page-header';
@@ -30,6 +31,7 @@ export default function PerfilDiaristaEdicaoScreen({
   navigation,
 }: any) {
   const { user, refreshSession } = useAuth();
+  const { sidebar, desktop } = useResponsive();
   const [profile, setProfile] = useState<Diarista | null>(null);
   const [endereco, setEndereco] = useState<Endereco | null>(null);
   const [loading, setLoading] = useState(true);
@@ -125,16 +127,17 @@ export default function PerfilDiaristaEdicaoScreen({
         {/* CONTEÚDO */}
         <View style={styles.content}>
           {/* PERFIL */}
-          <View style={styles.profileHeader}>
-            <View style={styles.avatar}>
+          <View style={[styles.profileHeader, desktop && styles.desktopProfileHeader]}>
+            <View style={[styles.avatar, desktop && styles.desktopAvatar]}>
               {user?.foto_perfil ? (
-                <Image source={{ uri: user.foto_perfil }} style={styles.avatarImage} />
+                <Image source={{ uri: user.foto_perfil }} style={[styles.avatarImage, desktop && styles.desktopAvatarImage]} resizeMode="cover" />
               ) : (
-                <Ionicons name="person" size={65} color="#FFFFFF" />
+                <Ionicons name="person" size={desktop ? 44 : 65} color="#FFFFFF" />
               )}
 
               <TouchableOpacity
-                style={styles.editPhotoButton}
+                style={[styles.editPhotoButton, desktop && styles.desktopEditPhotoButton]}
+                hitSlop={10}
                 accessibilityLabel="Editar foto do perfil"
                 onPress={() => setEditSection('photo')}
                 activeOpacity={0.8}
@@ -169,11 +172,11 @@ export default function PerfilDiaristaEdicaoScreen({
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() =>
-                  navigation.navigate('HistoricoDiarista')
+                  navigation.navigate('MinhasDiariasDiarista')
                 }
               >
                 <Text style={styles.historyText}>
-                  Ver histórico
+                  Ver minhas diárias
                 </Text>
               </TouchableOpacity>
             </View>
@@ -183,7 +186,7 @@ export default function PerfilDiaristaEdicaoScreen({
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Dados profissionais</Text>
               <TouchableOpacity style={styles.editButton} onPress={() => setEditSection('professional')} activeOpacity={0.7} accessibilityLabel="Editar dados profissionais">
-                <Ionicons name="pencil" size={14} color="#111111" />
+                <Ionicons name="pencil" size={20} color="#111111" />
               </TouchableOpacity>
             </View>
             <View style={styles.aboutCard}>
@@ -225,7 +228,7 @@ export default function PerfilDiaristaEdicaoScreen({
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Endereço</Text>
               <TouchableOpacity style={styles.editButton} onPress={() => setEditSection('address')} activeOpacity={0.7} accessibilityLabel="Editar endereço de atendimento">
-                <Ionicons name="pencil" size={14} color="#111111" />
+                <Ionicons name="pencil" size={20} color="#111111" />
               </TouchableOpacity>
             </View>
             <View style={styles.aboutCard}>
@@ -237,11 +240,13 @@ export default function PerfilDiaristaEdicaoScreen({
           <ReceivedReviews navigation={navigation} />
 
           {/* BOTÃO SAIR DA CONTA */}
+          {!sidebar && <>
           <ProfileAccessActions navigation={navigation} />
           <LogoutButton
             navigation={navigation}
             style={styles.logoutButton}
           />
+        </>}
         </View>
       </ScrollView>
 

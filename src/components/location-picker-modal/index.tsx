@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Endereco } from '../../services/types';
 
@@ -52,7 +52,7 @@ export function LocationPickerModal({ visible, addresses, selectedId, loading, o
 }
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 24 },
-  dialog: { width: '100%', maxWidth: 460, maxHeight: '85%', backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20 },
+  dialog: { width: '100%', maxWidth: Platform.OS === 'web' ? 720 : 460, maxHeight: Platform.OS === 'web' ? '90%' : '85%', backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20 },
   headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   title: { flex: 1, fontFamily: 'Poppins_600SemiBold', fontSize: 21, color: '#182230' },
   close: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },

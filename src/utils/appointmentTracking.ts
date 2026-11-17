@@ -19,7 +19,7 @@ export function trackingState(item: TrackingAppointment, profile: TrackingProfil
   if (confirmationExpired) return state('Confirmação do cliente expirada', 'A chegada foi registrada, mas o cliente não confirmou em 30 minutos. A diária foi encerrada; a entrada paga terá estorno integral.', -1, 8, { finished: true, actionLabel: 'Ver detalhes e estorno' });
   const late = item.status === 'Aceito' && !arrived && !item.checkin?.horario_checkin && item.inicio_em && now >= new Date(item.inicio_em).getTime() + 30 * 60000;
   if (item.checkin_expirado || late) {
-    return state('Check-in expirado', 'A chegada não foi registrada nos 30 minutos após o horário marcado. Se a entrada foi paga, será solicitado o estorno integral. Acompanhe os detalhes e o histórico.', -1, 8, { finished: true, actionLabel: 'Ver detalhes e estorno' });
+    return state('Check-in expirado', 'A chegada não foi registrada nos 30 minutos após o horário marcado. Se a entrada foi paga, será solicitado o estorno integral. Acompanhe os detalhes em Minhas diárias.', -1, 8, { finished: true, actionLabel: 'Ver detalhes e estorno' });
   }
   if (payment?.parcelas.some(p => p.estorno_pendente || p.status === 'Estorno_pendente')) {
     return state('Estorno em processamento', 'A devolução está sendo processada. O prazo depende do Mercado Pago.', -1, 2);
@@ -29,7 +29,7 @@ export function trackingState(item: TrackingAppointment, profile: TrackingProfil
   }
   if (['Recusado', 'Cancelado', 'Expirado'].includes(item.status)) {
     const title = item.status === 'Recusado' ? 'Solicitação recusada' : item.status === 'Cancelado' ? 'Agendamento cancelado' : 'Solicitação expirada';
-    return state(title, payment?.parcelas.some(p => p.status === 'Estornado') ? 'O pagamento foi estornado.' : 'Esta solicitação foi encerrada. Você pode consultar o registro no histórico.', -1, 8, { route: undefined, actionLabel: '', finished: true });
+    return state(title, payment?.parcelas.some(p => p.status === 'Estornado') ? 'O pagamento foi estornado.' : 'Esta solicitação foi encerrada. Você pode consultar o registro em Minhas diárias.', -1, 8, { route: undefined, actionLabel: '', finished: true });
   }
   if (item.status === 'Pendente') {
     return state(customer ? 'Aguardando aceite' : 'Nova solicitação', customer ? 'A diarista precisa aceitar ou recusar. Nenhum pagamento é solicitado antes do aceite.' : 'Confira a data e os serviços e responda à solicitação.', 1, customer ? 4 : 0,

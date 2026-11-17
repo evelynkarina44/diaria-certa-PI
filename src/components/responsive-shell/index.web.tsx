@@ -34,7 +34,7 @@ export function ResponsiveShell({ children, routeName, navigation }: ShellProps)
             <View style={styles.accountInfo}><Text style={styles.accountName} numberOfLines={1}>{user?.nome}</Text>
               <Text style={styles.accountEmail} numberOfLines={1}>{user?.email}</Text></View>
           </Pressable>
-          <ScrollView style={styles.menuScroll} contentContainerStyle={styles.menuContent}>
+          <ScrollView style={styles.menuScroll} contentContainerStyle={styles.menuContent} showsVerticalScrollIndicator={false}>
             <Text style={styles.menuCaption}>{profile === 'diarista' ? 'ÁREA DA DIARISTA' : 'ÁREA DO CLIENTE'}</Text>
             {profileMenu(profile).map(item => {
               const selected = item.route === routeName || (item.route === 'HomeDiarista' && routeName === 'SolicitacoesDiarista');
@@ -53,7 +53,7 @@ export function ResponsiveShell({ children, routeName, navigation }: ShellProps)
               <Ionicons name={access.icon} size={20} color="#667085" /><Text style={styles.menuLabel}>{access.label}</Text>
             </Pressable>
           </ScrollView>
-          <View style={styles.logout}><LogoutButton navigation={navigation} /></View>
+          <View style={styles.logout}><LogoutButton navigation={navigation} variant="compact" /></View>
         </View>}
         <View style={[styles.main, (layout.desktop || layout.constrained) && styles.desktopMain, layout.desktop && ['Home', 'Login', 'Cadastro', 'SelecionarPerfil'].includes(routeName) && { justifyContent: 'center' }]}>
           <View style={[styles.frame, (layout.desktop || layout.constrained) && { maxWidth: layout.maxWidth, borderRadius: 24, borderWidth: 1, borderColor: '#E3EBED', overflow: 'hidden' }, layout.desktop && ['Home', 'Login', 'Cadastro', 'SelecionarPerfil'].includes(routeName) && { maxHeight: 820, borderWidth: 0 }]}>
@@ -90,5 +90,5 @@ const styles = StyleSheet.create({
   activeDot: { width: 6, height: 6, borderRadius: 3 },
   divider: { height: 1, backgroundColor: '#EEF2F3', marginVertical: 12 },
   hover: { backgroundColor: '#F6F8FA' },
-  logout: { paddingVertical: 20, borderTopWidth: 1, borderTopColor: '#EEF2F3' },
+  logout: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#EEF2F3' },
 });

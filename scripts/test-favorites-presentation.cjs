@@ -9,7 +9,7 @@ function harness(initial = favoriteRecords) {
   let cursor = 0, focus;
   const slots = [], effects = [], requests = [], navigations = [];
   const react = {
-    createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
+    createElement: (type, props, ...children) => ({ type, props: { ...props, children: type === 'DailyFiltersLayout' ? [props.search, props.status, props.date, props.results, props.sort, props.reset] : children } }),
     useState(initial) {
       const index = cursor++;
       if (!(index in slots)) slots[index] = initial;
@@ -31,6 +31,8 @@ function harness(initial = favoriteRecords) {
     return exports;
   }
   const imports = {
+    '../../contexts/ResponsiveContext': { useResponsive: () => ({ desktop: false }) },
+    '../../components/daily-filters-layout': { DailyFiltersLayout: 'DailyFiltersLayout', StatusFilters: 'FilterScroll' },
     '../../utils/historyFilters': utility('src/utils/historyFilters.ts'),
     '../../utils/inputMasks': utility('src/utils/inputMasks.ts'),
     react, 'react-native': native,

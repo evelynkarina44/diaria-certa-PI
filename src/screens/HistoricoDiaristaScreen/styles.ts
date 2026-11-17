@@ -2,6 +2,12 @@ import { StyleSheet } from 'react-native';
 import { fonts } from '../../global';
 
 export const styles = StyleSheet.create({
+  desktopContainer: { maxWidth: 1280, paddingHorizontal: 24, paddingTop: 24 },
+  desktopCard: { padding: 20, marginBottom: 0, borderRadius: 16 },
+  desktopName: { fontSize: 18, lineHeight: 26 },
+  desktopDetail: { fontSize: 14, lineHeight: 22 },
+  desktopCaption: { fontSize: 12, lineHeight: 18 },
+
   historyHeaderTitle: { fontSize: 26, lineHeight: 34 },
   paginationActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8, marginBottom: 12 },
   pageButton: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 12, paddingHorizontal: 8, borderRadius: 12, backgroundColor: '#FFF1E8' },

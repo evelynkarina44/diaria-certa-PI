@@ -1,10 +1,36 @@
 import { StyleSheet } from 'react-native';
 
-import { colors, fonts, fontSizes } from '../../global';
+import { colors, fonts, fontSizes, ui } from '../../global';
 
 const clienteColor = '#18C7C8';
 
 export const styles = StyleSheet.create({
+
+  desktopScroll: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 25, borderTopRightRadius: 25 },
+  desktopContent: { flexGrow: 1, width: '100%', maxWidth: 1280, alignSelf: 'center', padding: 20, gap: 20 },
+  desktopHero: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#E4E7EC', backgroundColor: '#FFFFFF' },
+  desktopAvatar: { width: ui.profileAvatar, height: ui.profileAvatar, borderRadius: ui.profileAvatar / 2, overflow: 'hidden', backgroundColor: '#E8FAFA', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: clienteColor },
+  desktopPhoto: { width: '100%', height: '100%' },
+  desktopIdentity: { flex: 1, minWidth: 200 },
+  desktopBooking: { width: 180 },
+  desktopName: { fontSize: 20, lineHeight: 28 },
+  desktopRatingValue: { fontSize: 14, lineHeight: 20 },
+  desktopRatingCount: { fontSize: 12, lineHeight: 18 },
+  desktopRating: { flexWrap: 'wrap', marginTop: 8 },
+  desktopSchedule: { marginTop: 0, height: 44, borderRadius: 12, backgroundColor: '#008A99' },
+  desktopScheduleText: { fontSize: 13, lineHeight: 20 },
+  desktopColumns: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 20 },
+  desktopMain: { flexGrow: 2, flexBasis: 460, minWidth: 0, gap: 20 },
+  desktopAside: { flexGrow: 1, flexBasis: 280, minWidth: 0, gap: 20 },
+  desktopSection: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E7EC', borderRadius: ui.radius, padding: ui.padding },
+  desktopSectionTitle: { marginTop: 0, marginBottom: 10, fontSize: 16, lineHeight: 24 },
+  desktopService: { width: '100%', minHeight: 44, borderRadius: 12, padding: 12, backgroundColor: '#F7F9FA', flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  desktopBody: { fontSize: 13, lineHeight: 20, textAlign: 'left', flexShrink: 1 },
+  desktopPrice: { fontSize: 13, lineHeight: 20, marginTop: 0 },
+  desktopReviewTitle: { fontSize: 13, lineHeight: 20, fontFamily: fonts.semibold },
+  desktopCombo: { borderColor: '#E4E7EC', backgroundColor: '#F9FAFB', borderRadius: ui.radius, padding: ui.padding },
+  desktopCaption: { fontSize: ui.caption, lineHeight: ui.captionLine },
+
   safeArea: {
     flex: 1,
     backgroundColor: clienteColor,
@@ -30,7 +56,7 @@ export const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: clienteColor,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',

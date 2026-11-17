@@ -1,4 +1,3 @@
-import { ReceivedReviews } from '../../components/received-reviews';
 import { FilterScroll } from '../../components/filter-scroll';
 import { ResponsiveGrid } from '../../components/responsive-grid';
 import { PageHeader } from '../../components/page-header';
@@ -753,8 +752,6 @@ export default function EncontrarDiaristaScreen({
             />
           </View>
         </View>
-
-        <View style={{ paddingHorizontal: 18, marginTop: 18 }}><ReceivedReviews navigation={navigation} compact /></View>
 
         <View style={styles.content}>
           <Text style={styles.sectionLabel}>

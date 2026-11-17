@@ -6,7 +6,7 @@ export function responsiveLayout(platform: string, width: number, route: string,
   const desktop = platform === 'web' && width >= DESKTOP_BREAKPOINT;
   const constrained = platform === 'web' && width >= 768 && route !== 'Home';
   const sidebar = desktop && authenticated && !publicRoutes.has(route);
-  const maxWidth = publicRoutes.has(route) ? (['Home', 'Login', 'Cadastro', 'SelecionarPerfil'].includes(route) ? 1280 : 760) : focusedRoutes.has(route) ? 860 : 1280;
+  const maxWidth = publicRoutes.has(route) ? (['Home', 'Login', 'Cadastro', 'SelecionarPerfil'].includes(route) ? 1280 : 760) : desktop && ['Pagamento', 'CheckInDiarista', 'Avaliacao'].includes(route) ? 1280 : focusedRoutes.has(route) ? 860 : 1280;
   const contentWidth = (desktop || constrained) ? Math.max(0, Math.min(maxWidth, width - (sidebar ? SIDEBAR_WIDTH : 0) - 48)) : width;
   return { desktop, constrained, sidebar, maxWidth, contentWidth, columns: desktop && contentWidth >= 800 ? 2 : 1 };
 }

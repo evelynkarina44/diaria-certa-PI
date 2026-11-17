@@ -81,7 +81,7 @@ export function ProfilePhotoModal({ visible, imageUrl, accentColor, onClose, onS
 }
 const styles = StyleSheet.create({
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.5)' },
-  dialog: { width: '100%', maxWidth: 430, maxHeight: '85%', padding: 24, borderRadius: 20, backgroundColor: '#FFFFFF' },
+  dialog: { width: '100%', maxWidth: Platform.OS === 'web' ? 600 : 430, maxHeight: Platform.OS === 'web' ? '90%' : '85%', padding: 24, borderRadius: 20, backgroundColor: '#FFFFFF' },
   content: { alignItems: 'center', gap: 16 },
   title: { fontFamily: 'Poppins_600SemiBold', fontSize: 21, color: '#182230' },
   preview: { width: 160, height: 160, borderRadius: 80, borderWidth: 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F9FAFB' },

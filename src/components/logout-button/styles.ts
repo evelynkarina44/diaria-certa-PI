@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { colors, fonts, fontSizes } from '../../global';
 
 export const styles = StyleSheet.create({
@@ -19,6 +19,16 @@ export const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: fontSizes.md ?? 15,
   },
+  compactButton: {
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 12,
+    gap: 8,
+  },
+  compactButtonText: {
+    fontSize: fontSizes.sm,
+    fontFamily: fonts.medium,
+  },
   iconButton: {
     width: 30,
     height: 30,
@@ -36,7 +46,7 @@ export const styles = StyleSheet.create({
   },
   dialog: {
     width: '100%',
-    maxWidth: 390,
+    maxWidth: Platform.OS === 'web' ? 600 : 390,
     alignItems: 'center',
     borderRadius: 18,
     backgroundColor: colors.white,

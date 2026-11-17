@@ -8,29 +8,35 @@ type Props = {
   subtitle?: string;
   accentColor?: string;
   onBack?: () => void;
+  allowBackWithSidebar?: boolean;
   left?: ReactNode;
   right?: ReactNode;
   bottomSpace?: number;
+  compact?: boolean;
 };
 
 /** Shared authenticated-page header. Safe-area padding belongs to the screen. */
-export function PageHeader({ title, subtitle, accentColor = '#18C7C8', onBack, left, right, bottomSpace = 0 }: Props) {
-  const { desktop } = useResponsive();
+export function PageHeader({ title, subtitle, accentColor = '#18C7C8', onBack, left, right, bottomSpace = 0, allowBackWithSidebar = false, compact = false }: Props) {
+  const { desktop, sidebar } = useResponsive();
+  const showBack = Boolean(onBack) && (!sidebar || allowBackWithSidebar);
   return (
-    <View style={[styles.container, desktop && styles.desktopContainer, { backgroundColor: accentColor, paddingBottom: 24 + bottomSpace }]}>
-      <View style={[styles.actions, desktop && styles.desktopActions, desktop && onBack && { left: 24 }]}>
-        {left ?? (onBack ? <Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={onBack}
+    <View style={[styles.container, desktop && styles.desktopContainer, desktop && compact && styles.compactContainer, { backgroundColor: accentColor, paddingBottom: (desktop && compact ? 20 : 24) + bottomSpace }]}>
+      <View style={[styles.actions, desktop && styles.desktopActions, desktop && showBack && { left: 24 }]}>
+        {left ?? (showBack ? <Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={onBack}
           style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
           <Ionicons name="chevron-back" size={27} color="#FFFFFF" />
         </Pressable> : <View style={styles.back} />)}
         {right && <View style={styles.right}>{right}</View>}
       </View>
-      {title ? <Text accessibilityRole="header" style={[styles.title, desktop && styles.desktopTitle, desktop && onBack && { marginLeft: 52 }]}>{title}</Text> : null}
-      {subtitle ? <Text style={[styles.subtitle, desktop && styles.desktopSubtitle, desktop && onBack && { marginLeft: 52 }]}>{subtitle}</Text> : null}
+      {title ? <Text accessibilityRole="header" style={[styles.title, desktop && styles.desktopTitle, desktop && compact && styles.compactTitle, desktop && showBack && { marginLeft: 52 }]}>{title}</Text> : null}
+      {subtitle ? <Text style={[styles.subtitle, desktop && styles.desktopSubtitle, desktop && compact && styles.compactSubtitle, desktop && showBack && { marginLeft: 52 }]}>{subtitle}</Text> : null}
     </View>
   );
 }
 const styles = StyleSheet.create({
+  compactContainer: { minHeight: 100, paddingTop: 20 },
+  compactTitle: { fontSize: 24, lineHeight: 32 },
+  compactSubtitle: { fontSize: 12, lineHeight: 18 },
   desktopContainer: { paddingHorizontal: 32, paddingTop: 28, minHeight: 116 },
   desktopActions: { position: 'absolute', right: 32, top: 22, zIndex: 2 },
   desktopTitle: { fontSize: 28, lineHeight: 40, marginTop: 0, marginRight: 120 },

@@ -20,6 +20,7 @@ function harness(options = {}) {
   useEffect: () => {},
  };
  const native = Object.fromEntries(['ActivityIndicator','Modal','Pressable','ScrollView','Text','View'].map(name => [name, name]));
+ native.Platform = { OS: 'android' };
  native.StyleSheet = { create: value => value, absoluteFill: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 } };
  const imports = { react, 'react-native': native, '@expo/vector-icons': { Ionicons: 'Icon' },
   '../../contexts/NotificationContext': { useNotifications: () => context }, '../../contexts/GlobalContext': { useAuth: () => ({ user }) },
@@ -78,7 +79,7 @@ test('client dashboard is menu-only and bell/provider are connected without remo
  const provider = fs.readFileSync(path.join(root, 'src/contexts/NotificationContext.tsx'), 'utf8');
  assert.equal(client.includes('<AppointmentTracker'), false);
  assert.ok(client.includes('<NotificationBell'));
- assert.ok(menu.includes("route: 'AcompanharDiarias', label: 'Minhas diárias'"));
+ assert.ok(menu.includes("route: 'MinhasDiariasCliente', label: 'Minhas diárias'"));
  assert.ok(app.includes('<NotificationProvider>'));
  assert.equal(app.includes('<NotificationProvider key='), false);
  assert.ok(provider.includes('dataOwner === key'));

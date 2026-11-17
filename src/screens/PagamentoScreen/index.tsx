@@ -1,3 +1,4 @@
+import { useResponsive } from '../../contexts/ResponsiveContext';
 import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActionModal } from '../../components/action-modal';
@@ -45,6 +46,7 @@ export default function PagamentoScreen({ navigation, route }: any) {
 }
 
 function PagamentoDoAgendamento({ navigation, route }: any) {
+  const { desktop } = useResponsive();
   const { user } = useAuth();
   const id = Number(route.params?.agendamentoId);
   const [summary, setSummary] = useState<ResumoPagamento | null>(null);
@@ -158,12 +160,21 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
     }
   }
 
+  const refreshAction = (Boolean(id) && isClient && (
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar pagamento" accessibilityState={{ disabled: busy, busy }} style={[styles.refreshButton, desktop && styles.desktopRefreshButton, busy && styles.disabled]} disabled={busy} onPress={() => void load(true)}>
+            {busy ? <ActivityIndicator size="small" color="#008A99" /> : <Ionicons name="refresh-outline" size={22} color="#008A99" />}
+          </TouchableOpacity>
+        ));
+
   return (
     <SafeAreaView style={styles.safe}>
-      <PageHeader title="Pagamento da diária" accentColor="#18C7C8" onBack={() => navigation.goBack()} />
-      <ScrollView style={styles.body} contentContainerStyle={styles.content}>
+      <PageHeader title="Pagamento da diária" subtitle={desktop ? "Consulte os valores, as parcelas e o status do pagamento." : undefined}
+        accentColor="#18C7C8" onBack={() => navigation.goBack()} allowBackWithSidebar={desktop} />
+      <ScrollView style={styles.body} contentContainerStyle={[styles.content, desktop && styles.desktopContent]} showsVerticalScrollIndicator={false}>
         {summary && summary.id_agendamento === id && isClient && <>
-          <View style={styles.summaryCard}>
+          <View style={desktop ? styles.desktopColumns : styles.mobileColumns}>
+          <View style={desktop ? styles.desktopSummaryColumn : undefined}>
+          <View style={[styles.summaryCard, desktop && styles.desktopSummaryCard]}>
             <View style={styles.summaryTop}>
               <Text style={styles.booking}>DIÁRIA #{summary.id_agendamento}</Text>
               <Text style={styles.bookingStatus}>{summary.confirmacao_cliente_expirada ? 'Confirmação não recebida' : summary.checkin_expirado ? 'Check-in expirado' : summary.status_agendamento === 'Concluido' ? 'Concluído' : summary.status_agendamento.replace(/_/g, ' ')}</Text>
@@ -175,8 +186,10 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
             <Text style={styles.totalAmount}>{money(summary.valor_total)}</Text>
             <Text style={styles.caption}>50% após o aceite · 50% após o checkout</Text>
           </View>
+          </View>
+          <View style={desktop ? styles.desktopInstallments : styles.mobileInstallments}>
           {summary.parcelas.map((installment) => (
-            <View key={installment.fase} style={styles.card}>
+            <View key={installment.fase} style={[styles.card, desktop && styles.desktopCard]}>
               <View style={styles.installmentTop}>
                 <View style={styles.installmentName}>
                   <Ionicons name={installment.fase === 'Entrada' ? 'wallet-outline' : 'checkmark-done-outline'} size={19} color="#008A99" />
@@ -198,6 +211,8 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
               )}
             </View>
           ))}
+          </View>
+          </View>
           {Boolean(paymentNotice(summary)) && <View style={styles.noticeBox}>
             <Ionicons name={summary.checkin_expirado ? 'alarm-outline' : 'return-down-back-outline'} size={20} color="#B54708" />
             <Text style={styles.noticeText}>{paymentNotice(summary)}</Text>
@@ -210,21 +225,22 @@ function PagamentoDoAgendamento({ navigation, route }: any) {
           )}
         </>}
         {busy && <ActivityIndicator color="#18C7C8" />}
-        {Boolean(id) && isClient && (
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar pagamento" accessibilityState={{ disabled: busy, busy }} style={[{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', backgroundColor: '#E8FAFA' }, busy && styles.disabled]} disabled={busy} onPress={() => void load(true)}>
-            {busy ? <ActivityIndicator size="small" color="#008A99" /> : <Ionicons name="refresh-outline" size={22} color="#008A99" />}
-          </TouchableOpacity>
-        )}
-        <View style={styles.securityRow}>
+        {!desktop && refreshAction}
+        <View style={desktop ? styles.desktopFooter : styles.mobileFooter}>
+        <View style={[styles.securityRow, desktop && styles.desktopSecurity]}>
           <Ionicons name="shield-checkmark-outline" size={16} color="#657383" />
           <Text style={styles.securityText}>Pagamento seguro pelo Mercado Pago</Text>
         </View>
-        <TouchableOpacity accessibilityRole="button" style={styles.infoButton} onPress={() => setNotice('Não há cobrança ao solicitar a diária. A entrada (50%) é liberada após o aceite; o saldo (50%), após o checkout. Pix e cartões ficam disponíveis no Mercado Pago, conforme disponibilidade. Não informe dados de cartão neste aplicativo. A aprovação e os estornos dependem da confirmação do Mercado Pago.')}>
+        <View style={desktop ? styles.desktopFooterActions : styles.mobileFooterActions}>
+        {desktop && refreshAction}
+        <TouchableOpacity accessibilityRole="button" style={[styles.infoButton, desktop && styles.desktopInfoButton]} onPress={() => setNotice('Não há cobrança ao solicitar a diária. A entrada (50%) é liberada após o aceite; o saldo (50%), após o checkout. Pix e cartões ficam disponíveis no Mercado Pago, conforme disponibilidade. Não informe dados de cartão neste aplicativo. A aprovação e os estornos dependem da confirmação do Mercado Pago.')}>
           <Ionicons name="information-circle-outline" size={18} color="#008A99" /><Text style={styles.outlineText}>Como funciona</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.outline} onPress={() => navigation.navigate('AcompanharDiarias')}>
+        <TouchableOpacity accessibilityRole="button" style={[styles.outline, desktop && styles.desktopTrackButton]} onPress={() => navigation.navigate('MinhasDiariasCliente')}>
           <Text style={styles.outlineText}>Acompanhar minhas diárias</Text>
         </TouchableOpacity>
+        </View>
+        </View>
       </ScrollView>
       <ActionModal visible={Boolean(error)} variant="error" title="Não foi possível concluir" message={error} onClose={() => { setError(''); setConfirmCancel(false); }} />
       <ActionModal visible={!error && Boolean(notice)} variant="info" title="Pagamento da diária" message={notice} onClose={() => setNotice('')} />

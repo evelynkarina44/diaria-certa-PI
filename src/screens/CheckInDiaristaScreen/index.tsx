@@ -1,11 +1,12 @@
+import { useResponsive } from '../../contexts/ResponsiveContext';
 import { PageHeader } from '../../components/page-header';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActionModal } from '../../components/action-modal';
-import { ActivityIndicator, AppState, ScrollView, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, AppState, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { styles } from './styles';
+import { styles as baseStyles } from './styles';
 import { agendamentoService } from '../../services/agendamentoService';
 import { checkinCheckoutService } from '../../services/checkinCheckoutService';
 import { pagamentoService, type ResumoPagamento } from '../../services/pagamentoService';
@@ -21,6 +22,14 @@ export default function CheckInDiaristaScreen(props: any) {
 }
 
 function Diaria({ navigation, route }: any) {
+  const { desktop } = useResponsive();
+  const styles = desktop ? { ...baseStyles,
+    name: [baseStyles.name, baseStyles.desktopName],
+    address: [baseStyles.address, baseStyles.desktopBody],
+    sectionTitle: [baseStyles.sectionTitle, baseStyles.desktopSectionTitle],
+    checkInButton: [baseStyles.checkInButton, baseStyles.desktopAction],
+    checkInButtonText: [baseStyles.checkInButtonText, baseStyles.desktopActionText],
+  } : baseStyles;
   const id = Number(route.params?.agendamentoId);
   const [booking, setBooking] = useState<Agendamento | null>(null);
   const [payment, setPayment] = useState<ResumoPagamento | null>(null);
@@ -151,12 +160,8 @@ function Diaria({ navigation, route }: any) {
     }
   }
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <PageHeader title={confirmationExpired ? 'Confirmação não recebida' : waiting ? 'Aguardando confirmação' : expired ? 'Check-in expirado' : booking?.status === 'Cancelado' ? 'Diária cancelada' : finished ? 'Diária finalizada' : running ? 'Diária em andamento' : 'Registrar chegada'} accentColor="#FF6B2C" onBack={() => navigation.goBack()} />
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {loading && <ActivityIndicator color="#FF6B2C" />}
-        {booking && <>
+
+  const overview = (<>        {booking && <>
           <Text style={styles.name}>{booking.cliente?.usuario?.nome ?? 'Cliente'}</Text>
           <Text style={styles.address}>Diária #{booking.numero_diarista ?? '—'} • {new Date(booking.data_agendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} às {time(booking.horario_inicio)}</Text>
           {finished && !payment?.avaliacao_diarista && <TouchableOpacity
@@ -167,20 +172,65 @@ function Diaria({ navigation, route }: any) {
           <Text style={styles.sectionTitle}>Endereço</Text>
           <Text style={styles.address}>{booking.endereco ? booking.endereco.logradouro + ', ' + booking.endereco.numero + ' — ' + booking.endereco.bairro : 'Endereço não informado'}</Text>
           <Text style={styles.sectionTitle}>Serviços solicitados</Text>
-          {booking.agendamento_servico?.map(item => <Text key={item.id} style={styles.address}>• {item.diarista_servico?.servico?.nome_servico ?? 'Serviço'}</Text>)}
-          {!expired && !confirmationExpired && !waiting && booking.status === 'Aceito' && <Text style={[styles.address, { marginTop: 24 }]}>
-            Ao chegar ao local, toque em Cheguei, mesmo antes do horário agendado. Aguarde o cliente confirmar para iniciar.
-            {!entryPaid ? ' A entrada ainda precisa ser paga pelo cliente para que o serviço possa começar.' : ''}
-          </Text>}
-          {waiting && <Text style={[styles.address, { marginTop: 24 }]}>Chegada registrada. Aguarde o cliente confirmar o início no aplicativo até {stamp(new Date(confirmationLimit).toISOString())}. Não comece o serviço antes da confirmação.</Text>}
-          {confirmationExpired && <Text style={[styles.address, { marginTop: 24, color: '#D92D20' }]}>Você registrou a chegada, mas o cliente não confirmou em 30 minutos. A diária foi encerrada por falta de confirmação, sem registrar sua ausência. A entrada paga terá estorno integral.</Text>}
-          {expired && <Text style={[styles.address, { marginTop: 24, color: '#D92D20' }]}>A chegada não foi registrada nos 30 minutos após o horário agendado. Esta diária foi encerrada. Se a entrada foi paga, será solicitado o estorno integral ao cliente. Consulte o histórico para acompanhar.</Text>}
-          {!expired && !confirmationExpired && !waiting && booking.status === 'Aceito' && Number.isFinite(deadline) && <Text style={[styles.address, { marginTop: 12 }]}>Prazo para registrar chegada: {stamp(new Date(deadline).toISOString())}. Tolerância de 30 minutos.</Text>}
-          {running && <Text style={[styles.address, { marginTop: 24 }]}>Ao terminar o serviço, realize o checkout para liberar o pagamento do saldo pelo cliente.</Text>}
-          {check?.horario_chegada && <Text style={[styles.address, { marginTop: 16 }]}>Chegada: {stamp(check.horario_chegada)}</Text>}
-          {check?.horario_checkin && <Text style={[styles.address, { marginTop: 16 }]}>Check-in: {stamp(check.horario_checkin)}</Text>}
-          {check?.horario_checkout && <Text style={[styles.address, { marginTop: 10 }]}>Checkout: {stamp(check.horario_checkout)}</Text>}
-          {finished && <Text style={[styles.address, { marginTop: 16 }]}>O checkout liberou os 50% restantes para o cliente pagar. Finalizar o serviço não confirma o pagamento.</Text>}
+          <View style={baseStyles.servicesList}>
+            {booking.agendamento_servico?.map(item => <View key={item.id} style={baseStyles.serviceRow}>
+              <Ionicons name="checkmark-outline" size={16} color="#C2410C" />
+              <Text style={baseStyles.serviceName}>{item.diarista_servico?.servico?.nome_servico ?? 'Serviço'}</Text>
+            </View>)}
+          </View>
+        </>}</>);
+  const activity = (<>{booking && <>
+          {!expired && !confirmationExpired && !waiting && booking.status === 'Aceito' && <>
+            <StageNotice icon="location-outline" title="Antes de iniciar" steps={[
+              'Toque em Cheguei ao chegar, mesmo antes do horário.',
+              'Aguarde o cliente confirmar o início.',
+              ...(!entryPaid ? ['A entrada precisa estar paga para começar.'] : []),
+            ]} />
+            {Number.isFinite(deadline) && <View style={baseStyles.deadlineCard}>
+              <Ionicons name="time-outline" size={20} color="#B54708" />
+              <View style={baseStyles.rowInfo}>
+                <Text style={baseStyles.smallLabel}>Registrar chegada até</Text>
+                <Text style={baseStyles.deadlineValue}>{stamp(new Date(deadline).toISOString())}</Text>
+                <Text style={baseStyles.smallLabel}>Tolerância de 30 minutos</Text>
+              </View>
+            </View>}
+          </>}
+          {waiting && <>
+            <StageNotice icon="hourglass-outline" title="Aguarde o cliente" steps={['Sua chegada foi registrada.', 'Não comece antes da confirmação.']} />
+            <View style={baseStyles.deadlineCard}>
+              <Ionicons name="time-outline" size={20} color="#B54708" />
+              <View style={baseStyles.rowInfo}>
+                <Text style={baseStyles.smallLabel}>Confirmação até</Text>
+                <Text style={baseStyles.deadlineValue}>{stamp(new Date(confirmationLimit).toISOString())}</Text>
+              </View>
+            </View>
+          </>}
+          {confirmationExpired && <StageNotice icon="alert-circle-outline" tone="error" title="Confirmação não recebida" steps={[
+            'O cliente não confirmou em 30 minutos.',
+            'Diária encerrada, sem registrar sua ausência.',
+            'A entrada paga terá estorno integral.',
+          ]} />}
+          {expired && <StageNotice icon="alarm-outline" tone="error" title="Prazo de chegada encerrado" steps={[
+            'A chegada não foi registrada no prazo de 30 minutos.',
+            'Se a entrada foi paga, será solicitado estorno integral.',
+            'Acompanhe o estorno em Minhas diárias.',
+          ]} />}
+          {running && <StageNotice icon="sparkles-outline" title="Serviço em andamento" steps={['Ao terminar, faça o checkout para liberar o saldo ao cliente.']} />}
+          {finished && <StageNotice icon="checkmark-circle-outline" title="Serviço finalizado" steps={['Saldo liberado para o cliente pagar.', 'O checkout não confirma o pagamento.']} />}
+          {(check?.horario_chegada || check?.horario_checkin || check?.horario_checkout) && <View style={baseStyles.recordsCard}>
+            <Text style={baseStyles.blockTitle}>Registros da diária</Text>
+            {[
+              { label: 'Chegada', value: check?.horario_chegada },
+              { label: 'Check-in', value: check?.horario_checkin },
+              { label: 'Checkout', value: check?.horario_checkout },
+            ].filter(item => item.value).map(item => <View key={item.label} style={baseStyles.recordRow}>
+              <Ionicons name="checkmark-circle-outline" size={18} color="#16803C" />
+              <View style={baseStyles.rowInfo}>
+                <Text style={baseStyles.recordLabel}>{item.label}</Text>
+                <Text style={baseStyles.recordValue}>{stamp(item.value)}</Text>
+              </View>
+            </View>)}
+          </View>}
           {!expired && !confirmationExpired && !waiting && (booking.status === 'Aceito' || running) && <TouchableOpacity
             accessibilityRole="button"
             style={[styles.checkInButton, (loading || sending || sessionExpired || !(canStart || canFinish)) && { opacity: 0.45 }]}
@@ -190,8 +240,7 @@ function Diaria({ navigation, route }: any) {
               {canFinish ? 'Realizar checkout' : 'Cheguei'}
             </Text>}
           </TouchableOpacity>}
-        </>}
-        {canCancel && <TouchableOpacity
+</>}        {canCancel && <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel="Cancelar diária"
           disabled={loading || sending || sessionExpired}
@@ -199,10 +248,40 @@ function Diaria({ navigation, route }: any) {
           onPress={() => setConfirmCancel(true)}>
           <Text style={{ color: '#D92D20', fontFamily: 'Poppins_600SemiBold' }}>Cancelar diária</Text>
         </TouchableOpacity>}
-        {payment?.parcelas.map(item => <Text key={item.fase} style={[styles.address, { marginTop: 16 }]}>{item.fase}: {money(item.valor)} — {item.status.replace(/_/g, ' ')}</Text>)}
+        {Boolean(payment?.parcelas.length) && <View style={baseStyles.paymentSection}>
+          <Text style={baseStyles.blockTitle}>Pagamentos</Text>
+          <View style={baseStyles.paymentGrid}>
+            {payment?.parcelas.map(item => {
+              const paid = item.status === 'Pago' && !item.estorno_pendente;
+              const refunding = item.estorno_pendente || item.status === 'Estorno_pendente';
+              return <View key={item.fase} style={baseStyles.paymentCard}>
+                <Text style={baseStyles.smallLabel}>{item.fase}</Text>
+                <Text style={baseStyles.paymentAmount}>{money(item.valor)}</Text>
+                <View style={[baseStyles.paymentBadge, paid && baseStyles.paidBadge]}>
+                  <Ionicons name={paid ? 'checkmark-circle-outline' : refunding ? 'return-down-back-outline' : 'time-outline'} size={15} color={paid ? '#16803C' : '#667085'} />
+                  <Text style={[baseStyles.paymentStatus, paid && baseStyles.paidText]}>{refunding ? 'Estorno em processamento' : item.status.replace(/_/g, ' ')}</Text>
+                </View>
+              </View>;
+            })}
+          </View>
+        </View>}
         {sessionExpired ? <TouchableOpacity style={styles.checkInButton} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })}>
           <Text style={styles.checkInButtonText}>Entrar novamente</Text>
         </TouchableOpacity> : <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar diária e pagamentos" accessibilityState={{ disabled: sending || loading, busy: loading }} disabled={sending || loading} style={[{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', backgroundColor: '#FFF1E8' }, { marginTop: 24 }]} onPress={() => void reload.current()}>{loading ? <ActivityIndicator size="small" color="#C2410C" /> : <Ionicons name="refresh-outline" size={22} color="#C2410C" />}</TouchableOpacity>}
+</>);
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <PageHeader title={confirmationExpired ? 'Confirmação não recebida' : waiting ? 'Aguardando confirmação' : expired ? 'Check-in expirado' : booking?.status === 'Cancelado' ? 'Diária cancelada' : finished ? 'Diária finalizada' : running ? 'Diária em andamento' : 'Registrar chegada'} accentColor="#FF6B2C" onBack={() => navigation.goBack()} allowBackWithSidebar={desktop} compact={desktop}
+        subtitle={desktop ? "Acompanhe o serviço, os registros e os pagamentos." : undefined} />
+      <ScrollView style={styles.content} contentContainerStyle={[baseStyles.contentContainer, desktop && baseStyles.desktopContent]} showsVerticalScrollIndicator={false}>
+        {loading && <ActivityIndicator color="#FF6B2C" />}
+        {desktop ? <View style={baseStyles.desktopColumns}>
+          <View style={baseStyles.desktopOverview}>{overview}</View>
+          <View style={baseStyles.desktopActivity}>
+            <Text style={baseStyles.desktopPanelTitle}>Acompanhamento da diária</Text>
+            {activity}
+          </View>
+        </View> : <>{overview}{activity}</>}
       </ScrollView>
       <ActionModal visible={Boolean(error)} variant="error" title={sessionExpired ? 'Sessão expirada' : 'Não foi possível concluir'} message={error}
         confirmLabel={sessionExpired ? 'Entrar novamente' : 'Entendi'} onClose={() => setError('')}
@@ -220,4 +299,16 @@ function Diaria({ navigation, route }: any) {
         onConfirm={act} onClose={() => { setConfirmCheckout(false); setConfirmStart(false); }} />
     </SafeAreaView>
   );
+}
+
+function StageNotice({ icon, title, steps, tone = 'info' }: {
+  icon: React.ComponentProps<typeof Ionicons>['name']; title: string; steps: string[]; tone?: 'info' | 'error';
+}) {
+  return <View style={[baseStyles.stageNotice, tone === 'error' && baseStyles.errorNotice]}>
+    <Ionicons name={icon} size={22} color={tone === 'error' ? '#B42318' : '#C2410C'} />
+    <View style={baseStyles.rowInfo}>
+      <Text style={baseStyles.blockTitle}>{title}</Text>
+      {steps.map(step => <Text key={step} style={baseStyles.noticeStep}>• {step}</Text>)}
+    </View>
+  </View>;
 }

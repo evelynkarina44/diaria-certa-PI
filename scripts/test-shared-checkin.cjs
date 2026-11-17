@@ -1,7 +1,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const root = path.resolve(__dirname, '..'), ts = require(path.join(root, 'node_modules/typescript'));
-function harness(role, { paid = true, arrived = false, timeout = false, early = false, running = false } = {}) {
+function harness(role, { paid = true, arrived = false, timeout = false, early = false, running = false, desktop = false, finished = false } = {}) {
   let now = Date.parse('2026-11-14T11:05:00Z'), cursor = 0;
   class Clock extends Date { static now() { return now; } }
   const slots = [], effects = [], calls = [];
@@ -10,6 +10,7 @@ function harness(role, { paid = true, arrived = false, timeout = false, early = 
     cliente: { usuario: { nome: 'Cliente' } }, diarista: { usuario: { nome: 'Diarista' } },
     checkin_checkout: arrived ? [{ horario_chegada: '2026-11-14T11:04:00Z', horario_checkin: null, status_checkin: 'Checkin_solicitado' }] : [] };
   if (running) booking = { ...booking, status: 'Em_andamento', checkin_checkout: [{ horario_chegada: '2026-11-14T11:00:00Z', horario_checkin: '2026-11-14T11:01:00Z', status_checkin: 'Iniciado' }] };
+  if (finished) booking = { ...booking, status: 'Concluido', checkin_checkout: [{ horario_chegada: '2026-11-14T11:00:00Z', horario_checkin: '2026-11-14T11:01:00Z', horario_checkout: '2026-11-14T11:04:00Z', status_checkin: 'Finalizado' }] };
   const payment = { id_agendamento: 44, parcelas: [{ fase: 'Entrada', status: paid ? 'Pago' : 'Pendente', pode_pagar: !timeout && !paid, valor: 50 }, { fase: 'Saldo', status: 'Pendente', pode_pagar: false, valor: 50 }] };
   const react = {
     createElement: (type, props, ...children) => typeof type === 'function' ? type(props) : ({ type, props: props ?? {}, children }),
@@ -20,8 +21,9 @@ function harness(role, { paid = true, arrived = false, timeout = false, early = 
   const navigation = { addListener: () => () => {}, isFocused: () => true, navigate: (...args) => calls.push(['navigate', ...args]), goBack() {} };
   const native = { ...Object.fromEntries(['ActivityIndicator','ScrollView','Text','TouchableOpacity','View'].map(key => [key, key])), AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } };
   const imports = {
+    '../../contexts/ResponsiveContext': { useResponsive: () => ({ desktop: desktop }) },
     react, 'react-native': native, 'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' }, '@expo/vector-icons': { Ionicons: 'Icon' },
-    './styles': { styles: {} }, '../PagamentoScreen/paymentStyles': { paymentStyles: {} },
+    './styles': { styles: new Proxy({}, { get: (_, key) => key }) }, '../PagamentoScreen/paymentStyles': { paymentStyles: {} },
     '../../components/page-header': require('./page-header-fixture.cjs'),
     '../../components/action-modal': { ActionModal: 'ActionModal' },
     '../../services/api': { getErrorMessage: error => error.message, ApiError: class extends Error {} },
@@ -80,6 +82,30 @@ test('cliente não inicia sem chegada ou sem entrada paga; ausência de confirma
   }
 });
 
+test('mobile mostra orientações curtas, prazo destacado e pagamentos em cards',async()=>{
+ const h=harness('DIARISTA',{early:true,paid:false});await h.ready();
+ const texts=h.nodes.filter(n=>n.type==='Text').map(n=>n.children.flat(Infinity).join(''));
+ assert.ok(texts.includes('Antes de iniciar'));
+ assert.ok(texts.some(t=>t.includes('A entrada precisa estar paga')));
+ assert.ok(texts.includes('Registrar chegada até'));
+ assert.ok(h.nodes.some(n=>n.props.style==='deadlineCard'));
+ assert.ok(h.nodes.some(n=>n.props.style==='paymentGrid'));
+ assert.equal(h.nodes.filter(n=>n.props.style==='paymentCard').length,2);
+ assert.equal(h.calls.length,0,'renderizar blocos não registra chegada nem pagamentos');
+});
+test('espera destaca confirmação e serviço em andamento separa registros e checkout',async()=>{
+ const waiting=harness('DIARISTA',{arrived:true});await waiting.ready();
+ const texts=waiting.nodes.filter(n=>n.type==='Text').map(n=>n.children.flat(Infinity).join(''));
+ assert.ok(texts.includes('Aguarde o cliente'));
+ assert.ok(texts.includes('Confirmação até'));
+ assert.ok(texts.includes('Registros da diária'));
+ assert.equal(waiting.textButton('Realizar checkout'),undefined);
+ const running=harness('DIARISTA',{running:true});await running.ready();
+ assert.ok(running.nodes.some(n=>n.props.style==='recordsCard'));
+ assert.equal(running.nodes.filter(n=>n.props.style==='recordRow').length,2);
+ assert.ok(running.textButton('Realizar checkout'));
+});
+
 
 test('Cheguei e confirmação do cliente ficam disponíveis antes do horário agendado', async () => {
   const worker = harness('DIARISTA', {early:true});
@@ -106,4 +132,18 @@ test('checkout bem-sucedido abre avaliação do cliente para a diária correta',
   assert.ok(navigation);
   assert.equal(navigation[2].agendamentoId, 44);
   assert.equal(navigation[2].avaliarCliente, true);
+});
+
+test('web organiza chegada, espera, serviço e finalização nas mesmas colunas sem perder ações',async()=>{
+ for(const options of [{early:true},{arrived:true},{running:true},{finished:true}]){
+ const h=harness('DIARISTA',{...options,desktop:true});await h.ready();
+ assert.ok(h.nodes.some(n=>n.props.style==='desktopColumns'));
+ assert.ok(h.nodes.some(n=>n.props.style==='desktopOverview'));
+ assert.ok(h.nodes.some(n=>n.props.style==='desktopActivity'));
+ assert.equal(h.nodes.filter(n=>n.props.accessibilityLabel==='Atualizar diária e pagamentos').length,1);
+ if(options.early)assert.ok(h.textButton('Cheguei'));
+ if(options.arrived)assert.equal(h.textButton('Cheguei'),undefined);
+ if(options.running)assert.ok(h.textButton('Realizar checkout'));
+ if(options.finished)assert.ok(h.textButton('Avaliar cliente'));
+ }
 });

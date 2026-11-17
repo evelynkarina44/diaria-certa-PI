@@ -17,7 +17,7 @@ test('layout muda somente na web a partir de 1024px; nativo e tablet mantêm nav
 });
 test('formulários têm largura limitada; colunas dependem do espaço restante após menu', () => {
   assert.equal(policy.responsiveLayout('web', 1440, 'Login', false).maxWidth, 1280);
-  assert.equal(policy.responsiveLayout('web', 1440, 'Pagamento', true).maxWidth, 860);
+  assert.equal(policy.responsiveLayout('web', 1440, 'Pagamento', true).maxWidth, 1280);
   assert.equal(policy.responsiveLayout('web', 1024, 'FavoritosCliente', true).columns, 1);
   assert.equal(policy.responsiveLayout('web', 1440, 'FavoritosCliente', true).columns, 2);
   assert.ok(policy.responsiveLayout('web', 1920, 'EncontrarDiarista', true).contentWidth <= 1280);
@@ -105,4 +105,11 @@ test('menu móvel mantém opções roláveis e saída acessível em telas baixas
 test('lista de diaristas mantém espaçamento dentro da grade em uma coluna', () => {
   const source = fs.readFileSync(path.join(root, 'src/screens/EncontrarDiaristaScreen/index.tsx'), 'utf8');
   assert.match(source, /<ResponsiveGrid style={styles.list}>/);
+});
+
+test('pagamento usa largura de página no desktop, preservando limites em tablet e nativo',()=>{
+ assert.equal(policy.responsiveLayout('web',1920,'Pagamento',true).maxWidth,1280);
+ assert.equal(policy.responsiveLayout('web',820,'Pagamento',true).maxWidth,860);
+ assert.equal(policy.responsiveLayout('android',1440,'Pagamento',true).desktop,false);
+ assert.equal(policy.responsiveLayout('web',1440,'Avaliacao',true).maxWidth,1280);
 });

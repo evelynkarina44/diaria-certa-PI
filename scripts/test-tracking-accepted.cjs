@@ -20,7 +20,7 @@ async function harness(profile='DIARISTA',acceptedCount=130){
   react,'react-native':native,'@expo/vector-icons':{Ionicons:'Icon'},'../responsive-grid':{ResponsiveGrid:'Grid'},
   '../../contexts/GlobalContext':{useAuth:()=>({user})},'../../services/api':{ApiError:class extends Error{},getErrorMessage:String},
   '../../services/trackingService':{trackingService:{listar:async(page,status)=>{calls.push({page,status});const data=status==='Aceito'?accepted:[...pending,...accepted];return{data:data.slice((page-1)*100,page*100),pagination:{total:data.length,pages:Math.ceil(data.length/100),page,limit:100}};}}},
-  '../../utils/appointmentTracking':policy,'../../services/agendamentoService':{agendamentoService:{}},'../action-modal':{ActionModal:'ActionModal'},
+  '../../utils/appointmentTracking':policy,'../../services/agendamentoService':{agendamentoService:{}},'../filter-scroll':{FilterScroll:'FilterScroll'},'../action-modal':{ActionModal:'ActionModal'},
  },{setInterval:()=>1,clearInterval(){}}).AppointmentTracker;
  const navigation={isFocused:()=>true,addListener:()=>()=>{},navigate:(...args)=>navigations.push(args)};
  function render(){cursor=0;const nodes=walk(Screen({navigation,profile}));while(effects.length)effects.shift()();return nodes;}
@@ -59,6 +59,6 @@ test('histórico da diarista continua consultando todas as diárias e oferecendo
 test('numeração pessoal aparece no painel, mas ações continuam vinculadas ao ID global',async()=>{
  const h=await harness('DIARISTA',1),nodes=await h.click('Aceitas');
  assert.ok(nodes.some(n=>n.type==='Text'&&n.children.flat(Infinity).join('').startsWith('#1101 •')));
- await h.click('Ver detalhes');
+ await h.click('Cheguei');
  assert.equal(h.navigations.at(-1)[1].agendamentoId,101);
 });

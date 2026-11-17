@@ -1,3 +1,4 @@
+import { FilterScroll } from '../../components/filter-scroll';
 import { ResponsiveGrid } from '../../components/responsive-grid';
 import { HeaderMenu } from '../../components/header-menu';
 import { PageHeader } from '../../components/page-header';
@@ -212,14 +213,14 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
                 {Boolean(busca) && <TouchableOpacity accessibilityLabel="Limpar busca" onPress={() => setBusca('')}><Ionicons name="close-circle" size={20} color="#98A2B3" /></TouchableOpacity>}
               </View>
               <Text style={styles.filterLabel}>Status do agendamento</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusFilterList}>
+              <FilterScroll accentColor="#C2410C" contentContainerStyle={styles.statusFilterList}>
                 {statusFilters.map(([value, label]) => (
                   <TouchableOpacity key={value} accessibilityRole="button" accessibilityState={{ selected: statusFiltro === value }} onPress={() => setStatusFiltro(value)} style={[styles.statusChip, statusFiltro === value && styles.statusChipSelected]}>
                     <Ionicons name={statusIcons[value]} size={16} color={statusFiltro === value ? '#FFFFFF' : '#667085'} />
                     <Text style={[styles.statusChipText, statusFiltro === value && styles.statusChipTextSelected]}>{label}</Text>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
+              </FilterScroll>
               <Text style={styles.filterLabel}>Data da diária</Text>
               <View style={styles.historySearch}>
                 <Ionicons name="calendar-outline" size={20} color="#667085" />

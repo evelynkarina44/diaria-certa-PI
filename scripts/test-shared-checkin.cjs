@@ -1,14 +1,15 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const root = path.resolve(__dirname, '..'), ts = require(path.join(root, 'node_modules/typescript'));
-function harness(role, { paid = true, arrived = false, timeout = false } = {}) {
+function harness(role, { paid = true, arrived = false, timeout = false, early = false, running = false } = {}) {
   let now = Date.parse('2026-11-14T11:05:00Z'), cursor = 0;
   class Clock extends Date { static now() { return now; } }
   const slots = [], effects = [], calls = [];
-  let booking = { id_agendamento: 44, status: 'Aceito', data_agendamento: '2026-11-14', horario_inicio: '08:00',
+  let booking = { id_agendamento: 44, status: 'Aceito', data_agendamento: '2026-11-14', horario_inicio: early ? '15:00' : '08:00',
     confirmacao_cliente_expirada: timeout, confirmacao_cliente_limite_em: timeout ? '2026-11-14T11:04:00Z' : '2026-11-14T11:35:00Z',
     cliente: { usuario: { nome: 'Cliente' } }, diarista: { usuario: { nome: 'Diarista' } },
     checkin_checkout: arrived ? [{ horario_chegada: '2026-11-14T11:04:00Z', horario_checkin: null, status_checkin: 'Checkin_solicitado' }] : [] };
+  if (running) booking = { ...booking, status: 'Em_andamento', checkin_checkout: [{ horario_chegada: '2026-11-14T11:00:00Z', horario_checkin: '2026-11-14T11:01:00Z', status_checkin: 'Iniciado' }] };
   const payment = { id_agendamento: 44, parcelas: [{ fase: 'Entrada', status: paid ? 'Pago' : 'Pendente', pode_pagar: !timeout && !paid, valor: 50 }, { fase: 'Saldo', status: 'Pendente', pode_pagar: false, valor: 50 }] };
   const react = {
     createElement: (type, props, ...children) => typeof type === 'function' ? type(props) : ({ type, props: props ?? {}, children }),
@@ -79,3 +80,30 @@ test('cliente não inicia sem chegada ou sem entrada paga; ausência de confirma
   }
 });
 
+
+test('Cheguei e confirmação do cliente ficam disponíveis antes do horário agendado', async () => {
+  const worker = harness('DIARISTA', {early:true});
+  await worker.ready();
+  assert.equal(worker.textButton('Cheguei').props.disabled, false);
+  worker.textButton('Cheguei').props.onPress();worker.render();
+  await worker.modal('Registrar chegada?').props.onConfirm();
+  assert.equal(worker.calls.filter(call=>call[0]==='arrival').length,1);
+  const client = harness('CLIENTE', {early:true,arrived:true});
+  await client.ready();
+  assert.ok(client.textButton('Confirmar chegada e iniciar'));
+  client.textButton('Confirmar chegada e iniciar').props.onPress();client.render();
+  await client.modal('A diarista está no local?').props.onConfirm();
+  assert.equal(client.calls.filter(call=>call[0]==='confirm').length,1);
+});
+
+test('checkout bem-sucedido abre avaliação do cliente para a diária correta', async () => {
+  const h = harness('DIARISTA', { running: true });
+  await h.ready();
+  h.textButton('Realizar checkout').props.onPress();h.render();
+  await h.modal('Finalizar diária?').props.onConfirm();
+  assert.equal(h.calls.filter(call => call[0] === 'checkout').length, 1);
+  const navigation = h.calls.find(call => call[0] === 'navigate' && call[1] === 'Avaliacao');
+  assert.ok(navigation);
+  assert.equal(navigation[2].agendamentoId, 44);
+  assert.equal(navigation[2].avaliarCliente, true);
+});

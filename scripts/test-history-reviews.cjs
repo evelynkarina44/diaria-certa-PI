@@ -38,6 +38,7 @@ function harness(reviews, appointments) {
     '../../components/header-menu': { HeaderMenu: 'HeaderMenu' },
     '../../components/responsive-grid': { ResponsiveGrid: 'ResponsiveGrid' },
     '../../components/page-header': require('./page-header-fixture.cjs'),
+    '../../components/filter-scroll': { FilterScroll: 'FilterScroll' },
     '../../components/action-modal': { ActionModal: 'ActionModal' },
     '../../services/agendamentoService': { agendamentoService: { listar: async (query) => {
       requests.push(query);

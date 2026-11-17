@@ -40,6 +40,7 @@ export function trackingState(item: TrackingAppointment, profile: TrackingProfil
       { requiresAction: !customer, actionLabel: customer ? 'Ver pagamento' : 'Realizar checkout' });
   }
   if (item.status === 'Concluido') {
+    if (!customer && payment?.pode_avaliar_cliente) return state('Avalie o cliente', 'Checkout registrado. Conte como foi sua experiência com o cliente; não é necessário aguardar o pagamento do saldo.', 4, 1, { requiresAction: true, actionLabel: 'Avaliar cliente', route: 'Avaliacao' });
     if (payment?.quitado && customer && payment.pode_avaliar) return state('Falta sua avaliação', 'Pagamento integral confirmado. Conte como foi o serviço da diarista.', 5, 1, { requiresAction: true, actionLabel: 'Avaliar diarista', route: 'Avaliacao' });
     if (payment?.quitado) return state('Diária concluída e quitada', customer ? 'Serviço finalizado, pagamento confirmado e avaliação registrada.' : 'Serviço finalizado e as duas parcelas aprovadas. Os valores são recebidos pela plataforma.', 6, 7, { finished: true, actionLabel: 'Ver detalhes e pagamentos' });
     const canPay = payment?.parcelas.some(p => p.fase === 'Saldo' && p.pode_pagar);
@@ -53,8 +54,8 @@ export function trackingState(item: TrackingAppointment, profile: TrackingProfil
         : 'Chegada registrada. Aguarde o cliente confirmar antes de começar o serviço.', 3, customer ? 0 : 2,
       { requiresAction: customer, actionLabel: customer ? 'Confirmar início' : 'Ver confirmação', route: customer ? 'CheckIn' : 'CheckInDiarista' });
   }
-  if (!customer && item.status === 'Aceito' && item.inicio_em && new Date(item.inicio_em).getTime() <= now) {
-    return state('Registre sua chegada', 'Ao chegar ao endereço, toque em Cheguei e aguarde o cliente confirmar o início pelo aplicativo.', 3, 0,
+  if (!customer && item.status === 'Aceito') {
+    return state('Registre sua chegada', 'Ao chegar ao endereço, toque em Cheguei, mesmo antes do horário agendado, e aguarde a confirmação do cliente.', 3, 0,
       { requiresAction: true, actionLabel: 'Cheguei', route: 'CheckInDiarista' });
   }
   if (!payment) return state('Aguardando dados do pagamento', 'Abra os detalhes da diária para conferir as informações disponíveis.', 2, 3);
@@ -63,7 +64,8 @@ export function trackingState(item: TrackingAppointment, profile: TrackingProfil
     return state('Entrada de 50% pendente', customer ? 'A solicitação foi aceita. Pague a entrada antes do início do serviço.' : 'Você aceitou a solicitação. Aguarde a aprovação da entrada paga pelo cliente.', 2, customer ? 1 : 4,
       { requiresAction: customer && canPay, actionLabel: customer && canPay ? 'Pagar entrada de 50%' : 'Ver detalhes da diária' });
   }
-  const canStart = Boolean(item.inicio_em) && new Date(item.inicio_em!).getTime() <= now;
-  return state(canStart ? 'Horário do check-in' : 'Diária confirmada', customer ? 'Entrada aprovada. Aguarde a diarista registrar a chegada e confirme o início no horário combinado.' : canStart ? 'O horário agendado chegou e a entrada está paga. Você já pode registrar a chegada.' : 'Entrada aprovada. O check-in será liberado no horário agendado.', 3, canStart ? 1 : 5,
-    { requiresAction: !customer && canStart, actionLabel: !customer && canStart ? 'Cheguei' : 'Ver detalhes da diária' });
+  return state('Diária confirmada', customer
+    ? 'Entrada aprovada. A diarista pode registrar a chegada e você pode confirmar o início, mesmo antes do horário agendado.'
+    : 'Entrada aprovada. Ao chegar ao endereço, toque em Cheguei, mesmo antes do horário agendado.', 3, customer ? 5 : 1,
+    { requiresAction: !customer, actionLabel: !customer ? 'Cheguei' : 'Ver detalhes da diária' });
 }

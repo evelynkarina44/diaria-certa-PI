@@ -28,10 +28,10 @@ test('entrada pendente: cliente paga; diarista pode registrar chegada sem inicia
  assert.equal(trackingState(data, 'CLIENTE', now).route, 'Pagamento');
  assert.equal(trackingState(data, 'DIARISTA', now).actionLabel, 'Cheguei');
 });
-test('chegada só é oferecida à diarista a partir do horário', () => {
+test('chegada é oferecida à diarista também antes do horário', () => {
  const data = item();
  data.pagamento.parcelas[0].status = 'Pago';
- assert.equal(trackingState(data, 'DIARISTA', now - 1).requiresAction, false);
+ assert.equal(trackingState(data, 'DIARISTA', now - 1).requiresAction, true);
  assert.equal(trackingState(data, 'DIARISTA', now).actionLabel, 'Cheguei');
  assert.equal(trackingState(data, 'DIARISTA', now).route, 'CheckInDiarista');
  assert.equal(trackingState(data, 'CLIENTE', now).requiresAction, false);
@@ -128,4 +128,13 @@ test('chegada registrada oferece confirmação ao cliente e mantém diarista agu
  const expired = trackingState(data, 'CLIENTE', now + 45 * 60000);
  assert.equal(expired.title, 'Confirmação do cliente expirada');
  assert.equal(expired.finished, true);
+});
+
+test('diarista tem atalho para avaliar cliente depois do checkout, sem depender da quitação', () => {
+ const data=item('Concluido');data.pagamento.pode_avaliar_cliente=true;data.pagamento.parcelas[1].pode_pagar=true;
+ const worker=trackingState(data,'DIARISTA',now);
+ assert.equal(worker.actionLabel,'Avaliar cliente');
+ assert.equal(worker.route,'Avaliacao');
+ assert.equal(worker.requiresAction,true);
+ assert.equal(trackingState(data,'CLIENTE',now).actionLabel,'Pagar saldo de 50%');
 });

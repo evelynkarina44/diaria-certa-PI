@@ -20,6 +20,8 @@ export type ResumoPagamento = {
   moeda: 'BRL';
   quitado: boolean;
   pode_avaliar: boolean;
+  pode_avaliar_cliente?: boolean;
+  avaliacao_diarista?: { id_avaliacao: number; nota: number; comentario: string | null } | null;
   avaliacao_cliente: { id_avaliacao: number; nota: number; comentario: string | null } | null;
   parcelas: ParcelaPagamento[];
 };

@@ -96,7 +96,7 @@ function Diaria({ navigation, route }: any) {
   const confirmationExpired = booking?.confirmacao_cliente_expirada || (booking?.status === 'Aceito' && arrived && !check?.horario_checkin && now >= confirmationLimit);
   const waiting = booking?.status === 'Aceito' && arrived && !check?.horario_checkin && !confirmationExpired;
   const expired = booking?.checkin_expirado || (booking?.status === 'Aceito' && !arrived && !check?.horario_checkin && Number.isFinite(deadline) && now >= deadline);
-  const canStart = !expired && !confirmationExpired && !arrived && booking?.status === 'Aceito' && Number.isFinite(startsAt) && now >= startsAt;
+  const canStart = !expired && !confirmationExpired && !arrived && booking?.status === 'Aceito' && Number.isFinite(startsAt);
   const canFinish = running && check?.status_checkin === 'Iniciado';
   const canCancel = !expired && !confirmationExpired && booking?.status === 'Aceito' && !check?.horario_checkin;
 
@@ -120,7 +120,13 @@ function Diaria({ navigation, route }: any) {
       if (alive.current) showError(cause);
     } finally {
       locked.current = false;
-      if (alive.current) { setSending(false); if (updated) await reload.current(); }
+      if (alive.current) {
+        setSending(false);
+        if (updated) {
+          await reload.current();
+          if (canFinish && alive.current) navigation.navigate('Avaliacao', { agendamentoId: id, avaliarCliente: true });
+        }
+      }
     }
   }
 
@@ -153,12 +159,17 @@ function Diaria({ navigation, route }: any) {
         {booking && <>
           <Text style={styles.name}>{booking.cliente?.usuario?.nome ?? 'Cliente'}</Text>
           <Text style={styles.address}>Diária #{booking.numero_diarista ?? '—'} • {new Date(booking.data_agendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} às {time(booking.horario_inicio)}</Text>
+          {finished && !payment?.avaliacao_diarista && <TouchableOpacity
+            accessibilityRole="button" style={styles.checkInButton}
+            onPress={() => navigation.navigate('Avaliacao', { agendamentoId: id, avaliarCliente: true })}>
+            <Text style={styles.checkInButtonText}>Avaliar cliente</Text>
+          </TouchableOpacity>}
           <Text style={styles.sectionTitle}>Endereço</Text>
           <Text style={styles.address}>{booking.endereco ? booking.endereco.logradouro + ', ' + booking.endereco.numero + ' — ' + booking.endereco.bairro : 'Endereço não informado'}</Text>
           <Text style={styles.sectionTitle}>Serviços solicitados</Text>
           {booking.agendamento_servico?.map(item => <Text key={item.id} style={styles.address}>• {item.diarista_servico?.servico?.nome_servico ?? 'Serviço'}</Text>)}
           {!expired && !confirmationExpired && !waiting && booking.status === 'Aceito' && <Text style={[styles.address, { marginTop: 24 }]}>
-            {!canStart ? 'Registre a chegada a partir do horário agendado, no horário de Brasília.' : 'Ao chegar ao local, toque em Cheguei. O cliente precisa confirmar antes do início.'}
+            Ao chegar ao local, toque em Cheguei, mesmo antes do horário agendado. Aguarde o cliente confirmar para iniciar.
             {!entryPaid ? ' A entrada ainda precisa ser paga pelo cliente para que o serviço possa começar.' : ''}
           </Text>}
           {waiting && <Text style={[styles.address, { marginTop: 24 }]}>Chegada registrada. Aguarde o cliente confirmar o início no aplicativo até {stamp(new Date(confirmationLimit).toISOString())}. Não comece o serviço antes da confirmação.</Text>}

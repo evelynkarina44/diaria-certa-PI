@@ -39,6 +39,7 @@ function harness(initial = favoriteRecords) {
     '../../components/header-menu': { HeaderMenu: 'HeaderMenu' },
     '../../components/responsive-grid': { ResponsiveGrid: 'ResponsiveGrid' },
     '../../components/page-header': require('./page-header-fixture.cjs'),
+    '../../components/filter-scroll': { FilterScroll: 'FilterScroll' },
     '../../components/action-modal': { ActionModal: 'ActionModal' },
     '../../services/favoritoService': { favoritoService: {
       listar: async () => ({ data: favorites }),

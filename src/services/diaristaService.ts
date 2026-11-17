@@ -36,7 +36,7 @@ const crud = createCrudService<
 export const diaristaService = {
   ...crud,
   listar(params: DiaristaSearchQuery = {}) {
-    return request<PaginatedResponse<Diarista>>({
+    return request<PaginatedResponse<Diarista> & { localizacao?: { origem_disponivel: boolean; aviso: string | null } }>({
       method: 'GET',
       url: '/api/diarista',
       params,

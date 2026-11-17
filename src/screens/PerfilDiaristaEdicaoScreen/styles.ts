@@ -268,6 +268,10 @@ export const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  detailLabel: {
+    fontFamily: fonts.bold,
+  },
+
   aboutText: {
     color: colors.text,
     fontFamily: fonts.regular,

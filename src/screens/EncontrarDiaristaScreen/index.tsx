@@ -1,3 +1,5 @@
+import { ReceivedReviews } from '../../components/received-reviews';
+import { FilterScroll } from '../../components/filter-scroll';
 import { ResponsiveGrid } from '../../components/responsive-grid';
 import { PageHeader } from '../../components/page-header';
 import React, { useEffect, useRef, useState } from 'react';
@@ -72,6 +74,7 @@ export default function EncontrarDiaristaScreen({
   const [diaristas, setDiaristas] = useState<Diarista[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
+  const [avisoLocalizacao, setAvisoLocalizacao] = useState('');
   const [enderecos, setEnderecos] = useState<Endereco[]>([]);
   const [enderecoBuscaId, setEnderecoBuscaId] = useState<number | null>(null);
   const [seletorLocalizacaoAberto, setSeletorLocalizacaoAberto] = useState(false);
@@ -254,6 +257,7 @@ export default function EncontrarDiaristaScreen({
     try {
       setLoading(true);
       setErro('');
+      setAvisoLocalizacao('');
       if (!cepCliente) {
         setDiaristas([]);
         setTotalPaginas(0);
@@ -285,6 +289,7 @@ export default function EncontrarDiaristaScreen({
         : { data: [] as Favorito[] };
       if (id !== buscaId.current) return;
       setTotalPaginas(pages);
+      setAvisoLocalizacao(response.localizacao?.aviso ?? '');
       setDiaristas(
         response.data
           .filter((profile) => profile.id_usuario !== user?.id_usuario)
@@ -749,14 +754,14 @@ export default function EncontrarDiaristaScreen({
           </View>
         </View>
 
+        <View style={{ paddingHorizontal: 18, marginTop: 18 }}><ReceivedReviews navigation={navigation} compact /></View>
+
         <View style={styles.content}>
           <Text style={styles.sectionLabel}>
             Filtrar por
           </Text>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
+          <FilterScroll
             contentContainerStyle={styles.filtersContent}
           >
             {filtros.map((filtro) => {
@@ -803,18 +808,27 @@ export default function EncontrarDiaristaScreen({
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
+          </FilterScroll>
 
           {renderConteudoFiltro()}
 
           <Text style={styles.listTitle}>
-            {enderecoBusca ? `Diaristas perto de ${enderecoBusca.apelido || 'sua casa'}` : 'Diaristas próximas'}
+            {avisoLocalizacao ? 'Diaristas disponíveis' : enderecoBusca ? `Diaristas perto de ${enderecoBusca.apelido || 'sua casa'}` : 'Diaristas próximas'}
           </Text>
-          {Boolean(enderecoBusca) && <View style={styles.distanceInfo}>
+          {Boolean(enderecoBusca) && !avisoLocalizacao && <View style={styles.distanceInfo}>
             <Ionicons name="navigate-outline" size={14} color="#667085" />
             <Text style={styles.distanceHint}>Mais próximas primeiro · distância aproximada pelo CEP</Text>
           </View>}
 
+          {!loading && Boolean(avisoLocalizacao) && <View style={styles.distanceInfo}>
+            <Ionicons name="information-circle-outline" size={18} color="#667085" />
+            <Text style={[styles.distanceHint, { flex: 1 }]}>{avisoLocalizacao}</Text>
+            {Boolean(distanciaAplicada) && <TouchableOpacity
+              accessibilityRole="button" accessibilityLabel="Remover filtro de distância"
+              onPress={() => { setDistanciaAplicada(''); setDistanciaSelecionada(''); }}>
+              <Text style={styles.distanceHint}>Remover filtro</Text>
+            </TouchableOpacity>}
+          </View>}
           <View style={styles.list}>
             {loading && <View style={styles.searchLoading}>
               <ActivityIndicator color="#18C7C8" />

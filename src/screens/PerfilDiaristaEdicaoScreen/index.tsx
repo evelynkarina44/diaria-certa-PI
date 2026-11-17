@@ -1,3 +1,5 @@
+import { ReceivedReviews } from '../../components/received-reviews';
+import { formatCpf, formatPhone } from '../../utils/inputMasks';
 import { PageHeader } from '../../components/page-header';
 import React, { useCallback, useEffect, useState } from 'react';
 
@@ -55,8 +57,10 @@ export default function PerfilDiaristaEdicaoScreen({
   }, [user]);
 
   useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+    void loadProfile();
+    const unsubscribe = navigation.addListener?.('focus', loadProfile);
+    return () => unsubscribe?.();
+  }, [loadProfile, navigation]);
   const rating = Number(profile?.avaliacao_media ?? 0);
   function voltar() {
     navigation.goBack();
@@ -183,10 +187,10 @@ export default function PerfilDiaristaEdicaoScreen({
               </TouchableOpacity>
             </View>
             <View style={styles.aboutCard}>
-              <Text style={styles.aboutText}>Máximo de cômodos: {profile?.qtd_max_comodos ?? 'Não informado'}</Text>
-              <Text style={styles.aboutText}>E-mail: {user?.email ?? 'Não informado'}</Text>
-              <Text style={styles.aboutText}>Telefone: {user?.telefone ?? 'Não informado'}</Text>
-              <Text style={styles.aboutText}>CPF: {user?.cpf ?? 'Não informado'}</Text>
+              <Text style={styles.aboutText}><Text style={styles.detailLabel}>Máximo de cômodos: </Text>{profile?.qtd_max_comodos ?? 'Não informado'}</Text>
+              <Text style={styles.aboutText}><Text style={styles.detailLabel}>E-mail: </Text>{user?.email ?? 'Não informado'}</Text>
+              <Text style={styles.aboutText}><Text style={styles.detailLabel}>Telefone: </Text>{formatPhone(user?.telefone ?? '') || 'Não informado'}</Text>
+              <Text style={styles.aboutText}><Text style={styles.detailLabel}>CPF: </Text>{formatCpf(user?.cpf ?? '') || 'Não informado'}</Text>
             </View>
           </View>
 
@@ -229,6 +233,8 @@ export default function PerfilDiaristaEdicaoScreen({
               {endereco ? <Text style={styles.aboutText}>{endereco.bairro} - {endereco.cidade}/{endereco.estado} - CEP {endereco.cep}</Text> : null}
             </View>
           </View>
+
+          <ReceivedReviews navigation={navigation} />
 
           {/* BOTÃO SAIR DA CONTA */}
           <ProfileAccessActions navigation={navigation} />

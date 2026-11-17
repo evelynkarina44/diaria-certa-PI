@@ -65,6 +65,12 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
   const [enderecoSelecionadoId, setEnderecoSelecionadoId] = useState<number | null>(null);
   const casaSelecionada = selectedHouse(cliente?.endereco, enderecoSelecionadoId);
   const tamanhoCasa = casaSelecionada?.tamanho_casa ?? cliente?.tamanho_casa;
+  const comodosCasa = casaSelecionada?.qtd_comodos ?? cliente?.qtd_comodos;
+  const limiteComodos = profile?.qtd_max_comodos;
+  const erroComodos = casaSelecionada && comodosCasa != null && limiteComodos != null && comodosCasa > limiteComodos
+    ? `Esta diarista atende até ${limiteComodos} cômodos. A casa selecionada possui ${comodosCasa}. Escolha outra casa ou outra profissional.`
+    : '';
+
 
   useEffect(() => {
     const clienteId = user?.cliente?.[0]?.id_cliente;
@@ -82,8 +88,9 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
           diaristaService.buscarPorId(diaristaId), clienteService.buscarPorId(clienteId!),
         ]);
         if (!active || id !== request) return;
-        setProfile(diarista);
-        setCliente(clienteProfile);
+        // Respostas iguais não devem reiniciar a estimativa ou as escolhas do formulário.
+        setProfile(current => JSON.stringify(current) === JSON.stringify(diarista) ? current : diarista);
+        setCliente(current => JSON.stringify(current) === JSON.stringify(clienteProfile) ? current : clienteProfile);
         setError('');
       } catch (cause) {
         if (active && id === request) setError(getErrorMessage(cause));
@@ -149,7 +156,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
   function montarPayload(): AgendamentoCreate | null {
     const endereco = casaSelecionada;
     const slot = slotSelecionado();
-    if (!endereco || !dataSelecionada || !slot || !servicosSelecionados.length || !cliente) return null;
+    if (!endereco || erroComodos || !dataSelecionada || !slot || !servicosSelecionados.length || !cliente) return null;
     return {
       id_diarista: diaristaId,
       id_endereco: endereco.id_endereco,
@@ -185,7 +192,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
       })
       .finally(() => { if (active) setEstimating(false); });
     return () => { active = false; };
-  }, [cliente, profile, enderecoSelecionadoId, comboSelecionado, dataSelecionada, horarioSelecionado, servicosSelecionados]);
+  }, [cliente, profile, enderecoSelecionadoId, comboSelecionado, dataSelecionada, horarioSelecionado, servicosSelecionados, erroComodos]);
 
   function selecionarData(key: string) {
     const slots = disponibilidades.filter((item) => dateKey(item.dia_semana) === key);
@@ -215,6 +222,7 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
 
   async function confirmarAgendamento(confirmed = false) {
     if (bookingLock.current) return;
+    if (erroComodos) { setConfirmBooking(false); return setError(erroComodos); }
     const payload = montarPayload();
     if (!cliente?.endereco?.length) return setError('Cadastre um endereço antes de agendar.');
     if (!casaSelecionada) return setError('Selecione a casa onde será realizada a diária.');
@@ -275,6 +283,9 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
             <Ionicons name="add-circle-outline" size={18} color="#008A99" /><Text style={styles.manageHousesText}>Cadastrar ou editar minhas casas</Text>
           </TouchableOpacity>
 
+          {Boolean(erroComodos) && <View accessibilityRole="alert" style={{ backgroundColor: '#FFF4ED', borderColor: '#FFB58F', borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 18 }}>
+            <Text style={{ color: '#9C2A10', fontSize: 14, lineHeight: 21 }}>{erroComodos}</Text>
+          </View>}
           <Text style={styles.label}>Data</Text>
           <View style={styles.calendar}>
             <View style={styles.calendarHeader}>
@@ -383,14 +394,14 @@ export default function AgendarDiariaScreen({ navigation, route }: any) {
           <Text style={styles.estimatedLabel}>Valor estimado:</Text>
           {estimating ? <ActivityIndicator color="#18C7C8" style={styles.estimateLoader} /> : <Text style={styles.estimatedValue}>{valorEstimado === null ? '—' : valorEstimado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>}
 
-          <TouchableOpacity style={[styles.confirmButton, (saving || !valorEstimado) && styles.confirmButtonDisabled]} onPress={() => void confirmarAgendamento()} disabled={saving || !valorEstimado} activeOpacity={0.85}>
+          <TouchableOpacity style={[styles.confirmButton, (saving || Boolean(erroComodos) || !valorEstimado) && styles.confirmButtonDisabled]} onPress={() => void confirmarAgendamento()} disabled={saving || Boolean(erroComodos) || !valorEstimado} activeOpacity={0.85}>
             {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.confirmButtonText}>Confirmar Agendamento</Text>}
           </TouchableOpacity>
         </View>
       </ScrollView>
       <ActionModal visible={Boolean(error || estimateError)} variant="error" title="Não foi possível agendar" message={error || estimateError}
         onClose={() => { setError(''); setEstimateError(''); setConfirmBooking(false); }} />
-      <ActionModal visible={confirmBooking && !error && !estimateError} variant="confirm" title="Enviar solicitação?"
+      <ActionModal visible={confirmBooking && !erroComodos && !error && !estimateError} variant="confirm" title="Enviar solicitação?"
         message={`Deseja solicitar esta diária em ${casaSelecionada?.apelido || 'sua casa'} (${casaSelecionada?.logradouro}, ${casaSelecionada?.numero}) para ${dataSelecionada.split('-').reverse().join('/')} às ${horarioSelecionado}? Não há cobrança agora; aguarde o aceite da diarista.`}
         confirmLabel="Enviar solicitação" cancelLabel="Revisar" busy={saving}
         onConfirm={() => confirmarAgendamento(true)} onClose={() => setConfirmBooking(false)} />

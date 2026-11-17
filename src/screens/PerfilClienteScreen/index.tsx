@@ -1,3 +1,5 @@
+import { ReceivedReviews } from '../../components/received-reviews';
+import { formatCpf, formatPhone } from '../../utils/inputMasks';
 import { PageHeader } from '../../components/page-header';
 import React, { useCallback, useEffect, useState } from 'react';
 
@@ -44,8 +46,10 @@ export default function PerfilClienteScreen({ navigation }: any) {
   }, [user]);
 
   useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+    void loadProfile();
+    const unsubscribe = navigation.addListener?.('focus', loadProfile);
+    return () => unsubscribe?.();
+  }, [loadProfile, navigation]);
 
   const profileUser = profile?.usuario ?? user;
   const avaliacoes = profile?.avaliacao ?? [];
@@ -120,7 +124,7 @@ export default function PerfilClienteScreen({ navigation }: any) {
                   />
                 ))}
                 <Text style={styles.ratingCount}>
-                  ({avaliacoes.length} avaliações públicas)
+                  ({avaliacoes.length} avaliações recebidas)
                 </Text>
               </View>
 
@@ -154,11 +158,13 @@ export default function PerfilClienteScreen({ navigation }: any) {
               <Ionicons name="pencil" size={14} color="#111111" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.detailText}>E-mail: {profileUser?.email ?? 'Não informado'}</Text>
-          <Text style={styles.detailText}>Telefone: {profileUser?.telefone ?? 'Não informado'}</Text>
-          <Text style={styles.detailText}>CPF: {profileUser?.cpf ?? 'Não informado'}</Text>
-          <Text style={styles.detailText}>Data de nascimento: {nascimento}</Text>
+          <Text style={styles.detailText}><Text style={styles.detailLabel}>E-mail: </Text>{profileUser?.email ?? 'Não informado'}</Text>
+          <Text style={styles.detailText}><Text style={styles.detailLabel}>Telefone: </Text>{formatPhone(profileUser?.telefone ?? '') || 'Não informado'}</Text>
+          <Text style={styles.detailText}><Text style={styles.detailLabel}>CPF: </Text>{formatCpf(profileUser?.cpf ?? '') || 'Não informado'}</Text>
+          <Text style={styles.detailText}><Text style={styles.detailLabel}>Data de nascimento: </Text>{nascimento}</Text>
         </View>
+
+        <ReceivedReviews navigation={navigation} />
 
         <ClientHouses cliente={profile} onUpdated={loadProfile} />
 

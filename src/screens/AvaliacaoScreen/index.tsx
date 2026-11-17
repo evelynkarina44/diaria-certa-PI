@@ -16,7 +16,7 @@ import { pagamentoService } from '../../services/pagamentoService';
 import { StarRating } from '../../components/star-rating';
 
 export default function AvaliacaoScreen({ navigation, route }: any) {
-  return <AvaliacaoDaDiaria key={route.params?.agendamentoId} navigation={navigation} route={route} />;
+  return <AvaliacaoDaDiaria key={String(route.params?.agendamentoId) + ':' + Boolean(route.params?.avaliarCliente)} navigation={navigation} route={route} />;
 }
 
 function AvaliacaoDaDiaria({ navigation, route }: any) {
@@ -29,6 +29,8 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
   const [imagens, setImagens] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const agendamentoId = Number(route.params?.agendamentoId);
+  const avaliarCliente = route.params?.avaliarCliente === true;
+  const accentColor = avaliarCliente ? '#FF6B2C' : '#18C7C8';
   const [idUsuarioDenunciado, setIdUsuarioDenunciado] = useState(0);
   const [nomeDiarista, setNomeDiarista] = useState('diarista');
   const [ready, setReady] = useState(false);
@@ -49,21 +51,23 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
           agendamentoService.buscarPorId(agendamentoId), pagamentoService.buscar(agendamentoId),
         ]);
         if (!active) return;
-        setNomeDiarista(booking.diarista?.usuario?.nome ?? 'diarista');
-        setIdUsuarioDenunciado(booking.diarista?.id_usuario ?? 0);
-        if (summary.avaliacao_cliente) {
-          setAvaliacao(summary.avaliacao_cliente.nota);
-          setComentario(summary.avaliacao_cliente.comentario ?? '');
+        setNomeDiarista(avaliarCliente ? booking.cliente?.usuario?.nome ?? 'cliente' : booking.diarista?.usuario?.nome ?? 'diarista');
+        setIdUsuarioDenunciado(avaliarCliente ? booking.cliente?.id_usuario ?? 0 : booking.diarista?.id_usuario ?? 0);
+        const previous = avaliarCliente ? summary.avaliacao_diarista : summary.avaliacao_cliente;
+        const allowed = avaliarCliente ? summary.pode_avaliar_cliente : summary.pode_avaliar;
+        if (previous) {
+          setAvaliacao(previous!.nota);
+          setComentario(previous!.comentario ?? '');
           setSaved(true);
-        } else if (!summary.pode_avaliar) {
-          setError('A avaliação será liberada após a conclusão da diária e a aprovação das duas parcelas.'); return;
+        } else if (!allowed) {
+          setError(avaliarCliente ? 'A avaliação do cliente é liberada após o checkout.' : 'A avaliação será liberada após a conclusão da diária e a aprovação das duas parcelas.'); return;
         }
         setReady(true);
       } catch (cause) { if (active) setError(getErrorMessage(cause)); }
     }
     void load();
     return () => { active = false; };
-  }, [agendamentoId]);
+  }, [agendamentoId, avaliarCliente]);
 
   function selecionarAvaliacao(valor: number) {
     // A seleção é local; somente o envio depende da validação da diária na API.
@@ -126,7 +130,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
       });
       setSaved(true);
       setConfirmReview(false);
-      setSuccessNotice('Sua avaliação da diarista foi registrada. Obrigado!');
+      setSuccessNotice(avaliarCliente ? 'Sua avaliação do cliente foi registrada. Obrigado!' : 'Sua avaliação da diarista foi registrada. Obrigado!');
     } catch (error) {
       setConfirmReview(false);
       setError(getErrorMessage(error));
@@ -148,7 +152,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
         motivo: 'outro',
         descricao: denuncia.trim(),
       });
-      navigation.navigate('EncontrarDiarista');
+      navigation.navigate(avaliarCliente ? 'HomeDiarista' : 'EncontrarDiarista');
     } catch (error) {
       setError(getErrorMessage(error));
     } finally {
@@ -159,7 +163,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* HEADER */}
-      <PageHeader title="Avaliar serviço" accentColor="#18C7C8" onBack={voltar} />
+      <PageHeader title={avaliarCliente ? "Avaliar cliente" : "Avaliar serviço"} accentColor={accentColor} onBack={voltar} />
 
       <ScrollView
         style={styles.scroll}
@@ -178,7 +182,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
           ========================================= */
           <View style={styles.content}>
             <Text style={styles.title}>
-              Como foi o serviço de{'\n'}
+              {avaliarCliente ? 'Como foi sua experiência com' : 'Como foi o serviço de'}{'\n'}
               {nomeDiarista}?
             </Text>
 
@@ -197,7 +201,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
               onChangeText={setComentario}
               editable={ready && !saved && !loading}
               maxLength={2000}
-              accessibilityLabel="Comentário sobre a diarista"
+              accessibilityLabel={avaliarCliente ? "Comentário sobre o cliente" : "Comentário sobre a diarista"}
               multiline
               textAlignVertical="top"
             />
@@ -224,7 +228,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
               )}
 
               <TouchableOpacity
-                style={styles.sendButton}
+                style={[styles.sendButton, { backgroundColor: accentColor }]}
                 onPress={() => void enviarAvaliacao()}
                 disabled={loading || !ready || saved}
                 activeOpacity={0.85}
@@ -245,7 +249,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
           ========================================= */
           <View style={styles.content}>
             <Text style={styles.title}>
-              Como foi o serviço de{'\n'}
+              {avaliarCliente ? 'Como foi sua experiência com' : 'Como foi o serviço de'}{'\n'}
               {nomeDiarista}?
             </Text>
 

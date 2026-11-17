@@ -1,3 +1,4 @@
+import { FilterScroll } from '../filter-scroll';
 import { ResponsiveGrid } from '../responsive-grid';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -117,7 +118,7 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
   const shown = compact ? states.slice(0, 3) : filtered;
   const steps = ['Solicitação', 'Aceite', 'Entrada', 'Diária', 'Saldo', profile === 'CLIENTE' ? 'Avaliação' : 'Quitação'];
   function open(item: TrackingAppointment, route?: string) {
-    if (route) navigation.navigate(route, { agendamentoId: item.id_agendamento });
+    if (route) navigation.navigate(route, { agendamentoId: item.id_agendamento, ...(route === 'Avaliacao' && profile === 'DIARISTA' ? { avaliarCliente: true } : {}) });
   }
 
   return (
@@ -129,12 +130,12 @@ function Tracker({ navigation, profile, compact = false, showTitle = true, showS
         </Pressable>
       </View>
       {showSubtitle && <Text style={styles.subtitle}>{compact ? 'Acompanhe o status e continue pela próxima etapa.' : 'Solicitação, pagamento e execução em um só lugar.'}</Text>}
-      {!compact && <View style={styles.filters}>
+      {!compact && <FilterScroll accentColor={accent} contentContainerStyle={styles.filters}>
         {(profile === 'DIARISTA' ? (['all', 'accepted', 'action', 'finished'] as const) : (['all', 'action', 'finished'] as const)).map(value => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: filter === value }}
           style={[styles.filter, filter === value && { borderColor: accent, backgroundColor: accent + '12' }]} onPress={() => setFilter(value)}>
           <Text style={styles.filterText}>{value === 'all' ? 'Todas' : value === 'accepted' ? 'Aceitas' : value === 'action' ? 'Sua próxima ação' : 'Encerradas'}</Text>
         </Pressable>)}
-      </View>}
+      </FilterScroll>}
       {loading && <ActivityIndicator color={accent} style={{ marginVertical: 20 }} />}
       {!loading && !shown.length && <View style={styles.empty}><Ionicons name="calendar-outline" size={27} color={accent} /><Text style={styles.description}>
         {stale && !items.length ? 'Toque no ícone de atualização para carregar suas diárias.' : filter === 'accepted' ? 'Nenhuma diária aceita no momento.' : filter === 'action' ? 'Você não tem ações pendentes nas diárias carregadas.' : filter === 'finished' ? 'Nenhuma diária finalizada nas páginas carregadas.' : 'Nenhuma diária em acompanhamento. Suas novas solicitações aparecerão aqui.'}

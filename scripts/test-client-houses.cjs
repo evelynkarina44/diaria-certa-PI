@@ -35,10 +35,10 @@ function hooks() {
 }
 const walk = node => !node || typeof node !== 'object' ? [] : [node, ...(node.children ?? []).flat(Infinity).flatMap(walk)];
 const native = Object.fromEntries(['ActivityIndicator','ScrollView','Text','TextInput','TouchableOpacity','View'].map(name => [name, name]));
-async function bookingHarness(addresses) {
+async function bookingHarness(addresses, limit = 10) {
   const h = hooks(), estimates = [], bookings = [];
   const user = { cliente: [{ id_cliente: 2 }] };
-  let profile = { id_diarista: 8, disponibilidade_diarista: [{ id_agenda: 31, disponivel: true, dia_semana: '2099-01-01', horario_inicio: '09:00', horario_fim: '10:00' }], combo_base: [], diarista_servico: [{ id_diarista_servico: 3, id_servico: 4, preco: 100, servico: { nome_servico: 'Limpar' } }] };
+  let profile = { id_diarista: 8, qtd_max_comodos: limit, disponibilidade_diarista: [{ id_agenda: 31, disponivel: true, dia_semana: '2099-01-01', horario_inicio: '09:00', horario_fim: '10:00' }], combo_base: [], diarista_servico: [{ id_diarista_servico: 3, id_servico: 4, preco: 100, servico: { nome_servico: 'Limpar' } }] };
   let focus, tick, reads = 0;
   const navigation = { addListener: (_event, fn) => { focus = fn; return () => {}; }, isFocused: () => true, navigate() {}, goBack() {} };
   const watcher = load('src/utils/watchAvailability.ts', {
@@ -163,4 +163,27 @@ test('atualização conserva horário ainda válido e limpa seleção se a agend
   h.setAvailability([]);h.tick();await h.flush();
   assert.equal(h.button('11:00'),undefined);
   assert.equal(h.button('Confirmar Agendamento').props.disabled,true);
+});
+
+test('casa acima do limite desabilita solicitação e outra casa compatível volta a permitir', async () => {
+  const h = await bookingHarness(houses, 5);
+  h.nodes.filter(node => node.props.accessibilityRole === 'radio')[1].props.onPress();
+  await h.flush();
+  h.button('Limpar').props.onPress();await h.flush();
+  assert.equal(h.button('Confirmar Agendamento').props.disabled, true);
+  assert.equal(h.estimates.length, 0);
+  assert.ok(h.nodes.some(node => node.type === 'Text' && node.children.some(text => typeof text === 'string' && text.includes('atende até 5 cômodos'))));
+  h.button('Confirmar Agendamento').props.onPress();await h.flush();
+  assert.equal(h.bookings.length, 0);
+  h.nodes.filter(node => node.props.accessibilityRole === 'radio')[0].props.onPress();
+  await h.flush();
+  h.button('Limpar').props.onPress();await h.flush();
+  assert.equal(h.estimates.at(-1).id_endereco, 21);
+  assert.equal(h.button('Confirmar Agendamento').props.disabled, false);
+});
+test('casa com exatamente o limite da diarista pode solicitar', async () => {
+  const h = await bookingHarness([houses[0]], 3);
+  h.button('Limpar').props.onPress();await h.flush();
+  assert.equal(h.button('Confirmar Agendamento').props.disabled, false);
+  assert.equal(h.estimates.at(-1).qtd_comodos, 3);
 });

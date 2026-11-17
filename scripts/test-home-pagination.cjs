@@ -75,6 +75,24 @@ const response = query => ({
 });
 
 
+test('falha de localização mantém os cards e não promete ordem por proximidade; nova busca recupera', async () => {
+  let unavailable = true;
+  const warning = 'Distâncias indisponíveis no momento. Exibindo profissionais por avaliação.';
+  const app = mount(query => ({ ...response(query), localizacao: {
+    origem_disponivel: !unavailable, aviso: unavailable ? warning : null,
+  } }));
+  await app.flush();
+  assert.ok(app.nodes().some(node => node.type === 'Text' && node.children.includes(warning)));
+  assert.equal(app.nodes().filter(node => node.props.onPress && node.props.activeOpacity === 0.85).length, 10);
+  assert.ok(!app.nodes().some(node => node.type === 'Text' && node.children.includes('Mais próximas primeiro · distância aproximada pelo CEP')));
+  unavailable = false;
+  const search = app.nodes().find(node => node.type === 'TextInput' && node.props.accessibilityLabel === 'Buscar diarista pelo nome');
+  search.props.onChangeText('Nicole');
+  await app.flush();
+  assert.ok(!app.nodes().some(node => node.type === 'Text' && node.children.includes(warning)));
+  assert.ok(app.nodes().some(node => node.type === 'Text' && node.children.includes('Mais próximas primeiro · distância aproximada pelo CEP')));
+});
+
 test('resposta atrasada da casa anterior não substitui a lista do endereço recém-selecionado', async () => {
   let release;
   const result = (query, nome) => ({

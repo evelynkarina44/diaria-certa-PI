@@ -256,6 +256,10 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  detailLabel: {
+    fontFamily: fonts.bold,
+  },
+
   detailText: {
     flexShrink: 1,
     color: '#666666',

@@ -5,6 +5,8 @@ import type {
 } from './types';
 
 export type DenunciaCreate = {
+  id_agendamento?: number;
+  solicita_reembolso?: boolean;
   id_usuario_denunciado: number;
   motivo: Denuncia['motivo'];
   descricao?: string | null;

@@ -41,6 +41,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
 
   const [modoDenuncia, setModoDenuncia] = useState(false);
   const [denuncia, setDenuncia] = useState('');
+  const [requestRefund, setRequestRefund] = useState(false), [refundAvailable, setRefundAvailable] = useState(false);
 
   const [imagens, setImagens] = useState<ReportImage[]>([]);
   const [reviewMedia, setReviewMedia] = useState<ReportImage[]>([]);
@@ -73,6 +74,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
           agendamentoService.buscarPorId(agendamentoId), pagamentoService.buscar(agendamentoId),
         ]);
         if (!active) return;
+        setRefundAvailable(summary.possui_valor_pago_reembolsavel === true);
         setNomeDiarista(avaliarCliente ? booking.cliente?.usuario?.nome ?? 'cliente' : booking.diarista?.usuario?.nome ?? 'diarista');
         setIdUsuarioDenunciado(avaliarCliente ? booking.cliente?.id_usuario ?? 0 : booking.diarista?.id_usuario ?? 0);
         const previous = avaliarCliente ? summary.avaliacao_diarista : summary.avaliacao_cliente;
@@ -191,7 +193,7 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
     try {
       let id = reportId;
       if (!id) {
-        const result = await denunciaService.criar({ id_usuario_denunciado: idUsuarioDenunciado, motivo: 'outro', descricao: denuncia.trim() });
+        const result = await denunciaService.criar({ id_agendamento: agendamentoId, solicita_reembolso: requestRefund, id_usuario_denunciado: idUsuarioDenunciado, motivo: 'outro', descricao: denuncia.trim() });
         id = result.id_denuncia; setReportId(id);
       }
       for (let i = uploadedImages.current; i < imagens.length; i++) {
@@ -287,10 +289,10 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
 </>);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, desktop && { backgroundColor: accentColor }]}>
       {/* HEADER */}
-      <PageHeader title={avaliarCliente ? "Avaliar cliente" : "Avaliar serviço"} accentColor={accentColor} onBack={voltar} allowBackWithSidebar={desktop} compact={desktop}
-        subtitle={desktop ? "Compartilhe sua experiência após a diária." : undefined} />
+      <PageHeader title={modoDenuncia ? "Registrar denúncia" : avaliarCliente ? "Avaliar cliente" : "Avaliar serviço"} accentColor={accentColor} onBack={voltar} allowBackWithSidebar={desktop} compact={desktop}
+        subtitle={desktop ? (modoDenuncia ? "Relate o ocorrido para análise da administração." : "Compartilhe sua experiência após a diária.") : undefined} />
 
       <ScrollView
         style={styles.scroll}
@@ -317,15 +319,18 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
           /* =========================================
              DENÚNCIA
           ========================================= */
-          <View style={styles.content}>
-            <Text style={styles.title}>
-              {avaliarCliente ? 'Como foi sua experiência com' : 'Como foi o serviço de'}{'\n'}
-              {nomeDiarista}?
+          <View style={desktop ? baseStyles.desktopReportPage : styles.content}>
+            <Text style={[styles.title, desktop && baseStyles.desktopReportHeading]}>
+              {desktop ? 'Denúncia sobre ' + nomeDiarista : <>{avaliarCliente ? 'Como foi sua experiência com' : 'Como foi o serviço de'}{'\n'}{nomeDiarista}?</>}
             </Text>
 
+            <View style={desktop ? baseStyles.desktopReportColumns : undefined}>
+            <View style={desktop ? baseStyles.desktopReportDetails : undefined}>
+            {desktop && <Text style={baseStyles.desktopFieldTitle}>Descrição da denúncia</Text>}
             {/* CAMPO DA DENÚNCIA */}
             <TextInput
-              style={styles.reportInput}
+              style={[styles.reportInput, desktop && baseStyles.desktopReportTextArea]}
+              accessibilityLabel="Descrição da denúncia"
               placeholder={
                 'Escreva a sua denúncia\ndetalhada (Obrigatório)'
               }
@@ -338,9 +343,18 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
               textAlignVertical="top"
             />
 
-            <Text style={styles.noAttachments}>Fotos até 5 MB · Vídeos MP4 (H.264) até 10 MB e 1 minuto. Anexos privados para você e a administração.</Text>
+            <View style={baseStyles.refundBox}>
+              <TouchableOpacity accessibilityRole="checkbox" accessibilityLabel="Solicitar análise de reembolso" accessibilityState={{ checked: requestRefund, disabled: loading || Boolean(reportId) || !refundAvailable }}
+                disabled={loading || Boolean(reportId) || !refundAvailable} onPress={() => setRequestRefund(value => !value)} style={baseStyles.refundOption}>
+                <Ionicons name={requestRefund ? 'checkbox' : 'square-outline'} size={24} color={refundAvailable ? '#008A99' : '#98A2B3'} />
+                <Text style={baseStyles.refundTitle}>Solicitar análise de reembolso</Text>
+              </TouchableOpacity>
+              <Text style={baseStyles.refundNote}>{refundAvailable ? 'O administrador analisará o pedido junto à denúncia. O reembolso se refere aos valores pagos pelo cliente; o envio não garante nem executa a devolução.' : 'É necessário haver um pagamento confirmado e ainda não estornado para solicitar reembolso.'}</Text>
+            </View>
+            </View>
+            <View style={desktop ? baseStyles.desktopReportAttachments : undefined}>
             {/* ANEXOS */}
-            <View style={styles.attachmentHeader}>
+            <View style={[styles.attachmentHeader, desktop && baseStyles.desktopAttachmentHeader]}>
               <Text style={styles.attachmentTitle}>
                 Fotos e vídeos (até 3)
               </Text>
@@ -366,6 +380,8 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            <Text style={[styles.noAttachments, desktop && baseStyles.desktopAttachmentHint]}>Fotos até 5 MB · Vídeos MP4 (H.264) até 10 MB e 1 minuto. Anexos privados para você e a administração.</Text>
 
             {/* IMAGENS SELECIONADAS */}
             <View style={styles.attachmentsList}>
@@ -410,8 +426,13 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
               )}
             </View>
 
+            </View>
+            </View>
+            <View style={desktop ? baseStyles.desktopReportActions : { marginTop: 'auto' }}>
             <TouchableOpacity
-              style={styles.reportSendButton}
+              accessibilityRole="button"
+              accessibilityLabel="Enviar denúncia"
+              style={[styles.reportSendButton, desktop && baseStyles.desktopReportButton]}
               onPress={enviarDenuncia}
               disabled={loading || reportSent.current}
               activeOpacity={0.85}
@@ -424,11 +445,12 @@ function AvaliacaoDaDiaria({ navigation, route }: any) {
                 </Text>
               )}
             </TouchableOpacity>
+            </View>
           </View>
         )}
       </ScrollView>
       <ActionModal visible={reportSuccess && !error} variant="success" title="Denúncia enviada"
-        message="Sua denúncia foi enviada com sucesso e será analisada pela moderação. Obrigado por ajudar a manter a comunidade segura."
+        message={requestRefund ? "Sua denúncia e solicitação de reembolso foram enviadas para análise do administrador. Aguarde a decisão; nenhum valor foi devolvido automaticamente." : "Sua denúncia foi enviada com sucesso e será analisada pela moderação. Obrigado por ajudar a manter a comunidade segura."}
         confirmLabel="Entendi" onClose={() => { setReportSuccess(false); navigation.navigate(avaliarCliente ? 'HomeDiarista' : 'EncontrarDiarista'); }} />
       <ActionModal visible={Boolean(error)} variant="error" title="Confira os dados" message={error} onClose={() => setError('')} />
       <ActionModal visible={confirmReview && !error} variant="confirm" title="Enviar avaliação?"

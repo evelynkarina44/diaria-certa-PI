@@ -24,10 +24,10 @@ const native=Object.fromEntries(['ActivityIndicator','ScrollView','Text','TextIn
 native.StyleSheet={create:value=>value};
 native.Platform={OS:'web'};
 const walk=node=>!node||typeof node!=='object'?[]:[node,...(node.children??[]).flat(Infinity).flatMap(walk)];
-function reviewHarness(worker, {allowed=true,previous=null,desktop=false,uploadFailure=false,reviewUploadFailure=false,video=false,videoDuration=5000,videoSize=2048}={}) {
+function reviewHarness(worker, {allowed=true,previous=null,desktop=false,uploadFailure=false,reviewUploadFailure=false,video=false,videoDuration=5000,videoSize=2048,refundable=true}={}) {
   const h=hooks(),writes=[],navigations=[],reportWrites=[],uploads=[],reviewUploads=[];
   let uploadFailed=false,reviewUploadFailed=false;
-  const summary={pode_avaliar:!worker&&allowed,pode_avaliar_cliente:worker&&allowed,avaliacao_cliente:worker?null:previous,avaliacao_diarista:worker?previous:null};
+  const summary={possui_valor_pago_reembolsavel:refundable,pode_avaliar:!worker&&allowed,pode_avaliar_cliente:worker&&allowed,avaliacao_cliente:worker?null:previous,avaliacao_diarista:worker?previous:null};
   const booking={cliente:{id_usuario:7,usuario:{nome:'Cliente exemplo'}},diarista:{id_usuario:8,usuario:{nome:'Diarista exemplo'}}};
   const navigation={navigate:(...args)=>navigations.push(args),goBack(){}};
   const Screen=compile('src/screens/AvaliacaoScreen/index.tsx',{
@@ -91,6 +91,60 @@ test('perfis e tela separada incluem avaliações recebidas, sem bloco na págin
   for(const screen of ['PerfilClienteScreen','PerfilDiaristaEdicaoScreen','AvaliacoesRecebidasScreen']){
     assert.ok(fs.readFileSync(path.join(root,'src/screens',screen,'index.tsx'),'utf8').includes('<ReceivedReviews navigation={navigation}'));
   }
+});
+
+test('denúncia web separa relato e anexos, identifica o contexto e mantém campo multilinha',async()=>{
+ for(const worker of [false,true]){
+  const h=reviewHarness(worker,{desktop:true});await h.flush();
+  h.nodes.find(n=>n.type==='StarRating').props.onChange(1);await h.flush();
+  h.button('Denúncia').props.onPress();await h.flush();
+  assert.equal(h.nodes.find(n=>n.type==='PageHeader').props.title,'Registrar denúncia');
+  for(const style of ['desktopReportPage','desktopReportColumns','desktopReportDetails','desktopReportAttachments','desktopReportActions'])
+   assert.ok(h.nodes.some(n=>n.props.style===style),style);
+  const input=h.nodes.find(n=>n.props.accessibilityLabel==='Descrição da denúncia');
+  assert.equal(input.props.multiline,true);assert.equal(input.props.textAlignVertical,'top');
+  assert.ok(input.props.style.includes('desktopReportTextArea'));
+  assert.ok(h.button('Enviar'));assert.ok(h.nodes.find(n=>n.props.accessibilityLabel==='Solicitar análise de reembolso'));
+ }
+});
+test('denúncia mobile não recebe colunas nem altura de texto do desktop',async()=>{
+ const h=reviewHarness(true);await h.flush();h.nodes.find(n=>n.type==='StarRating').props.onChange(1);await h.flush();
+ h.button('Denúncia').props.onPress();await h.flush();
+ assert.equal(h.nodes.some(n=>n.props.style==='desktopReportColumns'),false);
+ const input=h.nodes.find(n=>n.props.accessibilityLabel==='Descrição da denúncia');
+ assert.equal(input.props.style[0],'reportInput');assert.equal(input.props.style[1],false);
+});
+test('estilos web impedem compressão do campo da denúncia e não esticam o envio',()=>{
+ const s=compile('src/screens/AvaliacaoScreen/styles.ts',{'react-native':native,'../../global':{colors:{},fonts:{},fontSizes:{}}}).styles;
+ assert.ok(s.desktopReportTextArea.minHeight>=180);assert.equal(s.desktopReportTextArea.flexShrink,0);
+ assert.equal(s.desktopReportPage.flex,undefined);
+ assert.equal(s.desktopReportButton.marginTop,0);assert.equal(s.desktopReportButton.width,200);
+ assert.equal(s.reportInput.height,190,'altura mobile preservada');
+});
+
+test('cliente e diarista podem solicitar reembolso junto à denúncia, sem estorno automático',async()=>{
+ for(const worker of [false,true]){
+ const h=reviewHarness(worker);await h.flush();
+ h.nodes.find(n=>n.type==='StarRating').props.onChange(1);await h.flush();h.button('Denúncia').props.onPress();await h.flush();
+ const option=h.nodes.find(n=>n.props.accessibilityLabel==='Solicitar análise de reembolso');assert.equal(option.props.disabled,false);
+ option.props.onPress();await h.flush();
+ h.nodes.find(n=>n.type==='TextInput').props.onChangeText('Serviço apresentou problemas.');await h.flush();
+ await h.button('Enviar').props.onPress();await h.flush();
+ assert.equal(h.reportWrites[0].id_agendamento,40);assert.equal(h.reportWrites[0].solicita_reembolso,true);
+ const success=h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Denúncia enviada');
+ assert.equal(success.props.visible,true);assert.ok(success.props.message.includes('nenhum valor foi devolvido automaticamente'));
+ assert.equal(h.nodes.find(n=>n.props.accessibilityLabel==='Solicitar análise de reembolso').props.disabled,true);
+ }
+});
+test('reembolso não é selecionado por padrão e exige pagamento elegível nos dois perfis',async()=>{
+ for(const [worker,refundable] of [[false,true],[false,false],[true,true],[true,false]]){
+  const h=reviewHarness(worker,{refundable});await h.flush();
+  h.nodes.find(n=>n.type==='StarRating').props.onChange(1);await h.flush();h.button('Denúncia').props.onPress();await h.flush();
+  const option=h.nodes.find(n=>n.props.accessibilityLabel==='Solicitar análise de reembolso');
+  assert.ok(option);assert.equal(option.props.accessibilityState.checked,false);assert.equal(option.props.disabled,!refundable);
+  h.nodes.find(n=>n.type==='TextInput').props.onChangeText('Relato normal.');await h.flush();
+  await h.button('Enviar').props.onPress();await h.flush();assert.equal(h.reportWrites[0].solicita_reembolso,false);
+ }
 });
 
 test('anexo pendente recusado pode ser removido para concluir sem duplicar o registro',async()=>{

@@ -13,6 +13,8 @@ export const styles = StyleSheet.create({
  mobileDialog:{padding:16,gap:12,maxHeight:'100%'},
  mobileActions:{flexWrap:'nowrap',gap:8},
  mobileAction:{flex:1,paddingHorizontal:10},
+ refundFilter:{flexDirection:'row',alignItems:'center',gap:10,minHeight:44},
+ refundNotice:{padding:12,gap:6,borderRadius:12,backgroundColor:'#FFF8E8',borderWidth:1,borderColor:'#F7DEAC'},
  row:{flexDirection:'row',alignItems:'center',gap:12},
  between:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'},
  searchRow:{flexDirection:'row',alignItems:'center',gap:10,flexWrap:'wrap'},

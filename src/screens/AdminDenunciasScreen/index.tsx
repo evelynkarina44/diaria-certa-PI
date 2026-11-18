@@ -9,7 +9,7 @@ import { useResponsive } from '../../contexts/ResponsiveContext';
 import { PageHeader } from '../../components/page-header';
 import { ActionModal } from '../../components/action-modal';
 import { ResponsiveGrid } from '../../components/responsive-grid';
-import { adminService, reportLabels, type AdminReport, type ReportStatus } from '../../services/adminService';
+import { adminService, reportLabels, refundLabels, type RefundDecision, type AdminReport, type ReportStatus } from '../../services/adminService';
 import { ApiError, getErrorMessage } from '../../services/api';
 import { styles as s } from './styles';
 
@@ -32,6 +32,7 @@ function AdminReports({ navigation }: any) {
   const { desktop } = useResponsive();
   const [search, setSearch] = useState(''), [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ReportStatus | undefined>();
+  const [refundOnly, setRefundOnly] = useState(false), [refundDecision, setRefundDecision] = useState<RefundDecision>('EmAnalise');
   const [page, setPage] = useState(1), [pages, setPages] = useState(0), [total, setTotal] = useState(0);
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [busy, setBusy] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
@@ -46,18 +47,18 @@ function AdminReports({ navigation }: any) {
     const request = ++version.current;
     setBusy(true);
     try {
-      const result = await adminService.listar({ page, limit: 10, busca: query, status: filter });
+      const result = await adminService.listar({ page, limit: 10, busca: query, status: filter, ...(refundOnly ? { somente_reembolso: true } : {}) });
       if (!alive.current || request !== version.current) return;
       setReports(result.data); setPages(result.pagination.pages); setTotal(result.pagination.total);
       if (result.pagination.pages > 0 && page > result.pagination.pages) setPage(result.pagination.pages);
     } catch (cause) { if (alive.current && request === version.current) { setReports([]); setError(getErrorMessage(cause)); } }
     finally { if (alive.current && request === version.current) setBusy(false); }
   }
-  useEffect(() => { void load(); return navigation.addListener('focus', () => void load()); }, [page, query, filter, navigation]);
+  useEffect(() => { void load(); return navigation.addListener('focus', () => void load()); }, [page, query, filter, refundOnly, navigation]);
   async function open(report: AdminReport) {
     if (lock.current) return;
     const request = ++opened.current;
-    setDetail(null); setNotes(''); setMeasure('Nenhuma'); setDays('');
+    setDetail(null); setNotes(''); setMeasure('Nenhuma'); setDays(''); setRefundDecision('EmAnalise');
     try {
       const result = await adminService.detalhes(report.id_denuncia);
       if (!alive.current || request !== opened.current) return;
@@ -68,9 +69,10 @@ function AdminReports({ navigation }: any) {
     if (!detail || lock.current) return;
     if (!notes.trim()) { setConfirm(false); setError('Registre uma observação para justificar a análise.'); return; }
     if (status === 'Resolvida' && measure === 'Suspender' && (!/^\d{1,3}$/.test(days) || Number(days) < 1 || Number(days) > 365)) { setConfirm(false); setError('Informe de 1 a 365 dias de suspensão.'); return; }
+    if (detail.solicita_reembolso && ((status === 'Resolvida' && refundDecision === 'EmAnalise') || (status === 'Arquivada' && refundDecision !== 'Negado'))) { setConfirm(false); setError('Registre a decisão do reembolso antes de concluir a denúncia.'); return; }
     lock.current = true; setSaving(true);
     try {
-      await adminService.analisar(detail.id_denuncia, { status, observacao: notes.trim(), versao: detail.versao, acao: status === 'Resolvida' ? measure : 'Nenhuma', ...(status === 'Resolvida' && measure === 'Suspender' ? { dias_suspensao: Number(days) } : {}) });
+      await adminService.analisar(detail.id_denuncia, { status, observacao: notes.trim(), versao: detail.versao, ...(detail.solicita_reembolso ? { decisao_reembolso: refundDecision } : {}), acao: status === 'Resolvida' ? measure : 'Nenhuma', ...(status === 'Resolvida' && measure === 'Suspender' ? { dias_suspensao: Number(days) } : {}) });
       if (alive.current) { setConfirm(false); setDetail(null); setNotes(''); await load(); }
     } catch (cause) {
       if (alive.current) {
@@ -102,6 +104,9 @@ function AdminReports({ navigation }: any) {
           <Text style={[s.chipText, filter === value && s.selectedText]}>{value ? reportLabels[value] : 'Todas'}</Text>
         </TouchableOpacity>)}
       </View>
+      <TouchableOpacity accessibilityRole="checkbox" accessibilityLabel="Somente pedidos de reembolso" accessibilityState={{ checked: refundOnly }} onPress={() => { setPage(1); setRefundOnly(value => !value); }} style={s.refundFilter}>
+        <Ionicons name={refundOnly ? 'checkbox' : 'square-outline'} size={22} color="#008A99" /><Text style={s.link}>Somente pedidos de reembolso</Text>
+      </TouchableOpacity>
       <View style={s.between}><Text style={s.caption}>{total} denúncias encontradas</Text>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Atualizar denúncias" disabled={busy} onPress={() => void load()} style={s.iconButton}>
           {busy ? <ActivityIndicator color="#008A99" /> : <Ionicons name="refresh-outline" size={22} color="#008A99" />}
@@ -109,6 +114,7 @@ function AdminReports({ navigation }: any) {
       </View>
       <ResponsiveGrid>{reports.map(report => <View key={report.id_denuncia} style={s.card}>
         <View style={s.between}><Text style={s.caption}>DENÚNCIA #{report.id_denuncia}</Text><Text style={s.badge}>{reportLabels[report.status]}</Text></View>
+        {report.solicita_reembolso && <View style={s.refundNotice}><Text style={s.strong}>Reembolso solicitado</Text><Text style={s.caption}>{refundLabels[report.reembolso_status ?? 'Pendente']} · Diária #{report.id_agendamento}</Text></View>}
         <Text style={s.title}>{reason(report.motivo)}</Text>
         <Text style={s.body}><Text style={s.strong}>De: </Text>{report.denunciante.nome}</Text>
         <Text style={s.body}><Text style={s.strong}>Contra: </Text>{report.denunciado.nome}</Text>
@@ -135,6 +141,12 @@ function AdminReports({ navigation }: any) {
             <Text style={s.badge}>{reportLabels[detail.status]} · {reason(detail.motivo)}</Text>
             <View style={s.person}><Text style={s.strong}>Denunciante</Text><Text style={s.body}>{detail.denunciante.nome} · {detail.denunciante.tipo}</Text><Text style={s.caption}>{detail.denunciante.email}</Text></View>
             <View style={s.person}><Text style={s.strong}>Denunciado</Text><Text style={s.body}>{detail.denunciado.nome} · {detail.denunciado.tipo}</Text><Text style={s.caption}>{detail.denunciado.email}</Text></View>
+            {detail.solicita_reembolso && <View style={s.refundNotice}>
+              <Text style={s.strong}>Solicitação de reembolso</Text>
+              <Text style={s.body}>Diária #{detail.id_agendamento} · {refundLabels[detail.reembolso_status ?? 'Pendente']}</Text>
+              {detail.reembolso_valor_pago_centavos != null && <Text style={s.body}>Valor pago na solicitação: {(detail.reembolso_valor_pago_centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>}
+              <Text style={s.caption}>A decisão aqui é administrativa. Aprovar o pedido não executa nem confirma estorno. Confira o pagamento antes de qualquer processamento financeiro.</Text>
+            </View>}
             <Text style={s.strong}>Relato original</Text><Text selectable style={s.body}>{detail.descricao || 'Sem descrição.'}</Text>
             <Text style={s.caption}>Recebida em {date(detail.data_denuncia)}</Text>
             <Text style={s.strong}>Fotos e vídeos anexados</Text>
@@ -142,7 +154,7 @@ function AdminReports({ navigation }: any) {
             {!['Resolvida', 'Arquivada'].includes(detail.status) && <>
             <Text style={s.strong}>Registrar análise</Text>
             <View style={s.filters}>{states.filter(v => v !== 'Pendente').map(value => <TouchableOpacity key={value} accessibilityRole="button" accessibilityState={{ selected: status === value }}
-              onPress={() => { setStatus(value as Exclude<ReportStatus, 'Pendente'>); setMeasure('Nenhuma'); }} style={[s.chip, status === value && s.selectedChip]}><Text style={[s.chipText, status === value && s.selectedText]}>{reportLabels[value]}</Text></TouchableOpacity>)}</View>
+              onPress={() => { setStatus(value as Exclude<ReportStatus, 'Pendente'>); setMeasure('Nenhuma'); setRefundDecision('EmAnalise'); }} style={[s.chip, status === value && s.selectedChip]}><Text style={[s.chipText, status === value && s.selectedText]}>{reportLabels[value]}</Text></TouchableOpacity>)}</View>
             {status === 'Resolvida' && <>
               <Text style={s.strong}>Decisão sobre a conta de {detail.denunciado.nome}</Text>
               <View style={s.filters}>{([['Nenhuma', 'Não aplicar medida'], ['Suspender', 'Suspender por dias'], ['Excluir', 'Excluir conta']] as const).map(([value,label]) =>
@@ -152,6 +164,13 @@ function AdminReports({ navigation }: any) {
               {measure === 'Suspender' && <TextInput style={s.notes} accessibilityLabel="Dias de suspensão" placeholder="Quantidade de dias (1 a 365)" keyboardType="number-pad" maxLength={3} value={days} onChangeText={value => setDays(value.replace(/\D/g,''))} />}
               {measure === 'Excluir' && <Text style={s.body}>A conta perderá o acesso. Diárias, pagamentos e denúncias serão preservados para histórico.</Text>}
             </>}
+            {detail.solicita_reembolso && <>
+              <Text style={s.strong}>Decisão sobre o pedido de reembolso</Text>
+              <View style={s.filters}>{(status === 'EmAnalise' ? [['EmAnalise','Manter em análise']] : status === 'Arquivada' ? [['Negado','Negar solicitação']] : [['Aprovado','Aprovar solicitação'],['Negado','Negar solicitação']]).map(([value,label]) =>
+                <TouchableOpacity key={value} accessibilityRole="button" accessibilityState={{ selected: refundDecision === value }} style={[s.chip, refundDecision === value && s.selectedChip]} onPress={() => setRefundDecision(value as RefundDecision)}>
+                  <Text style={[s.chipText, refundDecision === value && s.selectedText]}>{label}</Text>
+                </TouchableOpacity>)}</View>
+            </>}
             <TextInput style={s.notes} multiline textAlignVertical="top" maxLength={2000} placeholder="Descreva a análise e a decisão (obrigatório)"
               accessibilityLabel="Observação da análise" value={notes} onChangeText={setNotes} editable={!saving} />
             <Text style={s.caption}>A decisão será registrada com seu nome. Pagamentos e históricos não serão apagados.</Text>
@@ -160,6 +179,7 @@ function AdminReports({ navigation }: any) {
             {detail.analises?.length ? detail.analises.map(item => <View key={item.id_analise} style={s.person}>
               <Text style={s.strong}>{reportLabels[item.status]} · {item.administrador.nome}</Text>
               <Text style={s.body}>{item.observacao}</Text>
+              {item.decisao_reembolso && <Text style={s.caption}>Reembolso: {refundLabels[item.decisao_reembolso]}</Text>}
               <Text style={s.caption}>{item.acao === 'Suspender' ? 'Suspensão por ' + item.dias_suspensao + ' dias' : item.acao === 'Excluir' ? 'Conta excluída (acesso encerrado)' : 'Nenhuma medida aplicada'}</Text><Text style={s.caption}>{date(item.criado_em)}</Text>
             </View>) : <Text style={s.caption}>Nenhuma análise registrada.</Text>}
           </>}
@@ -170,7 +190,7 @@ function AdminReports({ navigation }: any) {
         </View>}
       </View></KeyboardAvoidingView></SafeAreaView>
     </Modal>
-    <ActionModal visible={confirm && !error} title="Salvar análise?" message={status === 'Resolvida' && measure !== 'Nenhuma' ? (measure === 'Suspender' ? 'Suspender por ' + days + ' dias' : 'Excluir a conta') + ' de ' + detail?.denunciado.nome + ' (' + detail?.denunciado.email + ')? O acesso será encerrado e a decisão ficará no histórico.' : 'Registrar esta denúncia como ' + reportLabels[status].toLowerCase() + ', sem aplicar medida à conta? A observação ficará no histórico.'}
+    <ActionModal visible={confirm && !error} title="Salvar análise?" message={(detail?.solicita_reembolso ? 'Reembolso: ' + refundLabels[refundDecision] + '. Esta decisão não executa nem confirma estorno. ' : '') + (status === 'Resolvida' && measure !== 'Nenhuma' ? (measure === 'Suspender' ? 'Suspender por ' + days + ' dias' : 'Excluir a conta') + ' de ' + detail?.denunciado.nome + ' (' + detail?.denunciado.email + ')? O acesso será encerrado e a decisão ficará no histórico.' : 'Registrar esta denúncia como ' + reportLabels[status].toLowerCase() + ', sem aplicar medida à conta? A observação ficará no histórico.')}
       variant="confirm" confirmLabel="Salvar análise" cancelLabel="Revisar" busy={saving} onConfirm={save} onClose={() => setConfirm(false)} />
     <ActionModal visible={Boolean(error)} title="Não foi possível concluir" message={error} variant="error" onClose={() => setError('')} />
   </SafeAreaView>;

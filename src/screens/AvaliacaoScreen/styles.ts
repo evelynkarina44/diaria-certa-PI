@@ -7,6 +7,17 @@ const laranja = '#FF6B2C';
 const vermelho = '#FF3338';
 
 export const styles = StyleSheet.create({
+  desktopReportPage: { width: '100%', gap: 20, minWidth: 0 },
+  desktopReportHeading: { textAlign: 'left', fontSize: 20, lineHeight: 28 },
+  desktopReportColumns: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'stretch', gap: 20, width: '100%' },
+  desktopReportDetails: { flexGrow: 2, flexShrink: 0, flexBasis: 420, minWidth: 0, padding: 20, gap: 12, borderWidth: 1, borderColor: '#E4E7EC', borderRadius: 16 },
+  desktopReportAttachments: { flexGrow: 1, flexShrink: 0, flexBasis: 280, minWidth: 0, padding: 20, gap: 12, borderWidth: 1, borderColor: '#E4E7EC', borderRadius: 16, backgroundColor: '#F9FAFB' },
+  desktopFieldTitle: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 22, color: '#182230' },
+  desktopReportTextArea: { height: 180, minHeight: 180, flexGrow: 0, flexShrink: 0, marginTop: 0, fontSize: 14, lineHeight: 22, borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 12 },
+  desktopAttachmentHeader: { marginTop: 0, marginBottom: 0, gap: 10 },
+  desktopAttachmentHint: { textAlign: 'left', marginTop: 0 },
+  desktopReportActions: { flexDirection: 'row', justifyContent: 'flex-end', paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E4E7EC' },
+  desktopReportButton: { width: 200, maxWidth: '100%', minHeight: 44, height: 44, marginTop: 0, flexShrink: 0, borderRadius: 12 },
   desktopScroll: { borderTopLeftRadius: 25, borderTopRightRadius: 25 },
   desktopContent: { flexGrow: 0, width: '100%', maxWidth: 1280, alignSelf: 'center', padding: 24 },
   desktopForm: { flex: 0, minHeight: 0, padding: 0, paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
@@ -189,6 +200,10 @@ export const styles = StyleSheet.create({
 
   /* ANEXOS */
 
+  refundBox: { width: '100%', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#B4E0E5', backgroundColor: '#F0FAFB', gap: 6, marginTop: 16 },
+  refundOption: { flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: 10 },
+  refundTitle: { fontFamily: fonts.semibold, fontSize: 13, lineHeight: 20, color: '#182230', flexShrink: 1 },
+  refundNote: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 18, color: '#475467' },
   attachmentHeader: {
     width: '100%',
     flexDirection: 'row',

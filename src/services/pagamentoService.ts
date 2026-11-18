@@ -9,6 +9,7 @@ export type ParcelaPagamento = {
 };
 
 export type ResumoPagamento = {
+  possui_valor_pago_reembolsavel?: boolean;
   confirmacao_cliente_expirada?: boolean;
   confirmacao_cliente_limite_em?: string | null;
   aguardando_confirmacao_cliente?: boolean;

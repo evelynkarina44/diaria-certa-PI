@@ -1,6 +1,6 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('../node_modules/typescript');
 const root=path.resolve(__dirname,'..');
-function harness(admin=true,users=false,mobile=false){
+function harness(admin=true,users=false,mobile=false,refund=false){
  let cursor=0;const state=[],effects=[],queries=[],writes=[],routes=[];
  const react={createElement:(type,props,...children)=>typeof type==='function'?type({...props,children}):({type,props:{...props,children}}),
  useState(initial){const i=cursor++;if(!(i in state))state[i]=initial;return[state[i],v=>state[i]=typeof v==='function'?v(state[i]):v];},
@@ -8,7 +8,7 @@ function harness(admin=true,users=false,mobile=false){
  useEffect(fn,deps){const i=cursor++;if(!state[i]||deps.some((v,j)=>v!==state[i][j])){state[i]=deps;effects.push(fn);}}};
  const user={id_usuario:7,activeProfile:admin?'ADMIN':'CLIENTE',profiles:admin?['ADMIN']:['CLIENTE']};
  const labels={Pendente:'Pendente',EmAnalise:'Em análise',Resolvida:'Resolvida',Arquivada:'Arquivada'};
- let report={id_denuncia:3,motivo:'outro',descricao:'Relato original completo',data_denuncia:'2026-11-17T12:00:00Z',status:'Pendente',versao:0,denunciante:{nome:'Pessoa A',email:'a@example.test',tipo:'CLIENTE'},denunciado:{nome:'Pessoa B',email:'b@example.test',tipo:'DIARISTA'},analises:[],anexos:[{id_anexo:'image',nome:'Vídeo',tipo:'video'}]};
+ let report={solicita_reembolso:refund,reembolso_status:refund?'Pendente':'NaoSolicitado',id_agendamento:40,reembolso_valor_pago_centavos:12000,id_denuncia:3,motivo:'outro',descricao:'Relato original completo',data_denuncia:'2026-11-17T12:00:00Z',status:'Pendente',versao:0,denunciante:{nome:'Pessoa A',email:'a@example.test',tipo:'CLIENTE'},denunciado:{nome:'Pessoa B',email:'b@example.test',tipo:'DIARISTA'},analises:[],anexos:[{id_anexo:'image',nome:'Vídeo',tipo:'video'}]};
  const imports={
  '../../services/reportAttachmentService':{reportAttachmentService:{read:async()=>({dataUrl:'data:image/jpeg;base64,AA=='})}},
  '../../components/admin-tabs':{AdminTabs:'AdminTabs'},
@@ -21,7 +21,7 @@ function harness(admin=true,users=false,mobile=false){
  '../../components/page-header':{PageHeader:'PageHeader'},'../../components/action-modal':{ActionModal:'ActionModal'},'../../components/logout-button':{LogoutButton:'LogoutButton'},
  '../../components/responsive-grid':{ResponsiveGrid:'ResponsiveGrid'},'./styles':{styles:new Proxy({},{get:(_,k)=>k})},
  '../../services/api':{ApiError:class extends Error{},getErrorMessage:e=>e.message},
- '../../services/adminService':{reportLabels:labels,adminService:{
+ '../../services/adminService':{reportLabels:labels,refundLabels:{Pendente:'Aguardando análise',EmAnalise:'Em análise',Aprovado:'Solicitação aprovada (estorno não confirmado)',Negado:'Solicitação negada'},adminService:{
  usuarios:async q=>{queries.push(q);return{data:[{id_usuario:12,nome:'Usuário consulta',email:'consulta@example.test',tipo:'CLIENTE',administrador:false,data_cadastro:'2026-11-17',situacao:'Ativa'}],total_usuarios:30,pagination:{pages:2,total:11,page:q.page}};},
  listar:async q=>{queries.push(q);return {data:[report],pagination:{pages:2,total:11,page:q.page}};},
  detalhes:async()=>report,
@@ -111,6 +111,24 @@ test('admin mobile usa o mesmo menu e busca sem largura fixa nas duas páginas',
   const input=h.nodes.find(n=>n.type==='TextInput');
   assert.equal(input.props.returnKeyType,'search');
  }
+});
+
+test('admin filtra pedidos e registra decisão de reembolso distinta de uma devolução financeira',async()=>{
+ const h=harness(true,false,true,true);await h.ready();
+ h.nodes.find(n=>n.props.accessibilityLabel==='Somente pedidos de reembolso').props.onPress();await h.ready();
+ assert.equal(h.queries.at(-1).somente_reembolso,true);
+ h.nodes.find(n=>n.props.accessibilityLabel==='Analisar denúncia 3').props.onPress();await h.ready();
+ assert.ok(h.nodes.some(n=>n.type==='Text'&&n.props.children.includes('Solicitação de reembolso')));
+ const walk=n=>!n||typeof n!=='object'?[]:[n,...(n.props?.children??[]).flat(Infinity).flatMap(walk)];
+ const detailButton=label=>walk(h.nodes.find(n=>n.type==='Modal')).find(n=>n.type==='TouchableOpacity'&&walk(n).some(t=>t.type==='Text'&&t.props.children.includes(label)));
+ detailButton('Resolvida').props.onPress();h.render();
+ detailButton('Aprovar solicitação').props.onPress();h.render();
+ h.nodes.find(n=>n.props.accessibilityLabel==='Observação da análise').props.onChangeText('Pedido analisado; processamento financeiro deve ser conferido.');h.render();
+ h.button('Salvar análise').props.onPress();h.render();
+ const modal=h.nodes.find(n=>n.type==='ActionModal'&&n.props.title==='Salvar análise?');
+ assert.ok(modal.props.message.includes('não executa nem confirma estorno'));
+ await modal.props.onConfirm();h.render();
+ assert.equal(h.writes[0].data.decisao_reembolso,'Aprovado');assert.equal(h.writes[0].data.acao,'Nenhuma');
 });
 test('consulta mobile apresenta cartões com labels em vez de tabela desktop',async()=>{
  const h=harness(true,true,true);await h.ready();

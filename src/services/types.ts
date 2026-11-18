@@ -244,6 +244,10 @@ export type Favorito = {
 };
 
 export type Denuncia = {
+  id_agendamento?: number | null;
+  solicita_reembolso?: boolean;
+  reembolso_status?: string;
+  reembolso_valor_pago_centavos?: number | null;
   id_denuncia: number;
   id_usuario_denunciante: number;
   id_usuario_denunciado: number;

@@ -26,6 +26,15 @@ export const favoritoService = {
       data: { id_diarista },
     });
   },
+  listarClientes(params: ListQuery = {}) {
+    return request<PaginatedResponse<Favorito>>({ method: 'GET', url: '/api/favorito/clientes', params });
+  },
+  removerCliente(id: number) {
+    return request<void>({ method: 'DELETE', url: '/api/favorito/clientes/' + id });
+  },
+  criarCliente(id_cliente: number) {
+    return request<Favorito>({ method: 'POST', url: '/api/favorito/clientes', data: { id_cliente } });
+  },
   remover(id: number) {
     return request<void>({
       method: 'DELETE',

@@ -1,3 +1,4 @@
+import { ActionModal } from '../../components/action-modal';
 import { DailyFiltersLayout, StatusFilters } from '../../components/daily-filters-layout';
 import { useResponsive } from '../../contexts/ResponsiveContext';
 import { ResponsiveGrid } from '../../components/responsive-grid';
@@ -86,6 +87,8 @@ export default function HistoricoClienteScreen({
 
   const [historico, setHistorico] = useState<Diarista[]>([]);
   const [favoritos, setFavoritos] = useState<Diarista[]>([]);
+  const [favoriteError, setFavoriteError] = useState(''), [favoriteBusy, setFavoriteBusy] = useState<number[]>([]);
+  const favoriteLocks = useRef(new Set<number>()), dataRequest = useRef(0), active = useRef(true);
   const [loading, setLoading] = useState(true);
   const [erroHistorico, setErroHistorico] = useState('');
   const [erroFavoritos, setErroFavoritos] = useState('');
@@ -120,9 +123,10 @@ export default function HistoricoClienteScreen({
   function limparFiltros() { setBusca(''); setDataFiltro(''); setStatusFiltro('Todos'); }
 
   useEffect(() => {
+    active.current = true;
     carregarDados();
     const unsubscribe = navigation.addListener('focus', carregarDados);
-    return unsubscribe;
+    return () => { active.current = false; dataRequest.current++; unsubscribe(); };
   }, [navigation]);
 
   function apresentarPerfil(
@@ -184,6 +188,7 @@ export default function HistoricoClienteScreen({
   }
 
   async function carregarDados() {
+    const request = ++dataRequest.current;
     setLoading(true);
     const [appointmentsResult, favoritesResult] = await Promise.allSettled([
       (async () => {
@@ -196,9 +201,15 @@ export default function HistoricoClienteScreen({
         }
         return { ...first, data };
       })(),
-      favoritoService.listar({ limit: 100 }),
+      (async () => {
+        const first = await favoritoService.listar({ limit: 100 });
+        const data = [...first.data];
+        for (let page = 2; page <= (first.pagination?.pages ?? 1); page++) data.push(...(await favoritoService.listar({ limit: 100, page })).data);
+        return { ...first, data };
+      })(),
     ]);
 
+    if (!active.current || request !== dataRequest.current) return;
     const favorites = favoritesResult.status === 'fulfilled'
       ? favoritesResult.value.data
       : [];
@@ -231,16 +242,18 @@ export default function HistoricoClienteScreen({
   }
 
   async function alternarFavorito(item: Diarista) {
-    if (!item.diaristaId) return;
+    const target = item.diaristaId;
+    if (!target || favoriteLocks.current.has(target) || loading || erroFavoritos) return;
+    favoriteLocks.current.add(target); setFavoriteBusy(current => [...current, target]);
     try {
-      if (item.favoritoId) {
-        await favoritoService.remover(item.favoritoId);
-      } else {
-        await favoritoService.criar(item.diaristaId);
-      }
-      await carregarDados();
+      if (item.favoritoId) await favoritoService.remover(item.favoritoId);
+      else await favoritoService.criar(target);
+      if (active.current) await carregarDados();
     } catch (error) {
-      Alert.alert('Não foi possível atualizar', getErrorMessage(error));
+      if (active.current) setFavoriteError(getErrorMessage(error));
+    } finally {
+      favoriteLocks.current.delete(target);
+      if (active.current) setFavoriteBusy(current => current.filter(id => id !== target));
     }
   }
 
@@ -272,6 +285,7 @@ export default function HistoricoClienteScreen({
             </View>
           </TouchableOpacity>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Remover ${diarista.nome} dos favoritos`}
+            disabled={loading || Boolean(erroFavoritos) || favoriteBusy.includes(diarista.diaristaId ?? 0)}
             style={styles.favoriteHeart} onPress={() => alternarFavorito(diarista)} activeOpacity={0.7}>
             <Ionicons name="heart" size={22} color="#E34A68" />
           </TouchableOpacity>
@@ -315,6 +329,12 @@ export default function HistoricoClienteScreen({
               <Text style={[styles.historyName, desktop && styles.desktopName]}>{item.nome}</Text>
               <Text style={[styles.profileLink, desktop && styles.desktopCaption]}>Ver perfil da profissional <Ionicons name="chevron-forward" size={11} /></Text>
             </View>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={(item.favorito ? 'Remover diarista dos favoritos: ' : 'Favoritar diarista: ') + item.nome}
+            accessibilityState={{ selected: item.favorito, busy: favoriteBusy.includes(item.diaristaId ?? 0) }}
+            disabled={loading || Boolean(erroFavoritos) || !item.diaristaId || favoriteBusy.includes(item.diaristaId)}
+            onPress={() => void alternarFavorito(item)} style={styles.favoriteHeart} activeOpacity={0.7}>
+            {favoriteBusy.includes(item.diaristaId ?? 0) ? <ActivityIndicator size="small" color="#E34A68" /> : <Ionicons name={item.favorito ? 'heart' : 'heart-outline'} size={22} color="#E34A68" />}
           </TouchableOpacity>
         </View>
         <View style={styles.historyDetails}>
@@ -461,6 +481,7 @@ export default function HistoricoClienteScreen({
           )}
         </ScrollView>
       </View>
+      <ActionModal visible={Boolean(favoriteError)} variant="error" title="Não foi possível atualizar o favorito" message={favoriteError} onClose={() => setFavoriteError('')} />
     </SafeAreaView>
   );
 }

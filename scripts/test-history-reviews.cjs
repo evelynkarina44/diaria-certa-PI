@@ -51,6 +51,7 @@ function harness(reviews, appointments) {
       const page = query.page ?? 1;
       return { data: data.slice((page - 1) * 100, page * 100), pagination: { pages: Math.ceil(data.length / 100) } };
     } } },
+    '../../services/favoritoService': { favoritoService: { listarClientes:async()=>({data:[],pagination:{pages:1}}) } },
     '../../services/api': { getErrorMessage: error => error.message },
     './styles': { styles: {} },
   };

@@ -237,6 +237,7 @@ export type Agendamento = {
 };
 
 export type Favorito = {
+  cliente?: { id_cliente: number; usuario?: Pick<Usuario, 'nome' | 'foto_perfil'> };
   id_favorito: number;
   id_cliente: number;
   id_diarista: number;

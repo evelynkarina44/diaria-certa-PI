@@ -44,6 +44,7 @@ test('histórico carrega todas as páginas antes de filtrar e preserva favoritos
   const end = source.indexOf('  async function alternarFavorito', start);
   const requested = [], state = {};
   const context = {
+    dataRequest:{current:0},active:{current:true},
     agendamentoService: { listar: async query => {
       requested.push(query.page ?? 1);
       return { data: [{ id_agendamento: query.page ?? 1 }], pagination: { pages: 2 } };
@@ -65,17 +66,17 @@ test('card conserva ID exclusivo do agendamento nos pagamentos e no check-in', (
     React: { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) },
     View: 'View', Text: 'Text', Image: 'Image', TouchableOpacity: 'Button', Ionicons: 'Icon',
     desktop: false, styles: {}, statusColors: { Aceito: '#008A99' }, statusLabels: { Aceito: 'Aceito' }, statusIcons: { Aceito: 'checkmark' },
-    fotosComErro: [], abrirPerfil() {}, alternarFavorito() {},
+    fotosComErro: [], abrirPerfil() {}, alternarFavorito() {},favoriteBusy:[],loading:false,erroFavoritos:'',
     navigation: { push: (...args) => calls.push(args), navigate: (...args) => calls.push(args) },
   };
   compile(source.slice(start, end), context);
   const tree = context.renderHistoryCard({ ...items[0], data: '01 de novembro de 2026', checkinSolicitado: true });
   const nodes = node => typeof node === 'object' && node ? [node, ...node.children.flat(Infinity).flatMap(nodes)] : [];
   const buttons = nodes(tree).filter(node => node.type === 'Button');
-  assert.equal(buttons.length, 3, 'histórico tem apenas perfil, pagamento e check-in, sem favoritar');
-  assert.equal(nodes(tree).some(node => node.type === 'Icon' && ['heart', 'heart-outline'].includes(node.props.name)), false);
-  buttons[1].props.onPress();
+  assert.equal(buttons.length, 4, 'perfil, favorito, pagamento e check-in continuam independentes');
+  assert.equal(nodes(tree).some(node => node.type === 'Icon' && ['heart', 'heart-outline'].includes(node.props.name)), true);
   buttons[2].props.onPress();
+  buttons[3].props.onPress();
   assert.equal(calls[0][0], 'Pagamento');
   assert.equal(calls[0][1].agendamentoId, 40);
   assert.equal(calls[1][0], 'CheckIn');

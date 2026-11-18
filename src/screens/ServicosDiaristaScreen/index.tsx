@@ -95,13 +95,11 @@ export default function ServicosDiaristaScreen({ navigation }: any) {
     if (nome.length < 2) throw new Error('Informe o nome do serviço.');
     const preco = parseMoney(values.preco);
     if (!preco || preco <= 0) throw new Error('Informe um preço válido.');
-    await Promise.all([
-      servicoService.atualizar(editingService.id_servico, {
-        nome_servico: nome,
-        descricao: values.descricao.trim() || null,
-      }),
-      diaristaServicoService.atualizar(editingService.id_diarista_servico, { preco }),
-    ]);
+    await diaristaServicoService.atualizar(editingService.id_diarista_servico, {
+      nome_servico: nome,
+      descricao: values.descricao.trim() || null,
+      preco,
+    });
     await loadData();
   }
 

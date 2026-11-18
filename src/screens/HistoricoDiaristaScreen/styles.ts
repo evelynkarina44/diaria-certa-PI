@@ -39,7 +39,6 @@ export const styles = StyleSheet.create({
   bookingNumber: { fontFamily: fonts.semibold, fontSize: 10, color: '#667085', letterSpacing: 1 },
   historyStatus: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, paddingHorizontal: 9, paddingVertical: 6 },
   historyStatusText: { fontFamily: fonts.semibold, fontSize: 11 },
-  favoriteHeart: { width: 44, height: 44, flexShrink: 0, marginLeft: 10, borderRadius: 14, backgroundColor: '#FFF3F6', alignItems: 'center', justifyContent: 'center' },
   historyProfileRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   historyProfile: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 },
   historyAvatar: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#FFF1E8', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },

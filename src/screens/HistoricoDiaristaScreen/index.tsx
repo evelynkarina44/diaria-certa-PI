@@ -1,4 +1,3 @@
-import { favoritoService } from '../../services/favoritoService';
 import { DailyFiltersLayout, StatusFilters } from '../../components/daily-filters-layout';
 import { useResponsive } from '../../contexts/ResponsiveContext';
 import { ResponsiveGrid } from '../../components/responsive-grid';
@@ -20,7 +19,6 @@ type RegistroHistorico = {
   id: number;
   numero: number | null;
   nome: string;
-  clienteId?: number;
   avaliacao: NonNullable<Agendamento['avaliacao']>[number] | null;
   endereco: string;
   status: Agendamento['status'];
@@ -75,10 +73,6 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
   const [error, setError] = useState('');
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [favoriteIds, setFavoriteIds] = useState<Record<number, number>>({}), [favoritesReady, setFavoritesReady] = useState(false);
-  const [favoriteBusy, setFavoriteBusy] = useState<number[]>([]), [favoriteError, setFavoriteError] = useState('');
-  const favoriteLocks = useRef(new Set<number>()), mounted = useRef(true);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [busca, setBusca] = useState('');
   const [statusFiltro, setStatusFiltro] = useState('Todos');
   const [dataFiltro, setDataFiltro] = useState('');
@@ -107,7 +101,6 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
       id: item.id_agendamento,
       numero: item.numero_diarista ?? null,
       nome: item.cliente?.usuario?.nome ?? 'Cliente',
-      clienteId: item.id_cliente,
       avaliacao: item.avaliacao?.find(review => review.autor_tipo === 'Cliente') ?? null,
       endereco: endereco ? `${endereco.logradouro} ${endereco.numero} - ${endereco.bairro}` : 'Endereço não informado',
       status: item.checkin_expirado ? 'Expirado' : item.status,
@@ -139,17 +132,6 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
           data.push(...response.data);
         }
         if (active && id === requestId) setHistoricoReal(data.map(apresentarHistorico));
-        try {
-          const firstFavorites = await favoritoService.listarClientes({ limit: 100 });
-          const records = [...firstFavorites.data];
-          for (let page = 2; page <= (firstFavorites.pagination?.pages ?? 1); page++) records.push(...(await favoritoService.listarClientes({ page, limit: 100 })).data);
-          if (active && id === requestId) {
-            setFavoriteIds(Object.fromEntries(records.map(record => [record.id_cliente, record.id_favorito])));
-            setFavoritesReady(true);
-          }
-        } catch (cause) {
-          if (active && id === requestId) { setFavoritesReady(false); setFavoriteError(getErrorMessage(cause)); }
-        }
       } catch (cause) {
         if (active && id === requestId) {
           setError(getErrorMessage(cause));
@@ -163,18 +145,6 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
     const unsubscribe = navigation.addListener('focus', carregarHistorico);
     return () => { active = false; unsubscribe(); };
   }, [navigation, refreshKey]);
-
-  async function alternarClienteFavorito(registro: RegistroHistorico) {
-    const target = registro.clienteId;
-    if (!target || !favoritesReady || loading || favoriteLocks.current.has(target)) return;
-    favoriteLocks.current.add(target); setFavoriteBusy(current => [...current, target]);
-    try {
-      if (favoriteIds[target]) await favoritoService.removerCliente(favoriteIds[target]);
-      else await favoritoService.criarCliente(target);
-      if (mounted.current) { setFavoritesReady(false); setRefreshKey(value => value + 1); }
-    } catch (cause) { if (mounted.current) setFavoriteError(getErrorMessage(cause)); }
-    finally { favoriteLocks.current.delete(target); if (mounted.current) setFavoriteBusy(current => current.filter(id => id !== target)); }
-  }
 
   function renderCard(registro: RegistroHistorico) {
     const color = statusColors[registro.status];
@@ -194,12 +164,6 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
               : <Ionicons name="person-outline" size={27} color="#C2410C" />}
           </View>
           <View style={styles.info}><Text style={[styles.historyName, desktop && styles.desktopName]}>{registro.nome}</Text><Text style={[styles.profileLink, desktop && styles.desktopCaption]}>Cliente da diária</Text></View>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={(favoriteIds[registro.clienteId ?? 0] ? 'Remover cliente dos favoritos: ' : 'Favoritar cliente: ') + registro.nome}
-            accessibilityState={{ selected: Boolean(favoriteIds[registro.clienteId ?? 0]), busy: favoriteBusy.includes(registro.clienteId ?? 0) }}
-            disabled={loading || !favoritesReady || !registro.clienteId || favoriteBusy.includes(registro.clienteId)}
-            onPress={() => void alternarClienteFavorito(registro)} style={styles.favoriteHeart} activeOpacity={0.7}>
-            {favoriteBusy.includes(registro.clienteId ?? 0) ? <ActivityIndicator size="small" color="#E34A68" /> : <Ionicons name={favoriteIds[registro.clienteId ?? 0] ? 'heart' : 'heart-outline'} size={22} color="#E34A68" />}
-          </TouchableOpacity>
         </View>
         <View style={styles.historyDetails}>
           <View style={styles.detailRow}><Ionicons name="calendar-outline" size={17} color="#C2410C" /><Text style={[styles.detailText, desktop && styles.desktopDetail]}>{registro.data}</Text></View>
@@ -313,7 +277,6 @@ export default function HistoricoDiaristaScreen({ navigation }: any) {
           {!loading && Boolean(error) && <Text style={styles.emptyText}>Não foi possível carregar suas diárias. Toque no ícone de atualização para tentar novamente.</Text>}
         </ScrollView>
       </View>
-      <ActionModal visible={Boolean(favoriteError) && !errorModalVisible} variant="error" title="Não foi possível atualizar os favoritos" message={favoriteError} accentColor="#FF6B2C" onClose={() => setFavoriteError('')} />
       <ActionModal visible={errorModalVisible} variant="error" title="Não foi possível carregar suas diárias"
         message={error} accentColor="#FF6B2C" onClose={() => setErrorModalVisible(false)} />
     </SafeAreaView>
